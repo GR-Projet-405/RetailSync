@@ -19,7 +19,7 @@ export const Sidebar = () => {
   return (
     <aside 
       className={cn(
-        "fixed inset-y-0 left-0 z-30 w-[280px] h-screen bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300 ease-in-out glass-panel",
+        "fixed inset-y-0 left-0 z-30 w-[280px] h-screen bg-[#0F172A] border-r border-white/5 flex flex-col transition-all duration-300 ease-in-out",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full",
         "lg:static lg:translate-x-0 lg:h-screen",
         isSidebarCollapsed ? "lg:w-[80px]" : "lg:w-[280px]"
@@ -81,10 +81,10 @@ export const Sidebar = () => {
                     to={item.path}
                     title={isSidebarCollapsed ? item.name : undefined}
                     className={({ isActive }) => cn(
-                      "flex items-center gap-3 px-3 py-2 text-xs font-medium rounded-lg transition-all relative group",
+                      "flex items-center gap-3 px-3 py-2 text-xs font-medium rounded-lg transition-colors duration-150 relative group",
                       isActive 
-                        ? "bg-indigo-600 text-white shadow-sm font-semibold" 
-                        : "text-slate-400 hover:bg-slate-800/80 hover:text-slate-200",
+                        ? "bg-blue-600 text-white shadow-sm font-semibold" 
+                        : "text-slate-400 hover:bg-slate-800 hover:text-white",
                       isSidebarCollapsed && "lg:justify-center lg:gap-0 lg:px-2"
                     )}
                   >

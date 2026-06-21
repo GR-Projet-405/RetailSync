@@ -1,8 +1,14 @@
-import React from 'react';
 import { cn } from '../utils/cn';
 
-export const Card = ({ className, ...props }) => (
-  <div className={cn('rounded-xl border border-slate-800 bg-slate-900/50 text-slate-100 shadow-sm backdrop-blur-md', className)} {...props} />
+export const Card = ({ className, hover = false, ...props }) => (
+  <div
+    className={cn(
+      'rounded-2xl border border-[#E2E8F0] bg-white shadow-[0_2px_8px_rgba(15,23,42,0.04)]',
+      hover && 'card-hover',
+      className
+    )}
+    {...props}
+  />
 );
 
 export const CardHeader = ({ className, ...props }) => (
@@ -10,11 +16,11 @@ export const CardHeader = ({ className, ...props }) => (
 );
 
 export const CardTitle = ({ className, ...props }) => (
-  <h3 className={cn('text-lg font-semibold leading-none tracking-tight', className)} {...props} />
+  <h3 className={cn('text-base font-semibold leading-none tracking-tight text-[#0F172A]', className)} {...props} />
 );
 
 export const CardDescription = ({ className, ...props }) => (
-  <p className={cn('text-sm text-slate-400', className)} {...props} />
+  <p className={cn('text-sm text-[#64748B]', className)} {...props} />
 );
 
 export const CardContent = ({ className, ...props }) => (
@@ -22,7 +28,7 @@ export const CardContent = ({ className, ...props }) => (
 );
 
 export const CardFooter = ({ className, ...props }) => (
-  <div className={cn('flex items-center p-6 pt-0 border-t border-slate-800/50 mt-4', className)} {...props} />
+  <div className={cn('flex items-center p-6 pt-0 border-t border-slate-200 mt-4', className)} {...props} />
 );
 
 export default Card;

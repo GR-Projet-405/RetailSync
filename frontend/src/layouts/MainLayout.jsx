@@ -2,25 +2,24 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import WorkspaceContainer from '../components/WorkspaceContainer';
-import AnimatedBackground from '../components/AnimatedBackground';
 import { useSidebar } from '../contexts/SidebarContext';
 
 export const MainLayout = () => {
   const { isSidebarOpen, closeMobileSidebar } = useSidebar();
 
   return (
-    <div className="h-screen bg-slate-950 text-slate-100 flex overflow-hidden relative">
-      {/* Animated Background */}
-      <AnimatedBackground />
-
+    <div
+      className="h-screen flex overflow-hidden relative"
+      style={{ background: 'linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 50%, #EEF2FF 100%)' }}
+    >
       {/* Sidebar navigation */}
       <Sidebar />
 
-      {/* Mobile backdrop drawer overlay */}
+      {/* Mobile backdrop overlay */}
       {isSidebarOpen && (
-        <div 
+        <div
           onClick={closeMobileSidebar}
-          className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-20 lg:hidden transition-opacity duration-300"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-20 lg:hidden transition-opacity duration-300"
         />
       )}
 
@@ -28,9 +27,9 @@ export const MainLayout = () => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <Navbar />
 
-        {/* Workspace Wrapper (scrollable outer area) */}
+        {/* Workspace Wrapper — scrollable outer area */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative p-4 sm:p-5 md:p-6">
-          {/* Workspace Container */}
+          {/* Workspace Container — frosted glass surface */}
           <WorkspaceContainer>
             <Outlet />
           </WorkspaceContainer>

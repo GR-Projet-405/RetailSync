@@ -1,16 +1,16 @@
-import React from 'react';
 import { cn } from '../utils/cn';
 
 export const Badge = ({ children, variant = 'primary', className }) => {
-  const baseStyles = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide transition-colors';
-  
+  const baseStyles = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide border';
+
   const variants = {
-    primary: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30',
-    secondary: 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30',
-    success: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30',
-    warning: 'bg-amber-500/10 text-amber-400 border border-amber-500/30',
-    danger: 'bg-red-500/10 text-red-400 border border-red-500/30',
-    info: 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
+    primary:   'bg-blue-50    text-blue-700    border-blue-200',
+    secondary: 'bg-sky-50     text-sky-700     border-sky-200',
+    success:   'bg-emerald-50 text-emerald-700 border-emerald-200',
+    warning:   'bg-amber-50   text-amber-700   border-amber-200',
+    danger:    'bg-red-50     text-red-700     border-red-200',
+    info:      'bg-blue-50    text-blue-600    border-blue-100',
+    neutral:   'bg-slate-100  text-slate-600   border-slate-200',
   };
 
   return (
@@ -19,5 +19,8 @@ export const Badge = ({ children, variant = 'primary', className }) => {
     </span>
   );
 };
+
+// Semantic alias for use in tables / audit logs
+export const StatusBadge = Badge;
 
 export default Badge;

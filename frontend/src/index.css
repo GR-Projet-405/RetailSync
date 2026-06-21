@@ -6,130 +6,99 @@
 
 @layer base {
   body {
-    @apply bg-slate-900 text-slate-100 font-sans antialiased;
+    @apply bg-[#F8FAFC] text-[#0F172A] font-sans antialiased;
   }
 }
 
-/* Custom premium scrollbar styling */
+/* ─── Scrollbar ──────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
+  background: #F1F5F9;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.3);
+  background: #BFDBFE; /* Blue-200 */
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.6);
+  background: #93C5FD; /* Blue-300 */
 }
 
-/* Custom styles for Glassmorphism effects */
+/* ─── Dark shell utilities (sidebar / dark panels) ───── */
 .glass-panel {
-  background: rgba(30, 41, 59, 0.7);
+  background: rgba(30, 41, 59, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .glass-card {
-  background: rgba(30, 41, 59, 0.45);
+  background: rgba(30, 41, 59, 0.50);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Workspace Container Architecture */
+/* ─── Workspace Container ─────────────────────────────── */
 .workspace-container {
   width: 100%;
   max-width: 1600px;
   margin-left: auto;
   margin-right: auto;
-  
-  /* Premium Light Floating Glass Surface */
-  background: rgba(255, 255, 255, 0.90);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.60);
+
+  /* Frosted white glass surface */
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.70);
   border-radius: 24px;
-  box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
   box-sizing: border-box;
 
-  /* Internal Padding */
-  padding: 16px; /* Mobile */
-  transition: all 0.3s ease;
+  /* Internal padding */
+  padding: 16px;
+  transition: box-shadow 200ms ease;
 }
 
 @media (min-width: 768px) {
   .workspace-container {
-    padding: 24px; /* Tablet */
+    padding: 24px;
   }
 }
 
 @media (min-width: 1024px) {
   .workspace-container {
-    padding: 32px; /* Desktop */
+    padding: 32px;
   }
 }
 
-/* Ambient Light Background */
-.ambient-light {
-  position: absolute;
-  width: 70vw;
-  height: 70vw;
-  background: radial-gradient(circle, currentColor 0%, transparent 70%);
-  filter: blur(80px);
-  will-change: opacity, transform;
+/* ─── Card hover lift ─────────────────────────────────── */
+.card-hover {
+  transition: box-shadow 200ms ease, transform 200ms ease;
+}
+.card-hover:hover {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.10);
+  transform: translateY(-1px);
 }
 
-/* Top-right light source — sky blue */
-.ambient-light--tr {
-  top: -20%;
-  right: -20%;
-  color: #38BDF8; /* Sky-400 */
-  opacity: 0.08;
-  animation: ambientTR 26s ease-in-out infinite;
+/* ─── Micro-animations ────────────────────────────────── */
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
 }
 
-/* Bottom-left light source — cyan */
-.ambient-light--bl {
-  bottom: -20%;
-  left: -20%;
-  color: #67E8F9; /* Cyan-300 */
-  opacity: 0.07;
-  animation: ambientBL 30s ease-in-out infinite;
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
 }
 
-@keyframes ambientTR {
-  0%, 100% {
-    opacity: 0.06;
-    transform: translate3d(0, 0, 0);
-  }
-  40% {
-    opacity: 0.12;
-    transform: translate3d(-3%, 3%, 0);
-  }
-  70% {
-    opacity: 0.07;
-    transform: translate3d(2%, -2%, 0);
-  }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-@keyframes ambientBL {
-  0%, 100% {
-    opacity: 0.05;
-    transform: translate3d(0, 0, 0);
-  }
-  35% {
-    opacity: 0.10;
-    transform: translate3d(3%, -3%, 0);
-  }
-  65% {
-    opacity: 0.06;
-    transform: translate3d(-2%, 2%, 0);
-  }
-}
-
-
+.modal-enter  { animation: modalIn 200ms ease forwards; }
+.fade-up      { animation: fadeUp  150ms ease forwards; }
+.fade-in      { animation: fadeIn  150ms ease forwards; }

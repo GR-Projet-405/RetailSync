@@ -6,7 +6,7 @@ export const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, conf
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <div className="space-y-4">
-        <p className="text-slate-300 text-sm leading-relaxed">{message}</p>
+        <p className="text-slate-600 text-sm leading-relaxed">{message}</p>
         <div className="flex justify-end space-x-3 pt-2">
           <Button variant="outline" onClick={onClose}>
             {cancelText}
