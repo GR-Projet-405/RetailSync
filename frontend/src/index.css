@@ -74,53 +74,62 @@
   }
 }
 
-/* Animated Background Blob Keyframes & Classes */
-@keyframes blob1 {
-  0%, 100% {
-    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
-  }
-  33% {
-    transform: translate3d(40px, 60px, 0) scale(1.08) rotate(120deg);
-  }
-  66% {
-    transform: translate3d(-30px, 30px, 0) scale(0.92) rotate(240deg);
-  }
+/* Ambient Light Background */
+.ambient-light {
+  position: absolute;
+  width: 70vw;
+  height: 70vw;
+  background: radial-gradient(circle, currentColor 0%, transparent 70%);
+  filter: blur(80px);
+  will-change: opacity, transform;
 }
 
-@keyframes blob2 {
-  0%, 100% {
-    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
-  }
-  50% {
-    transform: translate3d(-50px, -45px, 0) scale(1.12) rotate(-180deg);
-  }
+/* Top-right light source — sky blue */
+.ambient-light--tr {
+  top: -20%;
+  right: -20%;
+  color: #38BDF8; /* Sky-400 */
+  opacity: 0.08;
+  animation: ambientTR 26s ease-in-out infinite;
 }
 
-@keyframes blob3 {
+/* Bottom-left light source — cyan */
+.ambient-light--bl {
+  bottom: -20%;
+  left: -20%;
+  color: #67E8F9; /* Cyan-300 */
+  opacity: 0.07;
+  animation: ambientBL 30s ease-in-out infinite;
+}
+
+@keyframes ambientTR {
   0%, 100% {
-    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    opacity: 0.06;
+    transform: translate3d(0, 0, 0);
   }
   40% {
-    transform: translate3d(50px, -50px, 0) scale(0.88) rotate(90deg);
+    opacity: 0.12;
+    transform: translate3d(-3%, 3%, 0);
   }
-  80% {
-    transform: translate3d(-40px, 40px, 0) scale(1.04) rotate(270deg);
+  70% {
+    opacity: 0.07;
+    transform: translate3d(2%, -2%, 0);
   }
 }
 
-.animate-blob1 {
-  animation: blob1 35s infinite alternate ease-in-out;
-  will-change: transform;
-}
-
-.animate-blob2 {
-  animation: blob2 40s infinite alternate ease-in-out;
-  will-change: transform;
-}
-
-.animate-blob3 {
-  animation: blob3 30s infinite alternate ease-in-out;
-  will-change: transform;
+@keyframes ambientBL {
+  0%, 100% {
+    opacity: 0.05;
+    transform: translate3d(0, 0, 0);
+  }
+  35% {
+    opacity: 0.10;
+    transform: translate3d(3%, -3%, 0);
+  }
+  65% {
+    opacity: 0.06;
+    transform: translate3d(-2%, 2%, 0);
+  }
 }
 
 
