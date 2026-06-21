@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Menu, Bell, User, LogOut, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSidebar } from '../contexts/SidebarContext';
 import { ROLES, ROLE_LABELS } from '../config/roles';
 import BranchSelector from './BranchSelector';
 import { cn } from '../utils/cn';
 
-export const Navbar = ({ toggleSidebar }) => {
+export const Navbar = () => {
   const { user, updateRole, logout } = useAuth();
+  const { toggleSidebar } = useSidebar();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [showNotificationBadge, setShowNotificationBadge] = useState(true);
 
@@ -15,7 +17,7 @@ export const Navbar = ({ toggleSidebar }) => {
       <div className="flex items-center gap-4">
         <button 
           onClick={toggleSidebar}
-          className="lg:hidden p-2 rounded-lg bg-slate-850 hover:bg-slate-800 border border-slate-700/60 text-slate-400 hover:text-white"
+          className="p-2 rounded-lg bg-slate-850 hover:bg-slate-800 border border-slate-700/60 text-slate-400 hover:text-white"
         >
           <Menu className="w-5 h-5" />
         </button>
