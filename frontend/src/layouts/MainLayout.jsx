@@ -10,7 +10,12 @@ export const MainLayout = () => {
   return (
     <div
       className="h-screen flex overflow-hidden relative"
-      style={{ background: 'linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 50%, #EEF2FF 100%)' }}
+      style={{
+        background: `
+          radial-gradient(circle at top right, rgba(59,130,246,0.05), transparent 35%),
+          linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 55%, #EFF6FF 100%)
+        `
+      }}
     >
       {/* Sidebar navigation */}
       <Sidebar />
