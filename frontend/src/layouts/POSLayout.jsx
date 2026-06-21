@@ -39,7 +39,7 @@ export const POSLayout = () => {
       </header>
 
       {/* POS Working Area */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden relative p-4 sm:p-5 md:p-6">
         <WorkspaceContainer>
           <Outlet />
         </WorkspaceContainer>

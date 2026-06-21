@@ -2,13 +2,17 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import WorkspaceContainer from '../components/WorkspaceContainer';
+import AnimatedBackground from '../components/AnimatedBackground';
 import { useSidebar } from '../contexts/SidebarContext';
 
 export const MainLayout = () => {
   const { isSidebarOpen, closeMobileSidebar } = useSidebar();
 
   return (
-    <div className="h-screen bg-slate-950 text-slate-100 flex overflow-hidden">
+    <div className="h-screen bg-slate-950 text-slate-100 flex overflow-hidden relative">
+      {/* Animated Background */}
+      <AnimatedBackground />
+
       {/* Sidebar navigation */}
       <Sidebar />
 
@@ -25,7 +29,7 @@ export const MainLayout = () => {
         <Navbar />
 
         {/* Workspace Wrapper (scrollable outer area) */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden relative p-4 sm:p-5 md:p-6">
           {/* Workspace Container */}
           <WorkspaceContainer>
             <Outlet />
