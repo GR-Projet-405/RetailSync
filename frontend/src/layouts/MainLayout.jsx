@@ -9,7 +9,7 @@ export const MainLayout = () => {
   const { isSidebarOpen, closeMobileSidebar } = useSidebar();
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex overflow-hidden">
+    <div className="h-screen bg-slate-950 text-slate-100 flex overflow-hidden">
       {/* Sidebar navigation */}
       <Sidebar />
 

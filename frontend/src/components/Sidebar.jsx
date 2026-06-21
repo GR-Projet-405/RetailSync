@@ -19,9 +19,9 @@ export const Sidebar = () => {
   return (
     <aside 
       className={cn(
-        "fixed inset-y-0 left-0 z-30 w-[280px] bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300 ease-in-out glass-panel",
+        "fixed inset-y-0 left-0 z-30 w-[280px] h-screen bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300 ease-in-out glass-panel",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full",
-        "lg:static lg:translate-x-0",
+        "lg:static lg:translate-x-0 lg:h-screen",
         isSidebarCollapsed ? "lg:w-[80px]" : "lg:w-[280px]"
       )}
     >
