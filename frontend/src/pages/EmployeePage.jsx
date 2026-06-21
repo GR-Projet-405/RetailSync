@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function EmployeePage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Employee Management"
         description="Employee Management Module - Under Development"

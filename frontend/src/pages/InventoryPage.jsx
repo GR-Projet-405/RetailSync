@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function InventoryPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Inventory Management"
         description="Inventory Management Module - Under Development"

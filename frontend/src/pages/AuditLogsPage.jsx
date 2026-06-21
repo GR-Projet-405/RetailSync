@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function AuditLogsPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Audit Logs"
         description="Audit Logs Module - Under Development"

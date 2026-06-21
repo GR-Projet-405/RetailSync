@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function BusinessAnalyticsPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Business Analytics"
         description="Business Analytics Module - Under Development"

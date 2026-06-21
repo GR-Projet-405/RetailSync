@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function PromotionsDiscountsPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Promotions & Discounts"
         description="Promotions & Discounts Module - Under Development"

@@ -1,7 +1,7 @@
-import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { ArrowLeft, Monitor } from 'lucide-react';
 import BranchSelector from '../components/BranchSelector';
+import WorkspaceContainer from '../components/WorkspaceContainer';
 import { useAuth } from '../contexts/AuthContext';
 
 export const POSLayout = () => {
@@ -24,6 +24,10 @@ export const POSLayout = () => {
           </div>
         </div>
 
+        <div className="flex-1 flex justify-center max-w-xl mx-auto px-4">
+          {/* Optional centered element slot if needed */}
+        </div>
+
         <div className="flex items-center gap-6">
           <BranchSelector />
           <div className="h-6 w-px bg-slate-800" />
@@ -35,8 +39,10 @@ export const POSLayout = () => {
       </header>
 
       {/* POS Working Area */}
-      <main className="flex-1 overflow-hidden relative">
-        <Outlet />
+      <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
+        <WorkspaceContainer>
+          <Outlet />
+        </WorkspaceContainer>
       </main>
     </div>
   );

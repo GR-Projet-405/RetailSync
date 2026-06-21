@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function CustomerPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Customer Management"
         description="Customer Management Module - Under Development"

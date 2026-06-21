@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function StockTransferPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Stock Transfers"
         description="Stock Transfers Module - Under Development"

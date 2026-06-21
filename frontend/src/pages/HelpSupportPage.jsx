@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function HelpSupportPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Help & Support"
         description="Help & Support Module - Under Development"

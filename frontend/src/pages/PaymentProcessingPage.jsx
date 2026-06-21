@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function PaymentProcessingPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Payment Processing"
         description="Payment Processing Module - Under Development"

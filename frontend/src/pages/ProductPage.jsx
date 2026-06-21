@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function ProductPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Product Management"
         description="Product Management Module - Under Development"

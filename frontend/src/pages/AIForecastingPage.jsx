@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function AIForecastingPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="AI Forecasting"
         description="AI Forecasting Module - Under Development"

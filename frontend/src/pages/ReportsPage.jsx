@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function ReportsPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Reports"
         description="Reports Module - Under Development"

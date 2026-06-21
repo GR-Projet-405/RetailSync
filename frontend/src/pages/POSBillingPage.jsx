@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function POSBillingPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="POS Billing"
         description="POS Billing Module - Under Development"

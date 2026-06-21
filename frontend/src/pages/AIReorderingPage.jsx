@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function AIReorderingPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="AI Reordering"
         description="AI Reordering Module - Under Development"

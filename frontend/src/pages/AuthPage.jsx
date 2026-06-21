@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function AuthPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Authentication"
         description="Authentication Module - Under Development"

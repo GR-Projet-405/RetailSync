@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function UserRolePage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="User & Role Management"
         description="User & Role Management Module - Under Development"

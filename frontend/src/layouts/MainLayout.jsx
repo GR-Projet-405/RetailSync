@@ -1,9 +1,8 @@
-import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
+import WorkspaceContainer from '../components/WorkspaceContainer';
 import { useSidebar } from '../contexts/SidebarContext';
-import { cn } from '../utils/cn';
 
 export const MainLayout = () => {
   const { isSidebarOpen, closeMobileSidebar } = useSidebar();
@@ -25,9 +24,12 @@ export const MainLayout = () => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <Navbar />
 
-        {/* Dynamic page content scroll wrapper */}
-        <main className="flex-1 overflow-y-auto p-6 relative">
-          <Outlet />
+        {/* Workspace Wrapper (scrollable outer area) */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
+          {/* Workspace Container */}
+          <WorkspaceContainer>
+            <Outlet />
+          </WorkspaceContainer>
         </main>
       </div>
     </div>

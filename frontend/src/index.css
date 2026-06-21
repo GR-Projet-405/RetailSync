@@ -40,3 +40,26 @@
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
+
+/* Workspace Container Architecture */
+.workspace-container {
+  width: 100%;
+  max-width: 1600px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 16px; /* Mobile: responsive spacing */
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .workspace-container {
+    padding: 20px; /* Tablet: reduced padding */
+  }
+}
+
+@media (min-width: 1024px) {
+  .workspace-container {
+    padding: 24px; /* Desktop: centered, large breathing room */
+  }
+}
+

@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function CategoryPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Category Management"
         description="Category Management Module - Under Development"

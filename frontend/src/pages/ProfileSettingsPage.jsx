@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function ProfileSettingsPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Profile & Settings"
         description="Profile & Settings Module - Under Development"

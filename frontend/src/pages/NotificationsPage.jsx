@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function NotificationsPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Notifications & Activity"
         description="Notifications & Activity Module - Under Development"

@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function ReturnsRefundsPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Returns & Refunds"
         description="Returns & Refunds Module - Under Development"

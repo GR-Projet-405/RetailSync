@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function AIAssistantPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="AI Assistant"
         description="AI Assistant Module - Under Development"

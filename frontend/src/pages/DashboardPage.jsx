@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function DashboardPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Dashboard"
         description="Dashboard Module - Under Development"

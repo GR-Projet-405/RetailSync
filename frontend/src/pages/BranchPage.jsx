@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function BranchPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Branch Management"
         description="Branch Management Module - Under Development"

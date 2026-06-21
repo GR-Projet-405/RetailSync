@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function PurchaseOrderPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Purchase Orders"
         description="Purchase Orders Module - Under Development"

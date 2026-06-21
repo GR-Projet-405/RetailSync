@@ -1,9 +1,8 @@
-import React from 'react';
 import PageHeader from '../components/PageHeader';
 
 export default function SalesHistoryPage() {
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Sales History"
         description="Sales History Module - Under Development"
