@@ -6,7 +6,7 @@ import { ROLES, ROLE_LABELS } from '../config/roles';
 import BranchSelector from './BranchSelector';
 
 export const Navbar = () => {
-  const { user, updateRole, logout } = useAuth();
+  const { user, logout } = useAuth();
   const { toggleSidebar } = useSidebar();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [showNotificationBadge, setShowNotificationBadge] = useState(true);
@@ -30,22 +30,7 @@ export const Navbar = () => {
       {/* Right — role switcher, notifications, user menu */}
       <div className="flex items-center gap-3">
 
-        {/* Demo Role Switcher */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg">
-          <ShieldAlert className="w-3.5 h-3.5 text-white/80" />
-          <span className="text-[10px] font-bold text-white/60 uppercase tracking-wider">Demo Role:</span>
-          <select
-            value={user?.role}
-            onChange={(e) => updateRole(e.target.value)}
-            className="bg-transparent text-xs text-white font-semibold border-none focus:ring-0 outline-none cursor-pointer"
-          >
-            {Object.keys(ROLES).map((roleKey) => (
-              <option key={roleKey} value={roleKey} className="bg-blue-700 text-white">
-                {ROLE_LABELS[roleKey]}
-              </option>
-            ))}
-          </select>
-        </div>
+
 
         {/* Notifications */}
         <button
@@ -65,13 +50,13 @@ export const Navbar = () => {
             className="flex items-center gap-3 p-1.5 pl-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 transition-colors duration-150"
           >
             <div className="text-right hidden sm:block">
-              <div className="text-xs font-semibold text-white">{user?.name}</div>
+              <div className="text-xs font-semibold text-white">{user?.firstName} {user?.lastName}</div>
               <div className="text-[10px] text-white/70 font-medium uppercase tracking-wider leading-none mt-0.5">
-                {ROLE_LABELS[user?.role]}
+                {ROLE_LABELS[user?.roleId?.name] || user?.roleId?.name}
               </div>
             </div>
             <div className="w-8 h-8 rounded-lg bg-white text-blue-600 flex items-center justify-center font-bold text-xs uppercase">
-              {user?.name?.substring(0, 2)}
+              {user?.firstName?.substring(0, 1)}{user?.lastName?.substring(0, 1)}
             </div>
           </button>
 
@@ -80,24 +65,11 @@ export const Navbar = () => {
               <div className="fixed inset-0 z-10" onClick={() => setIsProfileOpen(false)} />
               <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 overflow-hidden fade-in">
                 <div className="px-4 py-3 border-b border-slate-100">
-                  <div className="text-sm font-semibold text-slate-900">{user?.name}</div>
+                  <div className="text-sm font-semibold text-slate-900">{user?.firstName} {user?.lastName}</div>
                   <div className="text-xs text-slate-500 truncate mt-0.5">{user?.email}</div>
-                </div>
-
-                {/* Mobile-only role selector */}
-                <div className="md:hidden px-4 py-2 border-b border-slate-100">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Switch Role</div>
-                  <select
-                    value={user?.role}
-                    onChange={(e) => updateRole(e.target.value)}
-                    className="w-full bg-slate-50 text-xs text-blue-600 font-semibold border border-slate-200 rounded px-2 py-1 outline-none"
-                  >
-                    {Object.keys(ROLES).map((roleKey) => (
-                      <option key={roleKey} value={roleKey}>
-                        {ROLE_LABELS[roleKey]}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="text-[10px] text-blue-600 font-semibold uppercase mt-1 px-2 py-0.5 bg-blue-50 rounded inline-block">
+                    {user?.branchId?.name || 'No Branch'}
+                  </div>
                 </div>
 
                 <button

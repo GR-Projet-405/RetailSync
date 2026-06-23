@@ -1,17 +1,47 @@
 const asyncHandler = require('../../utils/asyncHandler');
-const service = require('./service');
+const authService = require('./auth.service');
 
-// GET Boilerplate handler
-const getDetails = asyncHandler(async (req, res) => {
-  const data = await service.fetchDetails();
+const login = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({
+      success: false,
+      message: 'Please provide an email and password',
+    });
+  }
+
+  const { user, token } = await authService.login(email, password);
+
   res.status(200).json({
     success: true,
-    message: 'Authentication module active. Under development.',
-    timestamp: new Date().toISOString(),
-    data
+    message: 'Login successful',
+    data: { user, token },
+  });
+});
+
+const getMe = asyncHandler(async (req, res) => {
+  const user = await authService.getMe(req.user._id);
+
+  res.status(200).json({
+    success: true,
+    message: 'User data retrieved successfully',
+    data: user,
+  });
+});
+
+const logout = asyncHandler(async (req, res) => {
+  // Since we use JWT in local storage, logout is mostly a frontend action.
+  // We just return a success response.
+  res.status(200).json({
+    success: true,
+    message: 'Logged out successfully',
+    data: {},
   });
 });
 
 module.exports = {
-  getDetails
+  login,
+  getMe,
+  logout,
 };

@@ -7,7 +7,7 @@ import { useSidebar } from '../contexts/SidebarContext';
 import { cn } from '../utils/cn';
 
 export const Sidebar = () => {
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
   const { isSidebarCollapsed, isSidebarOpen, toggleSidebar } = useSidebar();
 
   // Helper to render Lucide Icons by name dynamically
@@ -57,7 +57,7 @@ export const Sidebar = () => {
         {NAVIGATION_GROUPS.map((group, index) => {
           // Filter items based on roles
           const visibleItems = group.items.filter(item => 
-            !user || item.allowedRoles.includes(user.role)
+            !user || (item.allowedRoles && hasRole(...item.allowedRoles))
           );
 
           if (visibleItems.length === 0) return null;

@@ -23,6 +23,11 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', service: 'RetailSync API Server' });
 });
 
+// Pre-load core models to avoid MissingSchemaError during population
+require('./modules/branch-management/branch.model');
+require('./modules/role-management/role.model');
+require('./modules/user-management/user.model');
+
 // Dynamically register routes for all 28 modular folders
 const modulesPath = path.join(__dirname, 'modules');
 if (fs.existsSync(modulesPath)) {

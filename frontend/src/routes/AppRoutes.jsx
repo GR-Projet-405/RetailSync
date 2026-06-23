@@ -12,6 +12,7 @@ import POSLayout from '../layouts/POSLayout';
 // Page Imports
 import DashboardPage from '../pages/DashboardPage';
 import AuthPage from '../pages/AuthPage';
+import LoginPage from '../features/auth/LoginPage';
 import NotificationsPage from '../pages/NotificationsPage';
 import ProfileSettingsPage from '../pages/ProfileSettingsPage';
 import BranchPage from '../pages/BranchPage';
@@ -39,51 +40,7 @@ import AIAssistantPage from '../pages/AIAssistantPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
 
-// Simple Mock Login
-const LoginMock = () => {
-  const { login } = useAuth();
-  const [email, setEmail] = React.useState('admin@retailsync.com');
-  const [role, setRole] = React.useState(ROLES.SUPER_ADMIN);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    login(email, role);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-1">
-        <label className="text-xs font-semibold text-slate-400">Email Address</label>
-        <input 
-          type="email" 
-          value={email} 
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:border-indigo-500" 
-        />
-      </div>
-      <div className="space-y-1">
-        <label className="text-xs font-semibold text-slate-400">Default Role Access</label>
-        <select 
-          value={role} 
-          onChange={(e) => setRole(e.target.value)}
-          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-300 outline-none focus:border-indigo-500 cursor-pointer"
-        >
-          {Object.keys(ROLES).map((roleKey) => (
-            <option key={roleKey} value={ROLES[roleKey]}>
-              {roleKey}
-            </option>
-          ))}
-        </select>
-      </div>
-      <button 
-        type="submit" 
-        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm py-2 rounded-lg transition-colors mt-2"
-      >
-        Sign In to POS
-      </button>
-    </form>
-  );
-};
 
 // Convenience arrays
 const ALL_ROLES = Object.values(ROLES);
@@ -97,9 +54,7 @@ export const AppRoutes = () => {
   return (
     <Routes>
       {/* Auth Routes */}
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={<LoginMock />} />
-      </Route>
+      <Route path="/login" element={<LoginPage />} />
 
       {/* POS Billing Route - Full-screen layout */}
       <Route element={

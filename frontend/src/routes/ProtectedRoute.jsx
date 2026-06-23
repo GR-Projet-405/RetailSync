@@ -5,15 +5,23 @@ import { ShieldAlert } from 'lucide-react';
 import Card, { CardContent } from '../components/Card';
 
 export const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { user } = useAuth();
+  const { user, hasRole, loading } = useAuth();
   const location = useLocation();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   if (!user) {
     // Redirect to login page
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  if (allowedRoles && !hasRole(...allowedRoles)) {
     // Render Access Denied
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -24,10 +32,10 @@ export const ProtectedRoute = ({ children, allowedRoles }) => {
             </div>
             <h2 className="text-lg font-bold text-slate-100">Access Denied</h2>
             <p className="text-sm text-slate-400">
-              Your current role (<span className="text-red-400 font-semibold">{user.role}</span>) does not have permission to access <code className="text-xs bg-slate-900 px-1.5 py-0.5 rounded text-slate-300">{location.pathname}</code>.
+              Your current role (<span className="text-red-400 font-semibold">{user.roleId?.name}</span>) does not have permission to access <code className="text-xs bg-slate-900 px-1.5 py-0.5 rounded text-slate-300">{location.pathname}</code>.
             </p>
             <p className="text-xs text-slate-500">
-              Use the demo role dropdown selector in the Navbar to switch roles.
+              Please contact your administrator if you believe this is an error.
             </p>
           </CardContent>
         </Card>

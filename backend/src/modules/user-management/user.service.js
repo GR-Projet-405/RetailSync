@@ -1,7 +1,7 @@
 const User = require('./user.model');
 
 // ─── Helpers ──────────────────────────────────────────────
-const buildQuery = ({ search, role, status, branch }) => {
+const buildQuery = ({ search, roleId, status, branchId }) => {
   const query = {};
 
   if (search) {
@@ -14,9 +14,9 @@ const buildQuery = ({ search, role, status, branch }) => {
     ];
   }
 
-  if (role) query.role = role;
-  if (status) query.status = status;
-  if (branch && branch !== 'all') query.branch = branch;
+  if (roleId && roleId !== 'all') query.roleId = roleId;
+  if (status && status !== 'all') query.status = status;
+  if (branchId && branchId !== 'all') query.branchId = branchId;
 
   return query;
 };
@@ -26,13 +26,14 @@ const buildQuery = ({ search, role, status, branch }) => {
 /**
  * Get paginated list of users with optional filters
  */
-const getUsers = async ({ search, role, status, branch, page = 1, limit = 10 }) => {
-  const query = buildQuery({ search, role, status, branch });
+const getUsers = async ({ search, roleId, status, branchId, page = 1, limit = 10 }) => {
+  const query = buildQuery({ search, roleId, status, branchId });
   const skip = (page - 1) * limit;
 
   const [users, total] = await Promise.all([
     User.find(query)
-      .populate('branch', 'name code city')
+      .populate('roleId', 'name description isSystemRole')
+      .populate('branchId', 'name code location')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -55,7 +56,10 @@ const getUsers = async ({ search, role, status, branch, page = 1, limit = 10 }) 
  * Get single user by ID
  */
 const getUserById = async (id) => {
-  const user = await User.findById(id).populate('branch', 'name code city').lean();
+  const user = await User.findById(id)
+    .populate('roleId', 'name description permissions isSystemRole')
+    .populate('branchId', 'name code location contactPhone contactEmail')
+    .lean();
   if (!user) {
     const err = new Error('User not found');
     err.statusCode = 404;
@@ -83,7 +87,10 @@ const createUser = async (userData) => {
   const user = new User(userData);
   await user.save();
 
-  return await User.findById(user._id).populate('branch', 'name code city').lean();
+  return await User.findById(user._id)
+    .populate('roleId', 'name description')
+    .populate('branchId', 'name code location')
+    .lean();
 };
 
 /**
@@ -113,7 +120,8 @@ const updateUser = async (id, updateData) => {
     id,
     { $set: updateData },
     { new: true, runValidators: true }
-  ).populate('branch', 'name code city');
+  ).populate('roleId', 'name description')
+   .populate('branchId', 'name code location');
 
   if (!user) {
     const err = new Error('User not found');
@@ -145,7 +153,8 @@ const updateUserStatus = async (id, status) => {
     id,
     { $set: { status } },
     { new: true, runValidators: true }
-  ).populate('branch', 'name code city');
+  ).populate('roleId', 'name description')
+   .populate('branchId', 'name code location');
 
   if (!user) {
     const err = new Error('User not found');
@@ -176,12 +185,13 @@ const resetPassword = async (id, newPassword) => {
 /**
  * Update user role
  */
-const updateUserRole = async (id, role) => {
+const updateUserRole = async (id, roleId) => {
   const user = await User.findByIdAndUpdate(
     id,
-    { $set: { role } },
+    { $set: { roleId } },
     { new: true, runValidators: true }
-  ).populate('branch', 'name code city');
+  ).populate('roleId', 'name description')
+   .populate('branchId', 'name code location');
 
   if (!user) {
     const err = new Error('User not found');
@@ -204,12 +214,22 @@ const getUserStats = async () => {
         active: { $sum: { $cond: [{ $eq: ['$status', 'ACTIVE'] }, 1, 0] } },
         inactive: { $sum: { $cond: [{ $eq: ['$status', 'INACTIVE'] }, 1, 0] } },
         suspended: { $sum: { $cond: [{ $eq: ['$status', 'SUSPENDED'] }, 1, 0] } },
+        pending: { $sum: { $cond: [{ $eq: ['$status', 'PENDING'] }, 1, 0] } },
       },
     },
   ]);
 
   const byRole = await User.aggregate([
-    { $group: { _id: '$role', count: { $sum: 1 } } },
+    {
+      $lookup: {
+        from: 'roles', // Name of the roles collection
+        localField: 'roleId',
+        foreignField: '_id',
+        as: 'roleData'
+      }
+    },
+    { $unwind: '$roleData' },
+    { $group: { _id: '$roleData.name', count: { $sum: 1 } } },
     { $sort: { count: -1 } },
   ]);
 

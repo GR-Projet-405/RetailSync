@@ -3,13 +3,13 @@ const service = require('./user.service');
 
 // ─── GET /api/users ────────────────────────────────────────
 const getUsers = asyncHandler(async (req, res) => {
-  const { search, role, status, branch, page = 1, limit = 10 } = req.query;
+  const { search, roleId, status, branchId, page = 1, limit = 10 } = req.query;
 
   const result = await service.getUsers({
     search,
-    role,
+    roleId,
     status,
-    branch,
+    branchId,
     page: Number(page),
     limit: Number(limit),
   });
@@ -102,12 +102,12 @@ const resetPassword = asyncHandler(async (req, res) => {
 
 // ─── PATCH /api/users/:id/role ─────────────────────────────
 const updateUserRole = asyncHandler(async (req, res) => {
-  const { role } = req.body;
-  const user = await service.updateUserRole(req.params.id, role);
+  const { roleId } = req.body;
+  const user = await service.updateUserRole(req.params.id, roleId);
 
   res.status(200).json({
     success: true,
-    message: `User role updated to ${role}`,
+    message: `User role updated successfully`,
     data: user,
   });
 });

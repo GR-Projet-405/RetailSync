@@ -13,7 +13,7 @@ const api = axios.create({
 // ─── Request interceptor (attach auth token if present) ───
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('rs_token');
+    const token = localStorage.getItem('retailsync_token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },

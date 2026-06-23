@@ -1,15 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-
-const ROLES = [
-  'SUPER_ADMIN',
-  'ADMIN',
-  'BRANCH_MANAGER',
-  'INVENTORY_MANAGER',
-  'CASHIER',
-  'EMPLOYEE',
-  'AUDITOR',
-];
+require('../branch-management/branch.model');
+require('../role-management/role.model');
 
 const userSchema = new mongoose.Schema(
   {
@@ -64,20 +56,19 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    role: {
-      type: String,
-      enum: ROLES,
+    roleId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Role',
       required: [true, 'Role is required'],
-      default: 'EMPLOYEE',
     },
-    branch: {
+    branchId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Branch',
       default: null,
     },
     status: {
       type: String,
-      enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED'],
+      enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING'],
       default: 'ACTIVE',
     },
     lastLogin: {
@@ -128,9 +119,9 @@ userSchema.virtual('fullName').get(function () {
 });
 
 // Indexes for performance
-userSchema.index({ role: 1 });
+userSchema.index({ roleId: 1 });
 userSchema.index({ status: 1 });
-userSchema.index({ branch: 1 });
+userSchema.index({ branchId: 1 });
 userSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('User', userSchema);

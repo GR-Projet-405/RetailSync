@@ -1,16 +1,6 @@
 const Joi = require('joi');
 
-const ROLES = [
-  'SUPER_ADMIN',
-  'ADMIN',
-  'BRANCH_MANAGER',
-  'INVENTORY_MANAGER',
-  'CASHIER',
-  'EMPLOYEE',
-  'AUDITOR',
-];
-
-const STATUS = ['ACTIVE', 'INACTIVE', 'SUSPENDED'];
+const STATUS = ['ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING'];
 
 // ─── Create User Validation ───────────────────────────────
 const createUserSchema = Joi.object({
@@ -46,14 +36,12 @@ const createUserSchema = Joi.object({
   }),
   phoneNumber: Joi.string().trim().allow('', null).optional(),
   profileImage: Joi.string().uri().allow('', null).optional(),
-  role: Joi.string()
-    .valid(...ROLES)
-    .required()
-    .messages({
-      'any.only': `Role must be one of: ${ROLES.join(', ')}`,
-      'any.required': 'Role is required',
-    }),
-  branch: Joi.string().hex().length(24).allow(null, '').optional(),
+  roleId: Joi.string().hex().length(24).required().messages({
+    'any.required': 'Role ID is required',
+    'string.length': 'Invalid Role ID format',
+    'string.hex': 'Invalid Role ID format',
+  }),
+  branchId: Joi.string().hex().length(24).allow(null, '').optional(),
   status: Joi.string()
     .valid(...STATUS)
     .default('ACTIVE')
@@ -78,10 +66,8 @@ const updateUserSchema = Joi.object({
   email: Joi.string().trim().email({ tlds: { allow: false } }).optional(),
   phoneNumber: Joi.string().trim().allow('', null).optional(),
   profileImage: Joi.string().uri().allow('', null).optional(),
-  role: Joi.string()
-    .valid(...ROLES)
-    .optional(),
-  branch: Joi.string().hex().length(24).allow(null, '').optional(),
+  roleId: Joi.string().hex().length(24).optional(),
+  branchId: Joi.string().hex().length(24).allow(null, '').optional(),
   status: Joi.string()
     .valid(...STATUS)
     .optional(),
@@ -117,13 +103,11 @@ const resetPasswordSchema = Joi.object({
 
 // ─── Role Assignment Validation ───────────────────────────
 const updateRoleSchema = Joi.object({
-  role: Joi.string()
-    .valid(...ROLES)
-    .required()
-    .messages({
-      'any.only': `Role must be one of: ${ROLES.join(', ')}`,
-      'any.required': 'Role is required',
-    }),
+  roleId: Joi.string().hex().length(24).required().messages({
+    'any.required': 'Role ID is required',
+    'string.length': 'Invalid Role ID format',
+    'string.hex': 'Invalid Role ID format',
+  }),
 });
 
 // ─── Validation Middleware Factory ────────────────────────
