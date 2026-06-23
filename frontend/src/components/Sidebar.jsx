@@ -28,19 +28,15 @@ export const Sidebar = () => {
       {/* Sidebar Header */}
       <div className="h-16 border-b border-white/5 flex items-center justify-between px-5 shrink-0">
         <div className="flex items-center gap-3 overflow-hidden">
-          {/* Logo mark */}
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-[11px] tracking-widest text-white shadow-md shadow-blue-600/30 shrink-0 select-none">
-            RS
-          </div>
-          {/* Brand text */}
-          <div
-            className={cn(
-              "transition-all duration-300 flex flex-col gap-0.5",
-              isSidebarCollapsed ? "lg:opacity-0 lg:w-0 overflow-hidden" : "opacity-100 lg:w-auto"
-            )}
-          >
-            <h1 className="text-[18px] font-[700] text-white tracking-[-0.01em] leading-none">RetailSync</h1>
-            <span className="text-[11px] font-[500] text-[#94A3B8] tracking-[0.08em] uppercase leading-none">Enterprise POS</span>
+          <div className="flex items-center h-8 shrink-0 overflow-hidden relative">
+            <img 
+              src="/logo.png" 
+              alt="RetailSync Logo" 
+              className={cn(
+                "h-8 transition-all duration-300 select-none",
+                isSidebarCollapsed ? "w-8 object-cover object-left" : "w-[180px] object-contain object-left"
+              )} 
+            />
           </div>
         </div>
         <button

@@ -23,7 +23,7 @@ export const NAVIGATION_GROUPS = [
         name: 'Audit Logs',
         path: '/audit-logs',
         icon: 'FileCode2',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]
       },
       {
         id: 'help-support',
@@ -56,7 +56,7 @@ export const NAVIGATION_GROUPS = [
         name: 'Employee Management',
         path: '/employees',
         icon: 'Contact',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]
       },
       {
         id: 'profile-settings',
@@ -82,7 +82,7 @@ export const NAVIGATION_GROUPS = [
         name: 'Warehouse Management',
         path: '/warehouses',
         icon: 'Home',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.INVENTORY_STAFF]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]
       }
     ]
   },
@@ -94,49 +94,49 @@ export const NAVIGATION_GROUPS = [
         name: 'Product Management',
         path: '/products',
         icon: 'ShoppingBag',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.INVENTORY_STAFF]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]
       },
       {
         id: 'category-management',
         name: 'Category Management',
         path: '/categories',
         icon: 'Layers',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.INVENTORY_STAFF]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]
       },
       {
         id: 'inventory-management',
         name: 'Inventory Management',
         path: '/inventory',
         icon: 'PackageSearch',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.INVENTORY_STAFF]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]
       },
       {
         id: 'supplier-management',
         name: 'Supplier Management',
         path: '/suppliers',
         icon: 'Truck',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.INVENTORY_STAFF]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]
       },
       {
         id: 'purchase-orders',
         name: 'Purchase Orders',
         path: '/purchase-orders',
         icon: 'FileText',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.INVENTORY_STAFF]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]
       },
       {
         id: 'goods-receiving',
         name: 'Goods Receiving',
         path: '/goods-receiving',
         icon: 'PackageCheck',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.INVENTORY_STAFF]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]
       },
       {
         id: 'stock-transfers',
         name: 'Stock Transfers',
         path: '/stock-transfers',
         icon: 'MoveHorizontal',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.INVENTORY_STAFF]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]
       }
     ]
   },
@@ -148,42 +148,42 @@ export const NAVIGATION_GROUPS = [
         name: 'POS Billing',
         path: '/pos-billing',
         icon: 'Calculator',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.CASHIER]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
       },
       {
         id: 'payment-processing',
         name: 'Payment Processing',
         path: '/payment-processing',
         icon: 'CreditCard',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.CASHIER]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
       },
       {
         id: 'sales-history',
         name: 'Sales History',
         path: '/sales-history',
         icon: 'History',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.CASHIER]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
       },
       {
         id: 'returns-refunds',
         name: 'Returns & Refunds',
         path: '/returns-refunds',
         icon: 'RotateCcw',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.CASHIER]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
       },
       {
         id: 'promotions-discounts',
         name: 'Promotions & Discounts',
         path: '/promotions-discounts',
         icon: 'Percent',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.CASHIER]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
       },
       {
         id: 'customer-management',
         name: 'Customer Management',
         path: '/customers',
         icon: 'Users',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.CASHIER]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
       }
     ]
   },
@@ -195,7 +195,7 @@ export const NAVIGATION_GROUPS = [
         name: 'Reports',
         path: '/reports',
         icon: 'FileBarChart2',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.AUDITOR]
       },
       {
         id: 'business-analytics',
@@ -209,14 +209,14 @@ export const NAVIGATION_GROUPS = [
         name: 'AI Forecasting',
         path: '/ai-forecasting',
         icon: 'LineChart',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]
       },
       {
         id: 'ai-reordering',
         name: 'AI Reordering',
         path: '/ai-reordering',
         icon: 'Brain',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]
       },
       {
         id: 'ai-assistant',

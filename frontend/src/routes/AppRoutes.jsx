@@ -69,7 +69,7 @@ const LoginMock = () => {
           className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-300 outline-none focus:border-indigo-500 cursor-pointer"
         >
           {Object.keys(ROLES).map((roleKey) => (
-            <option key={roleKey} value={roleKey}>
+            <option key={roleKey} value={ROLES[roleKey]}>
               {roleKey}
             </option>
           ))}
@@ -85,6 +85,14 @@ const LoginMock = () => {
   );
 };
 
+// Convenience arrays
+const ALL_ROLES = Object.values(ROLES);
+const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN];
+const MANAGEMENT_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER];
+const INVENTORY_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER];
+const SALES_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER];
+const POS_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER];
+
 export const AppRoutes = () => {
   return (
     <Routes>
@@ -95,7 +103,7 @@ export const AppRoutes = () => {
 
       {/* POS Billing Route - Full-screen layout */}
       <Route element={
-        <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.CASHIER]}>
+        <ProtectedRoute allowedRoles={POS_ROLES}>
           <POSLayout />
         </ProtectedRoute>
       }>
@@ -109,189 +117,189 @@ export const AppRoutes = () => {
 
         {/* Dashboard */}
         <Route path="/dashboard" element={
-          <ProtectedRoute allowedRoles={Object.values(ROLES)}>
+          <ProtectedRoute allowedRoles={ALL_ROLES}>
             <DashboardPage />
           </ProtectedRoute>
         } />
 
         {/* Notifications */}
         <Route path="/notifications" element={
-          <ProtectedRoute allowedRoles={Object.values(ROLES)}>
+          <ProtectedRoute allowedRoles={ALL_ROLES}>
             <NotificationsPage />
           </ProtectedRoute>
         } />
 
         {/* Help & Support */}
         <Route path="/help-support" element={
-          <ProtectedRoute allowedRoles={Object.values(ROLES)}>
+          <ProtectedRoute allowedRoles={ALL_ROLES}>
             <HelpSupportPage />
           </ProtectedRoute>
         } />
 
         {/* Profile & Settings */}
         <Route path="/profile-settings" element={
-          <ProtectedRoute allowedRoles={Object.values(ROLES)}>
+          <ProtectedRoute allowedRoles={ALL_ROLES}>
             <ProfileSettingsPage />
           </ProtectedRoute>
         } />
 
         {/* Authentication Info page */}
         <Route path="/auth-info" element={
-          <ProtectedRoute allowedRoles={Object.values(ROLES)}>
+          <ProtectedRoute allowedRoles={ALL_ROLES}>
             <AuthPage />
           </ProtectedRoute>
         } />
 
         {/* Audit Logs */}
         <Route path="/audit-logs" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN]}>
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
             <AuditLogsPage />
           </ProtectedRoute>
         } />
 
         {/* User & Role Management */}
         <Route path="/users-roles" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN]}>
+          <ProtectedRoute allowedRoles={ADMIN_ROLES}>
             <UserRolePage />
           </ProtectedRoute>
         } />
 
         {/* Employee Management */}
         <Route path="/employees" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER]}>
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
             <EmployeePage />
           </ProtectedRoute>
         } />
 
         {/* Branch Management */}
         <Route path="/branches" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN]}>
+          <ProtectedRoute allowedRoles={ADMIN_ROLES}>
             <BranchPage />
           </ProtectedRoute>
         } />
 
         {/* Warehouse Management */}
         <Route path="/warehouses" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.INVENTORY_STAFF]}>
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
             <WarehousePage />
           </ProtectedRoute>
         } />
 
         {/* Product Management */}
         <Route path="/products" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.INVENTORY_STAFF]}>
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
             <ProductPage />
           </ProtectedRoute>
         } />
 
         {/* Category Management */}
         <Route path="/categories" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.INVENTORY_STAFF]}>
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
             <CategoryPage />
           </ProtectedRoute>
         } />
 
         {/* Inventory Management */}
         <Route path="/inventory" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.INVENTORY_STAFF]}>
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
             <InventoryPage />
           </ProtectedRoute>
         } />
 
         {/* Supplier Management */}
         <Route path="/suppliers" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.INVENTORY_STAFF]}>
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
             <SupplierPage />
           </ProtectedRoute>
         } />
 
         {/* Purchase Orders */}
         <Route path="/purchase-orders" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.INVENTORY_STAFF]}>
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
             <PurchaseOrderPage />
           </ProtectedRoute>
         } />
 
         {/* Goods Receiving */}
         <Route path="/goods-receiving" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.INVENTORY_STAFF]}>
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
             <GoodsReceivingPage />
           </ProtectedRoute>
         } />
 
         {/* Stock Transfers */}
         <Route path="/stock-transfers" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.INVENTORY_STAFF]}>
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
             <StockTransferPage />
           </ProtectedRoute>
         } />
 
         {/* Payment Processing */}
         <Route path="/payment-processing" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.CASHIER]}>
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
             <PaymentProcessingPage />
           </ProtectedRoute>
         } />
 
         {/* Sales History */}
         <Route path="/sales-history" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.CASHIER]}>
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
             <SalesHistoryPage />
           </ProtectedRoute>
         } />
 
         {/* Returns & Refunds */}
         <Route path="/returns-refunds" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.CASHIER]}>
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
             <ReturnsRefundsPage />
           </ProtectedRoute>
         } />
 
         {/* Promotions & Discounts */}
         <Route path="/promotions-discounts" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.CASHIER]}>
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
             <PromotionsDiscountsPage />
           </ProtectedRoute>
         } />
 
         {/* Customer Management */}
         <Route path="/customers" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.CASHIER]}>
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
             <CustomerPage />
           </ProtectedRoute>
         } />
 
         {/* Reports */}
         <Route path="/reports" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER]}>
+          <ProtectedRoute allowedRoles={[...MANAGEMENT_ROLES, ROLES.AUDITOR]}>
             <ReportsPage />
           </ProtectedRoute>
         } />
 
         {/* Business Analytics */}
         <Route path="/business-analytics" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN]}>
+          <ProtectedRoute allowedRoles={ADMIN_ROLES}>
             <BusinessAnalyticsPage />
           </ProtectedRoute>
         } />
 
         {/* AI Forecasting */}
         <Route path="/ai-forecasting" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER]}>
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
             <AIForecastingPage />
           </ProtectedRoute>
         } />
 
         {/* AI Reordering */}
         <Route path="/ai-reordering" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER]}>
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
             <AIReorderingPage />
           </ProtectedRoute>
         } />
 
         {/* AI Assistant */}
         <Route path="/ai-assistant" element={
-          <ProtectedRoute allowedRoles={Object.values(ROLES)}>
+          <ProtectedRoute allowedRoles={ALL_ROLES}>
             <AIAssistantPage />
           </ProtectedRoute>
         } />

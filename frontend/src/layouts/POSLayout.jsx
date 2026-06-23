@@ -18,9 +18,8 @@ export const POSLayout = () => {
           >
             <ArrowLeft className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
           </Link>
-          <div className="flex items-center gap-2">
-            <Monitor className="w-5 h-5 text-indigo-400" />
-            <span className="font-semibold text-lg text-slate-200 tracking-tight">RetailSync POS Terminal</span>
+          <div className="flex items-center gap-2 h-8">
+            <img src="/logo.png" alt="RetailSync Logo" className="h-full object-contain" />
           </div>
         </div>
 

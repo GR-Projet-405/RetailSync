@@ -1,0 +1,404 @@
+import { useState, useEffect } from 'react';
+import { User, Mail, Lock, Phone, Shield, Building2, ImageIcon, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { cn } from '../../utils/cn';
+import Button from '../../components/Button';
+import { ROLE_LABELS, ALL_ROLES } from '../../config/roles';
+
+// ─── Mock branch list (replace with real branch query in production) ──
+const MOCK_BRANCHES = [
+  { _id: 'b1', name: 'Main Branch', code: 'MAIN' },
+  { _id: 'b2', name: 'North Branch', code: 'NORTH' },
+  { _id: 'b3', name: 'South Branch', code: 'SOUTH' },
+  { _id: 'b4', name: 'East Branch', code: 'EAST' },
+  { _id: 'b5', name: 'West Branch', code: 'WEST' },
+];
+
+const STATUSES = [
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'INACTIVE', label: 'Inactive' },
+  { value: 'SUSPENDED', label: 'Suspended' },
+];
+
+// ─── Field Component ──────────────────────────────────────
+const Field = ({ label, required, error, children }) => (
+  <div className="space-y-1.5">
+    <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider">
+      {label} {required && <span className="text-red-500 ml-0.5">*</span>}
+    </label>
+    {children}
+    {error && (
+      <p className="flex items-center gap-1 text-xs text-red-600 font-medium">
+        <AlertCircle size={11} /> {error}
+      </p>
+    )}
+  </div>
+);
+
+// ─── Input Component ──────────────────────────────────────
+const Input = ({ icon: Icon, error, className, ...props }) => (
+  <div className="relative">
+    {Icon && (
+      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+        <Icon size={14} className="text-slate-400" />
+      </div>
+    )}
+    <input
+      className={cn(
+        'w-full text-sm rounded-lg border bg-white px-3 py-2.5 text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-150',
+        Icon && 'pl-9',
+        error
+          ? 'border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100'
+          : 'border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100',
+        className
+      )}
+      {...props}
+    />
+  </div>
+);
+
+// ─── Select Component ─────────────────────────────────────
+const Select = ({ icon: Icon, error, children, className, ...props }) => (
+  <div className="relative">
+    {Icon && (
+      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none z-10">
+        <Icon size={14} className="text-slate-400" />
+      </div>
+    )}
+    <select
+      className={cn(
+        'w-full text-sm rounded-lg border bg-white px-3 py-2.5 text-slate-900 outline-none transition-all duration-150 appearance-none cursor-pointer',
+        Icon && 'pl-9',
+        error
+          ? 'border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100'
+          : 'border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100',
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </select>
+    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+      <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      </svg>
+    </div>
+  </div>
+);
+
+// ─── Validation ───────────────────────────────────────────
+const validate = (form, isEdit = false) => {
+  const errors = {};
+
+  if (!form.firstName?.trim()) errors.firstName = 'First name is required';
+  if (!form.lastName?.trim()) errors.lastName = 'Last name is required';
+
+  if (!form.username?.trim()) {
+    errors.username = 'Username is required';
+  } else if (!/^[a-z0-9_]+$/.test(form.username)) {
+    errors.username = 'Only lowercase letters, numbers, and underscores allowed';
+  } else if (form.username.length < 3) {
+    errors.username = 'Must be at least 3 characters';
+  }
+
+  if (!form.email?.trim()) {
+    errors.email = 'Email is required';
+  } else if (!/^\S+@\S+\.\S+$/.test(form.email)) {
+    errors.email = 'Invalid email address';
+  }
+
+  if (!isEdit) {
+    if (!form.password) {
+      errors.password = 'Password is required';
+    } else if (form.password.length < 8) {
+      errors.password = 'Password must be at least 8 characters';
+    }
+  }
+
+  if (!form.role) errors.role = 'Role is required';
+
+  return errors;
+};
+
+// ─── UserForm ─────────────────────────────────────────────
+export default function UserForm({ initialData = null, onSubmit, onCancel, isLoading = false }) {
+  const isEdit = Boolean(initialData);
+
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    username: '',
+    email: '',
+    password: '',
+    phoneNumber: '',
+    profileImage: '',
+    role: 'EMPLOYEE',
+    branch: '',
+    status: 'ACTIVE',
+    ...initialData,
+  });
+
+  const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [touched, setTouched] = useState({});
+
+  // Sync on initialData change
+  useEffect(() => {
+    if (initialData) {
+      setForm({
+        firstName: '',
+        lastName: '',
+        username: '',
+        email: '',
+        password: '',
+        phoneNumber: '',
+        profileImage: '',
+        role: 'EMPLOYEE',
+        branch: '',
+        status: 'ACTIVE',
+        ...initialData,
+        branch: initialData.branch?._id || initialData.branch || '',
+      });
+    }
+  }, [initialData]);
+
+  const set = (field) => (e) => {
+    const value = e.target.value;
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const validationErrors = validate(form, isEdit);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      // Mark all fields as touched
+      const allTouched = Object.keys(form).reduce((acc, k) => ({ ...acc, [k]: true }), {});
+      setTouched(allTouched);
+      return;
+    }
+
+    // Build payload — strip password if empty in edit mode
+    const payload = { ...form };
+    if (isEdit && !payload.password) delete payload.password;
+    if (!payload.branch) payload.branch = null;
+    if (!payload.phoneNumber) payload.phoneNumber = null;
+    if (!payload.profileImage) payload.profileImage = null;
+
+    onSubmit(payload);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* ─── Section: Personal Info ─── */}
+      <div>
+        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+          <User size={11} /> Personal Information
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="First Name" required error={touched.firstName && errors.firstName}>
+            <Input
+              icon={User}
+              type="text"
+              placeholder="John"
+              value={form.firstName}
+              onChange={set('firstName')}
+              onBlur={() => setTouched((p) => ({ ...p, firstName: true }))}
+              error={touched.firstName && errors.firstName}
+              autoComplete="given-name"
+            />
+          </Field>
+          <Field label="Last Name" required error={touched.lastName && errors.lastName}>
+            <Input
+              icon={User}
+              type="text"
+              placeholder="Doe"
+              value={form.lastName}
+              onChange={set('lastName')}
+              onBlur={() => setTouched((p) => ({ ...p, lastName: true }))}
+              error={touched.lastName && errors.lastName}
+              autoComplete="family-name"
+            />
+          </Field>
+        </div>
+      </div>
+
+      {/* ─── Section: Account ─── */}
+      <div>
+        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+          <Mail size={11} /> Account Credentials
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Username" required error={touched.username && errors.username}>
+            <Input
+              icon={User}
+              type="text"
+              placeholder="john_doe"
+              value={form.username}
+              onChange={(e) => {
+                setForm((p) => ({ ...p, username: e.target.value.toLowerCase() }));
+                setTouched((p) => ({ ...p, username: true }));
+                if (errors.username) setErrors((p) => ({ ...p, username: undefined }));
+              }}
+              onBlur={() => setTouched((p) => ({ ...p, username: true }))}
+              error={touched.username && errors.username}
+              autoComplete="username"
+            />
+          </Field>
+          <Field label="Email Address" required error={touched.email && errors.email}>
+            <Input
+              icon={Mail}
+              type="email"
+              placeholder="john@retailsync.com"
+              value={form.email}
+              onChange={set('email')}
+              onBlur={() => setTouched((p) => ({ ...p, email: true }))}
+              error={touched.email && errors.email}
+              autoComplete="email"
+            />
+          </Field>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field
+            label={isEdit ? 'New Password (leave blank to keep)' : 'Password'}
+            required={!isEdit}
+            error={touched.password && errors.password}
+          >
+            <div className="relative">
+              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <Lock size={14} className="text-slate-400" />
+              </div>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder={isEdit ? '••••••••' : 'Min. 8 characters'}
+                value={form.password}
+                onChange={set('password')}
+                onBlur={() => setTouched((p) => ({ ...p, password: true }))}
+                autoComplete="new-password"
+                className={cn(
+                  'w-full text-sm rounded-lg border bg-white pl-9 pr-10 py-2.5 text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-150',
+                  touched.password && errors.password
+                    ? 'border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100'
+                    : 'border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                )}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
+          </Field>
+          <Field label="Phone Number" error={errors.phoneNumber}>
+            <Input
+              icon={Phone}
+              type="tel"
+              placeholder="+91 98765 43210"
+              value={form.phoneNumber || ''}
+              onChange={set('phoneNumber')}
+              autoComplete="tel"
+            />
+          </Field>
+        </div>
+      </div>
+
+      {/* ─── Section: Role & Branch ─── */}
+      <div>
+        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+          <Shield size={11} /> Role & Branch Assignment
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Role" required error={touched.role && errors.role}>
+            <Select
+              icon={Shield}
+              value={form.role}
+              onChange={set('role')}
+              error={touched.role && errors.role}
+            >
+              <option value="">Select role...</option>
+              {ALL_ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABELS[r]}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Assigned Branch">
+            <Select
+              icon={Building2}
+              value={form.branch || ''}
+              onChange={set('branch')}
+            >
+              <option value="">No branch assigned</option>
+              {MOCK_BRANCHES.map((b) => (
+                <option key={b._id} value={b._id}>
+                  {b.name} ({b.code})
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Status">
+            <Select value={form.status} onChange={set('status')}>
+              {STATUSES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Profile Image URL">
+            <Input
+              icon={ImageIcon}
+              type="url"
+              placeholder="https://..."
+              value={form.profileImage || ''}
+              onChange={set('profileImage')}
+            />
+          </Field>
+        </div>
+      </div>
+
+      {/* ─── Profile Image Preview ─── */}
+      {form.profileImage && (
+        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+          <img
+            src={form.profileImage}
+            alt="Profile preview"
+            className="w-10 h-10 rounded-full object-cover border-2 border-blue-200"
+            onError={(e) => { e.target.style.display = 'none'; }}
+          />
+          <span className="text-xs text-slate-500 truncate">{form.profileImage}</span>
+        </div>
+      )}
+
+      {/* ─── Actions ─── */}
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+          Cancel
+        </Button>
+        <Button type="submit" variant="primary" disabled={isLoading} className="min-w-[100px]">
+          {isLoading ? (
+            <span className="flex items-center gap-2">
+              <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              {isEdit ? 'Saving...' : 'Creating...'}
+            </span>
+          ) : (
+            isEdit ? 'Save Changes' : 'Create User'
+          )}
+        </Button>
+      </div>
+    </form>
+  );
+}
