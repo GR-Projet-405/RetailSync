@@ -2,7 +2,7 @@ import { useState } from 'react';
 import PageHeader from '../components/PageHeader';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/Card';
 import Button from '../components/Button';
-import { Wallet, User, ShoppingBag, Lock } from 'lucide-react';
+import { Wallet, User, ShoppingBag, Lock, Banknote, CreditCard, QrCode } from 'lucide-react';
 
 export default function PaymentProcessingPage() {
   // State to manage the selected payment method (cash, card, qr)
@@ -29,10 +29,106 @@ export default function PaymentProcessingPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {/* Step 3: Cash, Card, and QR selection buttons will be added here */}
-              <div className="p-12 font-medium text-center border-2 border-dashed border-slate-200 rounded-xl text-slate-400">
-                Payment Method Tabs & Inputs will go here
+
+              {/* Payment Method Tabs */}
+              <div className="grid grid-cols-3 gap-4 mb-8">
+                {/* Cash Tab */}
+                <button
+                  onClick={() => setPaymentMethod('cash')}
+                  className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${paymentMethod === 'cash'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:bg-slate-50'
+                    }`}
+                >
+                  <Banknote className="w-6 h-6" />
+                  <span className="text-sm font-bold">Cash Pay</span>
+                </button>
+
+                {/* Card Tab */}
+                <button
+                  onClick={() => setPaymentMethod('card')}
+                  className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${paymentMethod === 'card'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:bg-slate-50'
+                    }`}
+                >
+                  <CreditCard className="w-6 h-6" />
+                  <span className="text-sm font-bold">Credit/Debit Card</span>
+                </button>
+
+                {/* QR Tab */}
+                <button
+                  onClick={() => setPaymentMethod('qr')}
+                  className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${paymentMethod === 'qr'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:bg-slate-50'
+                    }`}
+                >
+                  <QrCode className="w-6 h-6" />
+                  <span className="text-sm font-bold">Mobile / QR</span>
+                </button>
               </div>
+
+              {/* Dynamic Content based on selected tab */}
+
+              {/* --- CASH PAYMENT UI --- */}
+              {paymentMethod === 'cash' && (
+                <div className="space-y-6 fade-in">
+
+                  {/* Amount Due Display */}
+                  <div className="flex items-center justify-between p-4 border border-blue-100 bg-blue-50 rounded-xl">
+                    <span className="text-lg font-bold text-blue-800">Amount Due:</span>
+                    <span className="text-2xl font-bold text-blue-600">Rs. 16,100.00</span>
+                  </div>
+
+                  {/* Quick Cash Buttons */}
+                  <div>
+                    <label className="block mb-3 text-xs font-bold tracking-wider uppercase text-slate-500">
+                      Quick Cash
+                    </label>
+                    <div className="grid grid-cols-4 gap-3">
+                      <Button variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50">Exact</Button>
+                      <Button variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50">16,500</Button>
+                      <Button variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50">17,000</Button>
+                      <Button variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50">20,000</Button>
+                    </div>
+                  </div>
+
+                  {/* Tendered Amount Input */}
+                  <div>
+                    <label className="block mb-2 text-xs font-bold tracking-wider uppercase text-slate-500">
+                      Tendered Amount (Rs.)
+                    </label>
+                    <input
+                      type="text"
+                      defaultValue="17,000.00"
+                      className="w-full px-4 py-3 text-xl font-bold transition-all border-2 outline-none text-slate-800 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                    />
+                  </div>
+
+                  {/* Change Due Display */}
+                  <div className="flex items-center justify-between p-4 border bg-emerald-50 border-emerald-100 rounded-xl">
+                    <span className="text-lg font-bold text-emerald-800">Change Due:</span>
+                    <span className="text-2xl font-bold text-emerald-600">Rs. 900.00</span>
+                  </div>
+
+                </div>
+              )}
+
+              {/* --- CARD PAYMENT UI (Placeholder for now) --- */}
+              {paymentMethod === 'card' && (
+                <div className="p-12 font-medium text-center border-2 border-dashed border-slate-200 rounded-xl text-slate-400 fade-in">
+                  Card Payment Interface will go here
+                </div>
+              )}
+
+              {/* --- QR PAYMENT UI (Placeholder for now) --- */}
+              {paymentMethod === 'qr' && (
+                <div className="p-12 font-medium text-center border-2 border-dashed border-slate-200 rounded-xl text-slate-400 fade-in">
+                  Mobile / QR Scanner will go here
+                </div>
+              )}
+
             </CardContent>
           </Card>
         </div>
