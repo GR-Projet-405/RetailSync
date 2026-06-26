@@ -208,6 +208,7 @@ export const AppRoutes = () => {
           <ProtectedRoute allowedRoles={SALES_ROLES}>
             <ReturnsRefundsPage />
           </ProtectedRoute>
+
         } />
 
         {/* Promotions & Discounts */}
