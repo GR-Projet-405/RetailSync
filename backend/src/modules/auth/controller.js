@@ -128,6 +128,34 @@ const getMe = asyncHandler(async (req, res) => {
     data: user,
   });
 });
+const getAvailableRoles = asyncHandler(async (req, res) => {
+  const roles = await authService.getAvailableRoles();
+
+  res.status(200).json({
+    success: true,
+    message: 'Available roles retrieved successfully',
+    data: roles,
+  });
+});
+
+const selectRole = asyncHandler(async (req, res) => {
+  const { userId, role } = req.body;
+
+  if (!userId || !role) {
+    return res.status(400).json({
+      success: false,
+      message: 'Please provide userId and role',
+    });
+  }
+
+  const result = await authService.selectRole(userId, role);
+
+  res.status(200).json({
+    success: true,
+    message: result.message,
+    data: result.user,
+  });
+});
 
 const logout = asyncHandler(async (req, res) => {
   // Since we use JWT in local storage, logout is mostly a frontend action.
@@ -147,5 +175,7 @@ module.exports = {
   resetPassword,
   login,
   getMe,
+  getAvailableRoles,
+  selectRole,
   logout,
 };
