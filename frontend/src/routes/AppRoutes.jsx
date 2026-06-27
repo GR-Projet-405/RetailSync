@@ -13,6 +13,7 @@ import POSLayout from '../layouts/POSLayout';
 import DashboardPage from '../pages/DashboardPage';
 import AuthPage from '../pages/AuthPage';
 import LoginPage from '../features/auth/LoginPage';
+import RegisterPage from '../features/auth/RegisterPage'; 
 import NotificationsPage from '../pages/NotificationsPage';
 import ProfileSettingsPage from '../pages/ProfileSettingsPage';
 import BranchPage from '../pages/BranchPage';
@@ -55,7 +56,7 @@ export const AppRoutes = () => {
     <Routes>
       {/* Auth Routes */}
       <Route path="/login" element={<LoginPage />} />
-
+      <Route path="/register" element={<RegisterPage />} />
       {/* POS Billing Route - Full-screen layout */}
       <Route element={
         <ProtectedRoute allowedRoles={POS_ROLES}>
