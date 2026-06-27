@@ -16,6 +16,7 @@ import VerifyOTPPage from '../features/auth/VerifyOTPPage';
 import LoginPage from '../features/auth/LoginPage';
 import RegisterPage from '../features/auth/RegisterPage'; 
 import SelectRolePage from '../features/auth/SelectRolePage';
+import ForgotPasswordPage from '../features/auth/ForgotPasswordPage';
 import NotificationsPage from '../pages/NotificationsPage';
 import ProfileSettingsPage from '../pages/ProfileSettingsPage';
 import BranchPage from '../pages/BranchPage';
@@ -61,6 +62,7 @@ export const AppRoutes = () => {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-otp" element={<VerifyOTPPage />} />
       <Route path="/select-role" element={<SelectRolePage />} /> 
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       {/* POS Billing Route - Full-screen layout */}
       <Route element={
         <ProtectedRoute allowedRoles={POS_ROLES}>
