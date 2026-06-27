@@ -12,6 +12,7 @@ import POSLayout from '../layouts/POSLayout';
 // Page Imports
 import DashboardPage from '../pages/DashboardPage';
 import AuthPage from '../pages/AuthPage';
+import VerifyOTPPage from '../features/auth/VerifyOTPPage';
 import LoginPage from '../features/auth/LoginPage';
 import RegisterPage from '../features/auth/RegisterPage'; 
 import NotificationsPage from '../pages/NotificationsPage';
@@ -57,6 +58,7 @@ export const AppRoutes = () => {
       {/* Auth Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/verify-otp" element={<VerifyOTPPage />} />
       {/* POS Billing Route - Full-screen layout */}
       <Route element={
         <ProtectedRoute allowedRoles={POS_ROLES}>
