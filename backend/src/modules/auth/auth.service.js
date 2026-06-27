@@ -4,6 +4,7 @@ const env = require('../../config/env');
 
 const OTP = require('./otp.model');
 const sendEmail = require('../../config/email');
+const Role = require('../role-management/role.model'); 
 
 const generateToken = (id) => {
   return jwt.sign({ id }, env.JWT_SECRET, {
@@ -23,10 +24,19 @@ const register = async (userData) => {
     err.statusCode = 409;
     throw err;
   }
+ // Get default role (EMPLOYEE)
+  const defaultRole = await Role.findOne({ name: 'EMPLOYEE' });
+  
+  if (!defaultRole) {
+    const err = new Error('Default role not found. Please run database seeders first.');
+    err.statusCode = 500;
+    throw err;
+  }
 
   // Create user (inactive until email verified)
   const user = await User.create({
     ...userData,
+    roleId: defaultRole._id, 
     status: 'INACTIVE',
     isEmailVerified: false,
   });
