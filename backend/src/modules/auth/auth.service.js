@@ -257,6 +257,74 @@ const getMe = async (id) => {
   return user;
 };
 
+// Get available roles for selection (exclude sensitive roles)
+const getAvailableRoles = async () => {
+  // Roles that regular users can select (exclude admin roles)
+  const excludedRoles = ['SUPER_ADMIN', 'ADMIN', 'AUDITOR'];
+  
+  const roles = await Role.find({
+    name: { $nin: excludedRoles },
+  }).select('name description permissions');
+
+  return roles;
+};
+
+// Assign role to user after email verification
+const selectRole = async (userId, roleName) => {
+  // Find user
+  const user = await User.findById(userId);
+  
+  if (!user) {
+    const err = new Error('User not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Check if email is verified
+  if (!user.isEmailVerified) {
+    const err = new Error('Please verify your email first');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  // Check if role is allowed for selection
+  const excludedRoles = ['SUPER_ADMIN', 'ADMIN', 'AUDITOR'];
+  if (excludedRoles.includes(roleName)) {
+    const err = new Error('This role cannot be selected');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  // Find the role
+  const role = await Role.findOne({ name: roleName });
+  
+  if (!role) {
+    const err = new Error('Role not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Update user with selected role
+  user.roleId = role._id;
+  user.status = 'ACTIVE'; // Ensure user is active
+  await user.save();
+
+  return {
+    message: 'Role assigned successfully',
+    user: {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      username: user.username,
+      roleId: role._id,
+      roleName: role.name,
+      status: user.status,
+    },
+  };
+};
+
+
 module.exports = {
   register,
   verifyOTP,
@@ -265,4 +333,6 @@ module.exports = {
   resetPassword,
   login,
   getMe,
+  getAvailableRoles,
+  selectRole,
 };
