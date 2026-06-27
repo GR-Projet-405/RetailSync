@@ -5,18 +5,43 @@ import {
   ShoppingCart, FileCheck2, ArrowLeftRight, SlidersHorizontal,
   Package, ExternalLink,
 } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../utils/cn';
 
-// ─── Mock data (replace with API calls once backend is ready) ────────────────
+// ─── Mock data ─────────────────────────────────────────────────────────────────
 
-const KPI_DATA = [
-  { label: 'Total Inventory Value', value: 'LKR 12 80 000.00', trend: 5.5,  up: true,  badWhenUp: false },
-  { label: 'Total SKUs',            value: '4 218',             trend: 2.2,  up: true,  badWhenUp: false },
-  { label: 'Low Stock Items',       value: '54',                trend: 2.0,  up: true,  badWhenUp: true  },
-  { label: 'Out of Stock Items',    value: '12',                trend: 0.1,  up: true,  badWhenUp: true  },
-  { label: 'Stock Turnover',        value: '3.32',              trend: 0.01, up: true,  badWhenUp: false },
-];
+const BRANCHES = ['Colombo', 'Kandy', 'Galle'];
+
+// Per-branch KPI snapshots — swapped in when user selects a branch
+const BRANCH_KPIS = {
+  'All Branches': [
+    { label: 'Total Inventory Value', value: 'LKR 900,000.00', trend: 5.5, up: true,  badWhenUp: false },
+    { label: 'Total SKUs',            value: '4,218',           trend: 2.2, up: true,  badWhenUp: false },
+    { label: 'Low Stock Items',       value: '54',              trend: 2.0, up: true,  badWhenUp: true  },
+    { label: 'Out of Stock Items',    value: '12',              trend: 0.1, up: true,  badWhenUp: true  },
+    { label: 'Stock Turnover',        value: '3.32',            trend: 1.2, up: true,  badWhenUp: false },
+  ],
+  'Colombo': [
+    { label: 'Total Inventory Value', value: 'LKR 420,000.00', trend: 6.1, up: true,  badWhenUp: false },
+    { label: 'Total SKUs',            value: '1,980',           trend: 1.8, up: true,  badWhenUp: false },
+    { label: 'Low Stock Items',       value: '22',              trend: 3.1, up: true,  badWhenUp: true  },
+    { label: 'Out of Stock Items',    value: '5',               trend: 0.5, up: false, badWhenUp: true  },
+    { label: 'Stock Turnover',        value: '3.85',            trend: 2.1, up: true,  badWhenUp: false },
+  ],
+  'Kandy': [
+    { label: 'Total Inventory Value', value: 'LKR 290,000.00', trend: 3.4, up: true,  badWhenUp: false },
+    { label: 'Total SKUs',            value: '1,340',           trend: 2.5, up: true,  badWhenUp: false },
+    { label: 'Low Stock Items',       value: '18',              trend: 1.5, up: true,  badWhenUp: true  },
+    { label: 'Out of Stock Items',    value: '4',               trend: 1.0, up: true,  badWhenUp: true  },
+    { label: 'Stock Turnover',        value: '3.10',            trend: 0.8, up: false, badWhenUp: false },
+  ],
+  'Galle': [
+    { label: 'Total Inventory Value', value: 'LKR 190,000.00', trend: 7.2, up: true,  badWhenUp: false },
+    { label: 'Total SKUs',            value: '898',             trend: 3.0, up: true,  badWhenUp: false },
+    { label: 'Low Stock Items',       value: '14',              trend: 0.5, up: false, badWhenUp: true  },
+    { label: 'Out of Stock Items',    value: '3',               trend: 2.0, up: false, badWhenUp: true  },
+    { label: 'Stock Turnover',        value: '2.80',            trend: 1.5, up: true,  badWhenUp: false },
+  ],
+};
 
 const STOCK_CATEGORIES = [
   { name: 'Groceries',          value: 25, color: '#22C55E' },
@@ -29,19 +54,22 @@ const STOCK_CATEGORIES = [
 ];
 
 const RECENT_MOVEMENTS = [
-  { id: 'INV-ELE-001', type: 'Sale',             date: '7 June 2026, 10:10 a.m.', Icon: ShoppingCart,     colorClass: 'bg-emerald-100 text-emerald-600' },
-  { id: 'INV-GRO-002', type: 'Purchase Receipt', date: '7 June 2026, 10:35 a.m.', Icon: FileCheck2,       colorClass: 'bg-blue-100 text-blue-600'       },
-  { id: 'INV-CLO-003', type: 'Stock Transfer',   date: '7 June 2026, 11:30 a.m.', Icon: ArrowLeftRight,   colorClass: 'bg-violet-100 text-violet-600'   },
-  { id: 'INV-BEV-004', type: 'Adjustment',       date: '8 June 2026, 11:30 a.m.', Icon: SlidersHorizontal, colorClass: 'bg-amber-100 text-amber-600'   },
+  { id: 'INV-ELE-001', type: 'Sale',             branch: 'Colombo', date: '27 Jun 2026, 09:15 a.m.', Icon: ShoppingCart,      colorClass: 'bg-emerald-100 text-emerald-600' },
+  { id: 'INV-GRO-002', type: 'Purchase Receipt', branch: 'Kandy',   date: '27 Jun 2026, 10:35 a.m.', Icon: FileCheck2,        colorClass: 'bg-blue-100 text-blue-600'       },
+  { id: 'INV-CLO-003', type: 'Stock Transfer',   branch: 'Galle',   date: '26 Jun 2026, 11:30 a.m.', Icon: ArrowLeftRight,    colorClass: 'bg-violet-100 text-violet-600'   },
+  { id: 'INV-BEV-004', type: 'Adjustment',       branch: 'Colombo', date: '26 Jun 2026, 03:45 p.m.', Icon: SlidersHorizontal, colorClass: 'bg-amber-100 text-amber-600'     },
 ];
 
+// Feb–Jun = actual data, Jul–Sep = forecast
 const FORECAST_DATA = [
-  { month: 'Jan', actual: 10.2, forecast: 9.8  },
-  { month: 'Mar', actual: 13.1, forecast: 12.5 },
-  { month: 'May', actual: 11.5, forecast: 12.0 },
-  { month: 'Jul', actual: null, forecast: 12.2 },
-  { month: 'Sep', actual: null, forecast: 11.6 },
-  { month: 'Nov', actual: null, forecast: 12.8 },
+  { month: 'Feb', actual: 10.2, forecast: 9.8  },
+  { month: 'Mar', actual: 11.8, forecast: 11.2 },
+  { month: 'Apr', actual: 12.5, forecast: 12.0 },
+  { month: 'May', actual: 13.1, forecast: 12.5 },
+  { month: 'Jun', actual: 12.8, forecast: 13.0 },
+  { month: 'Jul', actual: null, forecast: 13.8 },
+  { month: 'Aug', actual: null, forecast: 13.2 },
+  { month: 'Sep', actual: null, forecast: 14.1 },
 ];
 
 // ─── SVG Donut Chart ─────────────────────────────────────────────────────────
@@ -120,11 +148,11 @@ function smoothPath(pts) {
 }
 
 function ForecastLineChart({ data }) {
-  const W = 360, H = 130;
-  const pad = { t: 12, r: 12, b: 28, l: 34 };
+  const W = 370, H = 140;
+  const pad = { t: 12, r: 12, b: 28, l: 46 };
   const cW = W - pad.l - pad.r;
   const cH = H - pad.t - pad.b;
-  const minY = 4, maxY = 16;
+  const minY = 8, maxY = 16;
   const xS = i => pad.l + (i / (data.length - 1)) * cW;
   const yS = v => pad.t + (1 - (v - minY) / (maxY - minY)) * cH;
 
@@ -139,7 +167,7 @@ function ForecastLineChart({ data }) {
       ? `${smoothPath(actualPts)} L${actualPts[actualPts.length - 1][0]},${areaBottom} L${actualPts[0][0]},${areaBottom} Z`
       : '';
 
-  const yTicks = [5, 10, 15];
+  const yTicks = [9, 11, 13, 15];
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
@@ -149,6 +177,18 @@ function ForecastLineChart({ data }) {
           <stop offset="100%" stopColor="#3B82F6" stopOpacity="0"    />
         </linearGradient>
       </defs>
+
+      {/* Y-axis unit label */}
+      <text
+        x="8"
+        y={pad.t + cH / 2}
+        textAnchor="middle"
+        fill="#94A3B8"
+        fontSize="7"
+        transform={`rotate(-90, 8, ${pad.t + cH / 2})`}
+      >
+        LKR M
+      </text>
 
       {/* Y grid lines + labels */}
       {yTicks.map(v => (
@@ -186,9 +226,9 @@ function ForecastLineChart({ data }) {
 
 // ─── Branch Dropdown ─────────────────────────────────────────────────────────
 
-function BranchDropdown({ activeBranch, branches, onChange }) {
+function BranchDropdown({ activeBranch, onChange }) {
   const [open, setOpen] = useState(false);
-  const options = ['All Branches', ...branches].filter((b, i, a) => a.indexOf(b) === i);
+  const options = ['All Branches', ...BRANCHES];
 
   return (
     <div className="relative">
@@ -203,7 +243,7 @@ function BranchDropdown({ activeBranch, branches, onChange }) {
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 fade-in overflow-hidden">
+          <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 fade-in overflow-hidden">
             {options.map(b => (
               <button
                 key={b}
@@ -244,7 +284,7 @@ function KPICard({ label, value, trend, up, badWhenUp, onClick, linkLabel }) {
       <div className="flex items-center justify-between">
         <div className={cn('flex items-center gap-1 text-xs font-semibold', trendColor)}>
           <Icon size={13} />
-          <span>{trend}% VS last week</span>
+          <span>{trend}% vs last week</span>
         </div>
         {onClick && linkLabel && (
           <span className="text-[10px] text-blue-500 font-semibold flex items-center gap-0.5 hover:underline">
@@ -259,13 +299,13 @@ function KPICard({ label, value, trend, up, badWhenUp, onClick, linkLabel }) {
 // ─── Main Inventory Dashboard ─────────────────────────────────────────────────
 
 export default function InventoryDashboard() {
-  const { branches } = useAuth();
   const navigate = useNavigate();
   const [activeBranch, setActiveBranch] = useState('All Branches');
 
-  const branchList = Array.isArray(branches) && branches.length > 0
-    ? branches
-    : ['Main Branch', 'North Branch', 'South Branch'];
+  const kpiData = BRANCH_KPIS[activeBranch];
+  const visibleMovements = activeBranch === 'All Branches'
+    ? RECENT_MOVEMENTS
+    : RECENT_MOVEMENTS.filter(m => m.branch === activeBranch);
 
   return (
     <div className="space-y-5 fade-up">
@@ -280,23 +320,27 @@ export default function InventoryDashboard() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Inventory Dashboard</h1>
         </div>
-        <BranchDropdown activeBranch={activeBranch} branches={branchList} onChange={setActiveBranch} />
+        <BranchDropdown activeBranch={activeBranch} onChange={setActiveBranch} />
       </div>
 
       {/* ── KPI Cards ──────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
-        {KPI_DATA.map((kpi, i) => (
+        {kpiData.map((kpi, i) => (
           <KPICard
             key={i}
             {...kpi}
             onClick={
-              kpi.label === 'Low Stock Items'    ? () => navigate('/low-stock-alerts') :
-              kpi.label === 'Out of Stock Items' ? () => navigate('/low-stock-alerts') :
+              kpi.label === 'Low Stock Items'       ? () => navigate('/low-stock-alerts') :
+              kpi.label === 'Out of Stock Items'    ? () => navigate('/low-stock-alerts') :
+              kpi.label === 'Total Inventory Value' ? () => navigate('/stock-levels')     :
+              kpi.label === 'Total SKUs'            ? () => navigate('/stock-levels')     :
               undefined
             }
             linkLabel={
               kpi.label === 'Low Stock Items' || kpi.label === 'Out of Stock Items'
                 ? 'View alerts'
+                : kpi.label === 'Total Inventory Value' || kpi.label === 'Total SKUs'
+                ? 'View levels'
                 : undefined
             }
           />
@@ -332,24 +376,39 @@ export default function InventoryDashboard() {
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.04)] p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-slate-800">Recent Movements</h2>
-            <button className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-0.5">
+            <button
+              onClick={() => navigate('/stock-movements')}
+              className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-0.5"
+            >
               View All <ArrowUpRight size={11} />
             </button>
           </div>
-          <div className="space-y-1">
-            {RECENT_MOVEMENTS.map(({ id, type, date, Icon, colorClass }) => (
-              <div key={id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer">
-                <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center shrink-0', colorClass)}>
-                  <Icon size={15} />
+
+          {visibleMovements.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-32 text-slate-400">
+              <Package size={28} className="mb-2 opacity-40" />
+              <p className="text-xs font-medium">No recent movements for {activeBranch}</p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {visibleMovements.map(({ id, type, branch, date, Icon, colorClass }) => (
+                <div
+                  key={id}
+                  onClick={() => navigate('/stock-movements')}
+                  className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center shrink-0', colorClass)}>
+                    <Icon size={15} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 leading-tight">{type}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 font-medium">{id} · {branch}</p>
+                  </div>
+                  <p className="text-[10px] text-slate-400 shrink-0 text-right leading-tight">{date}</p>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 leading-tight">{type}</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5 font-medium">{id}</p>
-                </div>
-                <p className="text-[10px] text-slate-400 shrink-0 text-right leading-tight">{date}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -363,7 +422,7 @@ export default function InventoryDashboard() {
             <div className="flex items-center gap-4 text-[10px] text-slate-500 font-medium">
               <span className="flex items-center gap-1.5">
                 <span className="inline-block w-5 h-[2px] bg-blue-500 rounded" />
-                Actual Value
+                Actual
               </span>
               <span className="flex items-center gap-1.5">
                 <span
@@ -379,7 +438,7 @@ export default function InventoryDashboard() {
           </div>
         </div>
 
-        {/* Top Forecasted Product — AI */}
+        {/* Top Forecasted Product */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.04)] p-5 flex flex-col">
           <h2 className="text-sm font-semibold text-slate-800 mb-4">Top Forecasted Product</h2>
 
@@ -402,7 +461,10 @@ export default function InventoryDashboard() {
             <p className="text-xl font-bold text-blue-700">250 Units</p>
           </div>
 
-          <button className="mt-auto w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold transition-colors shadow-sm shadow-blue-200">
+          <button
+            onClick={() => navigate('/stock-levels')}
+            className="mt-auto w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold transition-colors shadow-sm shadow-blue-200"
+          >
             View Analysis
           </button>
         </div>
