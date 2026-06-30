@@ -32,7 +32,9 @@ import PaymentProcessingPage from '../pages/PaymentProcessingPage';
 import SalesHistoryPage from '../pages/SalesHistoryPage';
 import ReturnsRefundsPage from '../pages/ReturnsRefundsPage';
 import PromotionsDiscountsPage from '../pages/PromotionsDiscountsPage';
-import ReportsPage from '../pages/ReportsPage';
+import ReportsPage from '../pages/reports/ReportsPage';
+import ReportConfigPage from '../pages/reports/ReportConfigPage';
+import ReportViewPage from '../pages/reports/ReportViewPage';
 import BusinessAnalyticsPage from '../pages/BusinessAnalyticsPage';
 import AIForecastingPage from '../pages/AIForecastingPage';
 import AIReorderingPage from '../pages/AIReorderingPage';
@@ -228,6 +230,20 @@ export const AppRoutes = () => {
         <Route path="/reports" element={
           <ProtectedRoute allowedRoles={[...MANAGEMENT_ROLES, ROLES.AUDITOR]}>
             <ReportsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Report Configuration */}
+        <Route path="/reports/configure/:reportType" element={
+          <ProtectedRoute allowedRoles={[...MANAGEMENT_ROLES, ROLES.AUDITOR]}>
+            <ReportConfigPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Report View */}
+        <Route path="/reports/view/:reportType" element={
+          <ProtectedRoute allowedRoles={[...MANAGEMENT_ROLES, ROLES.AUDITOR]}>
+            <ReportViewPage />
           </ProtectedRoute>
         } />
 

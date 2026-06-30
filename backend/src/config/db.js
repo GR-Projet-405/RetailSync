@@ -1,5 +1,11 @@
+const dns = require('dns');
 const mongoose = require('mongoose');
 const env = require('./env');
+
+// Some routers/ISP DNS servers fail to resolve SRV records used by
+// mongodb+srv:// URIs. Fall back to public DNS resolvers to avoid
+// "querySrv ETIMEOUT" errors during local development.
+dns.setServers(['1.1.1.1', '8.8.8.8']);
 
 const connectDB = async () => {
   try {
