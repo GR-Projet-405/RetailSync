@@ -39,6 +39,7 @@ import AIReorderingPage from '../pages/AIReorderingPage';
 import AIAssistantPage from '../pages/AIAssistantPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
+import AddCustomerPage from '../pages/AddCustomerPage';
 
 
 
@@ -221,6 +222,11 @@ export const AppRoutes = () => {
         <Route path="/customers" element={
           <ProtectedRoute allowedRoles={SALES_ROLES}>
             <CustomerPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/customers/new" element={
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <AddCustomerPage />
           </ProtectedRoute>
         } />
 
