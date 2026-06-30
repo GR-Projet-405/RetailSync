@@ -31,7 +31,7 @@ import POSBillingPage from '../pages/POSBillingPage';
 import PaymentProcessingPage from '../pages/PaymentProcessingPage';
 import SalesHistoryPage from '../pages/SalesHistoryPage';
 import ReturnsRefundsPage from '../pages/ReturnsRefundsPage';
-import PromotionsDiscountsPage from '../pages/PromotionsDiscountsPage';
+import PromotionsDiscountsPage from '../pages/promotions/PromotionsDahboard';
 import ReportsPage from '../pages/ReportsPage';
 import BusinessAnalyticsPage from '../pages/BusinessAnalyticsPage';
 import AIForecastingPage from '../pages/AIForecastingPage';
