@@ -3,16 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Filter, X, CheckCircle2, AlertTriangle, XCircle,
   Package, Truck, Building2, Tag, CalendarDays, FileText,
-  ChevronDown, Settings, AlertCircle, MoreVertical, Eye, Calendar,
+  ChevronDown, Settings, AlertCircle, MoreVertical, Eye, Calendar, Loader2,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import { cn } from '../../utils/cn';
 import { toast } from '../../utils/toast';
+import { useStockLevels, useUpdateReorderLevel } from '../../hooks/useInventory';
 
-// ─── Mock data (replace with API calls once backend is ready) ────────────────
-// Fields per SRS REQ-INV-001, REQ-INV-007: product, warehouse, current/reserved/
-// available stock, reorder level, supplier, last purchase date.
-
+// ─── Mock data 
 const MOCK_STOCK = [
   { id:  1, sku: 'SKU-ELE-000123', product: 'Samsung Galaxy S24 128GB',      category: 'Electronics',     warehouse: 'Colombo', currentStock:  50, reservedStock: 10, reorderLevel: 100, supplier: 'Samsung Lanka (Pvt) Ltd',    lastPurchase: '15 March 2026',  image: null },
   { id:  2, sku: 'SKU-ELE-000124', product: 'Lenovo IdeaPad Slim 3',          category: 'Electronics',     warehouse: 'Kandy',   currentStock:  20, reservedStock:  5, reorderLevel:  10, supplier: 'Lenovo Lanka Distributors',   lastPurchase: '02 April 2026',  image: null },
@@ -38,7 +36,7 @@ const CATEGORIES  = ['All Categories',  'Electronics', 'Clothing', 'Groceries', 
 const WAREHOUSES  = ['All Warehouses',  'Colombo', 'Galle', 'Kandy'];
 const STATUSES    = ['Stock Status',    'In Stock', 'Low Stock', 'Out of Stock'];
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+//  Helpers 
 
 function availableStock(item) {
   return Math.max(0, item.currentStock - item.reservedStock);
@@ -61,7 +59,7 @@ const STATUS_FILTER_KEY = {
   'In Stock': 'in', 'Low Stock': 'low', 'Out of Stock': 'out',
 };
 
-// ─── Status Badge ─────────────────────────────────────────────────────────────
+// Status Badge 
 
 function StatusBadge({ status }) {
   const cfg = STATUS_CFG[status];
@@ -82,7 +80,7 @@ function StatusBadge({ status }) {
   );
 }
 
-// ─── Date helpers ─────────────────────────────────────────────────────────────
+//  Date helpers 
 
 function fmtISOLabel(iso) {
   if (!iso) return '';
@@ -157,7 +155,7 @@ function DateRangeFilter({ startDate, endDate, onChange }) {
   );
 }
 
-// ─── Filter Select ────────────────────────────────────────────────────────────
+//  Filter Select 
 
 function FilterSelect({ value, onChange, options }) {
   return (
@@ -174,7 +172,7 @@ function FilterSelect({ value, onChange, options }) {
   );
 }
 
-// ─── Action Menu (three-dot) ─────────────────────────────────────────────────
+//  Action Menu (three-dot) 
 
 function ActionMenu({ item, onView }) {
   const [open, setOpen] = useState(false);
@@ -208,7 +206,7 @@ function ActionMenu({ item, onView }) {
   );
 }
 
-// ─── View Details Modal ───────────────────────────────────────────────────────
+//  View Details Modal 
 
 function ViewModal({ item, onClose }) {
   useEffect(() => {
@@ -314,7 +312,7 @@ function ViewModal({ item, onClose }) {
   );
 }
 
-// ─── Set Reorder Level Modal (REQ-INV-007) ────────────────────────────────────
+//  Set Reorder Level Modal 
 
 function SetReorderModal({ item, onClose, onSave }) {
   const [level, setLevel] = useState(String(item.reorderLevel));
@@ -359,7 +357,7 @@ function SetReorderModal({ item, onClose, onSave }) {
   );
 }
 
-// ─── Product Detail Panel ─────────────────────────────────────────────────────
+//  Product Detail Panel 
 
 function ProductDetailPanel({ item, onClose, onPurchaseOrder, onSetReorder }) {
   const avail  = availableStock(item);
@@ -460,11 +458,14 @@ function InfoRow({ icon: Icon, label, value }) {
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// Main Component 
 
 export default function StockLevels() {
   const navigate = useNavigate();
-  const [stocks,        setStocks]        = useState(MOCK_STOCK);
+  const { data: slData, isLoading } = useStockLevels();
+  const updateReorder = useUpdateReorderLevel();
+  const stocks = slData?.items?.length ? slData.items : MOCK_STOCK;
+
   const [search,        setSearch]        = useState('');
   const [category,      setCategory]      = useState('All Categories');
   const [warehouse,     setWarehouse]     = useState('All Warehouses');
@@ -476,7 +477,7 @@ export default function StockLevels() {
   const [endDate,       setEndDate]       = useState('');
 
   function handleUpdateReorderLevel(id, level) {
-    setStocks(prev => prev.map(s => s.id === id ? { ...s, reorderLevel: level } : s));
+    updateReorder.mutate({ id, reorderLevel: level });
     setSelectedItem(prev => prev?.id === id ? { ...prev, reorderLevel: level } : prev);
   }
 
@@ -517,13 +518,13 @@ export default function StockLevels() {
   return (
     <div className="space-y-5 fade-up">
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      {/*  Header  */}
       <PageHeader
         title="Stock Levels"
         description="View and manage current stock levels across all locations."
       />
 
-      {/* ── Main content: table + detail panel ────────────────────────────── */}
+      {/*  Main content: table + detail panel  */}
       <div className={cn('flex gap-4 items-start transition-all duration-300')}>
 
         {/* Left: filters + table */}
@@ -578,7 +579,17 @@ export default function StockLevels() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
-                {filtered.length === 0 ? (
+                {isLoading ? (
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <tr key={i}>
+                      {Array.from({ length: 8 }).map((__, j) => (
+                        <td key={j} className="px-4 py-3.5">
+                          <div className="h-4 bg-slate-100 rounded animate-pulse" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                ) : filtered.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-6 py-14 text-center text-slate-400">
                       No stock records match the current filters.
@@ -640,7 +651,7 @@ export default function StockLevels() {
             {filtered.length > 0 && (
               <div className="px-4 py-2.5 border-t border-slate-100 text-xs text-slate-400">
                 Showing <span className="font-semibold text-slate-600">{filtered.length}</span> of{' '}
-                <span className="font-semibold text-slate-600">{MOCK_STOCK.length}</span> records
+                <span className="font-semibold text-slate-600">{stocks.length}</span> records
               </div>
             )}
           </div>

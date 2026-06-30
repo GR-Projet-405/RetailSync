@@ -1,9 +1,29 @@
 const mongoose = require('mongoose');
 
-const CategoryPageSchema = new mongoose.Schema({
-  // Mongoose schema declaration boilerplate
-}, { 
-  timestamps: true 
-});
+const categorySchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, 'Category name is required'],
+      unique: true,
+      trim: true,
+      maxlength: [100, 'Category name cannot exceed 100 characters'],
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Description cannot exceed 500 characters'],
+      default: null,
+    },
+    status: {
+      type: String,
+      enum: ['ACTIVE', 'INACTIVE'],
+      default: 'ACTIVE',
+    },
+  },
+  { timestamps: true }
+);
 
-module.exports = mongoose.model('CategoryPage', CategoryPageSchema);
+categorySchema.index({ status: 1 });
+
+module.exports = mongoose.model('Category', categorySchema);

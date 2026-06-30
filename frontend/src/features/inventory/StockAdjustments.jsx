@@ -3,19 +3,21 @@ import {
   Search, Filter, X, ChevronDown, Calendar, Plus, MoreVertical,
   Eye, CheckCircle2, XCircle, Clock, Upload, AlertTriangle,
   Package, Building2, SlidersHorizontal, ArrowRight, Info,
-  ShieldAlert, Trash2, RefreshCw, RotateCcw, PlusCircle,
+  ShieldAlert, Trash2, RefreshCw, RotateCcw, PlusCircle, Loader2,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import { cn } from '../../utils/cn';
 import { toast } from '../../utils/toast';
+import { useAdjustments, useApproveAdjustment, useRejectAdjustment } from '../../hooks/useInventory';
 
-// ─── Catalog (mock — replace with API) ───────────────────────────────────────
+//  Catalog (mock — replace with API) 
 
 const PRODUCT_CATALOG = [
   { sku: 'SKU-CLO-000123', name: 'Ladies Jeans',              category: 'Clothing',    warehouses: { 'Galle': 50,  'Colombo': 80,  'Kandy': 30  } },
   { sku: 'SKU-GRO-000123', name: 'Bread (White 400g)',         category: 'Grocery',     warehouses: { 'Colombo': 120,'Galle': 90,   'Kandy': 60  } },
   { sku: 'SKU-BEV-000123', name: 'Soft Drink 330ml',           category: 'Beverage',    warehouses: { 'Kandy': 200, 'Colombo': 150, 'Galle': 100 } },
-  { sku: 'SKU-STA-000123', name: 'School Bag',                  category: 'Stationery',  warehouses: { 'Nugegoda': 15,'Colombo': 25, 'Kandy': 10  } },
+  { sku: 'SKU-STA-000123', name: 'School Bag',                  category: 'Stationery',  warehouses: { 'Nugegoda': 15, 'Colombo': 25, 'Kandy': 10, 'Galle': 8  } },
+  { sku: 'SKU-STA-000011', name: 'A4 Printing Paper (Ream)',   category: 'Stationery',  warehouses: { 'Colombo': 40,  'Kandy': 15,  'Galle': 20, 'Nugegoda': 10 } },
   { sku: 'SKU-ELE-000123', name: 'Samsung Galaxy S24 128GB',   category: 'Electronics', warehouses: { 'Colombo': 50, 'Galle': 30,   'Kandy': 20  } },
   { sku: 'SKU-HH-000500',  name: 'Surf Excel Detergent 2kg',   category: 'Household',   warehouses: { 'Colombo': 14, 'Kandy': 20,   'Galle': 18  } },
   { sku: 'SKU-GRO-000201', name: 'Sunflower Cooking Oil 1L',   category: 'Grocery',     warehouses: { 'Colombo': 18, 'Galle': 12,   'Kandy': 22  } },
@@ -24,8 +26,7 @@ const PRODUCT_CATALOG = [
 
 const BRANCHES = ['Colombo Branch', 'Galle Branch', 'Kandy Branch', 'Nugegoda Branch'];
 
-// ─── Adjustment types ─────────────────────────────────────────────────────────
-// SRS REQ-INV-004: reason is mandatory; type determines stock direction
+//  Adjustment types 
 
 const ADJ_TYPE_CFG = {
   'Damaged':            { dir: -1, color: 'bg-red-100    text-red-700    border-red-200',    Icon: ShieldAlert,   description: 'Damaged — cannot be sold' },
@@ -46,7 +47,7 @@ const STATUS_CFG = {
   'Completed':{ color: 'bg-slate-100  text-slate-600  border-slate-200',  Icon: CheckCircle2 },
 };
 
-// ─── Mock adjustments ─────────────────────────────────────────────────────────
+//  Mock adjustments 
 
 const INITIAL_ADJUSTMENTS = [
   { id: 1, date: '10 Jun 2026', time: '10:00 a.m.', sku: 'SKU-CLO-000123', product: 'Ladies Jeans',           category: 'Clothing',    warehouse: 'Galle',    branch: 'Galle Branch',    adjType: 'Damaged',   reason: 'Water damage from warehouse flooding',          qty: -10, stockBefore: 60,  stockAfter: 50,  adjustedBy: 'Kasun',  status: 'Rejected'  },
@@ -58,17 +59,19 @@ const INITIAL_ADJUSTMENTS = [
   { id: 7, date: '13 Jun 2026', time: '11:00 a.m.', sku: 'SKU-HH-000500',  product: 'Surf Excel Detergent 2kg', category: 'Household',  warehouse: 'Kandy',    branch: 'Kandy Branch',    adjType: 'Cycle Count', reason: 'Physical count 20 vs system 14, correcting upward', qty: +6, stockBefore: 14, stockAfter: 20, adjustedBy: 'Priya',  status: 'Completed' },
 ];
 
-// ─── Form initial state ───────────────────────────────────────────────────────
+//  Form initial state 
+
+const PRODUCT_CATEGORIES_CREATE = [...new Set(PRODUCT_CATALOG.map(p => p.category))].sort();
 
 const EMPTY_FORM = {
-  productSku: '', branch: '', warehouse: '', adjType: '', qty: '', reason: '', evidence: null,
+  category: '', productSku: '', branch: '', warehouse: '', adjType: '', qty: '', reason: '', evidence: null,
 };
 
 const EMPTY_ERRORS = {
-  productSku: '', branch: '', warehouse: '', adjType: '', qty: '', reason: '',
+  category: '', productSku: '', branch: '', warehouse: '', adjType: '', qty: '', reason: '',
 };
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+//  Sub-components 
 
 function FilterSelect({ value, onChange, options }) {
   return (
@@ -109,7 +112,7 @@ function StatusBadge({ status }) {
   );
 }
 
-// ─── Date helpers ─────────────────────────────────────────────────────────────
+//  Date helpers 
 
 function fmtISOLabel(iso) {
   if (!iso) return '';
@@ -214,13 +217,13 @@ function ActionMenu({ item, onView, onApprove, onReject }) {
           {item.status === 'Pending' && (
             <>
               <button
-                onClick={() => { onApprove(item.id); setOpen(false); }}
+                onClick={() => { onApprove(item._id ?? item.id); setOpen(false); }}
                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-emerald-600 hover:bg-emerald-50 transition-colors"
               >
                 <CheckCircle2 size={13} /> Approve
               </button>
               <button
-                onClick={() => { onReject(item.id); setOpen(false); }}
+                onClick={() => { onReject(item._id ?? item.id); setOpen(false); }}
                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
               >
                 <XCircle size={13} /> Reject
@@ -233,7 +236,7 @@ function ActionMenu({ item, onView, onApprove, onReject }) {
   );
 }
 
-// ─── View Details Modal ───────────────────────────────────────────────────────
+//  View Details Modal 
 
 function ViewModal({ item, onClose }) {
   useEffect(() => {
@@ -323,7 +326,7 @@ function ViewModal({ item, onClose }) {
   );
 }
 
-// ─── Create Adjustment Modal ──────────────────────────────────────────────────
+//  Create Adjustment Modal 
 
 function CreateModal({ onClose, onSave }) {
   const [form, setForm]     = useState(EMPTY_FORM);
@@ -335,6 +338,11 @@ function CreateModal({ onClose, onSave }) {
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
+
+  // Products filtered by selected category
+  const filteredProducts = form.category
+    ? PRODUCT_CATALOG.filter(p => p.category === form.category)
+    : PRODUCT_CATALOG;
 
   // Resolve selected product
   const product = PRODUCT_CATALOG.find(p => p.sku === form.productSku) || null;
@@ -350,13 +358,17 @@ function CreateModal({ onClose, onSave }) {
   const signedQty    = adjCfg ? adjCfg.dir * qtyNum : 0;
   const stockAfter   = currentStock !== null ? currentStock + signedQty : null;
 
-  const set = (key, val) => {
-    setForm(f => ({ ...f, [key]: val }));
-    setErrors(e => ({ ...e, [key]: '' }));
+  // Atomic multi-field update helpers
+  const setFields = (fields) => {
+    setForm(f => ({ ...f, ...fields }));
+    setErrors(e => ({ ...e, ...Object.fromEntries(Object.keys(fields).map(k => [k, ''])) }));
   };
+
+  const set = (key, val) => setFields({ [key]: val });
 
   function validate() {
     const e = { ...EMPTY_ERRORS };
+    if (!form.category)   e.category   = 'Select a product category';
     if (!form.productSku) e.productSku = 'Select a product';
     if (!form.branch)     e.branch     = 'Select a branch';
     if (!form.warehouse)  e.warehouse  = 'Select a warehouse';
@@ -377,7 +389,7 @@ function CreateModal({ onClose, onSave }) {
       time:        now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', hour12:true }),
       sku:         product.sku,
       product:     product.name,
-      category:    product.category,
+      category:    form.category || product.category,
       warehouse:   form.warehouse,
       branch:      form.branch,
       adjType:     form.adjType,
@@ -442,32 +454,33 @@ function CreateModal({ onClose, onSave }) {
         {/* Form body */}
         <div className="px-6 py-5 space-y-5">
 
-          {/* Row 1: Product + Branch */}
+          {/* Row 1: Category + Branch */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label required>Product</Label>
+              <Label required>Product Category</Label>
               <div className="relative">
                 <select
-                  value={form.productSku}
-                  onChange={e => {
-                    set('productSku', e.target.value);
-                    set('warehouse', '');
-                  }}
-                  className={selectCls('productSku')}
+                  value={form.category}
+                  onChange={e => setFields({ category: e.target.value, productSku: '', warehouse: '' })}
+                  className={selectCls('category')}
                 >
-                  <option value="">Select Product</option>
-                  {PRODUCT_CATALOG.map(p => (
-                    <option key={p.sku} value={p.sku}>{p.name}</option>
+                  <option value="">Select Category</option>
+                  {PRODUCT_CATEGORIES_CREATE.map(c => (
+                    <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
                 <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
-              <FieldError field="productSku" />
+              <FieldError field="category" />
             </div>
             <div>
               <Label required>Branch</Label>
               <div className="relative">
-                <select value={form.branch} onChange={e => { set('branch', e.target.value); set('warehouse', ''); }} className={selectCls('branch')}>
+                <select
+                  value={form.branch}
+                  onChange={e => setFields({ branch: e.target.value, warehouse: '' })}
+                  className={selectCls('branch')}
+                >
                   <option value="">Select Branch</option>
                   {BRANCHES.map(b => <option key={b}>{b}</option>)}
                 </select>
@@ -477,17 +490,25 @@ function CreateModal({ onClose, onSave }) {
             </div>
           </div>
 
-          {/* Row 2: SKU (auto) + Warehouse */}
+          {/* Row 2: Product (filtered by category) + Warehouse */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label>SKU</Label>
-              <input
-                type="text"
-                value={product?.sku ?? ''}
-                readOnly
-                placeholder="Auto-filled from product"
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 text-slate-500 cursor-not-allowed outline-none"
-              />
+              <Label required>Product</Label>
+              <div className="relative">
+                <select
+                  value={form.productSku}
+                  onChange={e => setFields({ productSku: e.target.value, warehouse: '' })}
+                  disabled={!form.category}
+                  className={cn(selectCls('productSku'), !form.category && 'opacity-50 cursor-not-allowed')}
+                >
+                  <option value="">{form.category ? 'Select Product' : 'Select category first'}</option>
+                  {filteredProducts.map(p => (
+                    <option key={p.sku} value={p.sku}>{p.name}</option>
+                  ))}
+                </select>
+                <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
+              <FieldError field="productSku" />
             </div>
             <div>
               <Label required>Warehouse</Label>
@@ -498,24 +519,35 @@ function CreateModal({ onClose, onSave }) {
                   disabled={availableWarehouses.length === 0}
                   className={cn(selectCls('warehouse'), availableWarehouses.length === 0 && 'opacity-50 cursor-not-allowed')}
                 >
-                  <option value="">Select Warehouse</option>
+                  <option value="">
+                    {!form.productSku
+                      ? 'Select product first'
+                      : availableWarehouses.length === 0 && form.branch
+                        ? 'No stock at selected branch'
+                        : 'Select Warehouse'}
+                  </option>
                   {availableWarehouses.map(w => (
                     <option key={w}>{w}</option>
                   ))}
                 </select>
                 <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
+              {form.productSku && form.branch && availableWarehouses.length === 0 && (
+                <p className="text-[11px] text-amber-600 mt-1 flex items-center gap-1">
+                  <AlertTriangle size={10} /> No warehouses for this product at {form.branch}. Try a different branch.
+                </p>
+              )}
               <FieldError field="warehouse" />
             </div>
           </div>
 
-          {/* Row 3: Category (auto) + Current Stock (auto) */}
+          {/* Row 3: SKU (auto) + Current Stock (auto) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label>Product Category</Label>
+              <Label>SKU</Label>
               <input
                 type="text"
-                value={product?.category ?? ''}
+                value={product?.sku ?? ''}
                 readOnly
                 placeholder="Auto-filled from product"
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 text-slate-500 cursor-not-allowed outline-none"
@@ -667,7 +699,12 @@ const WAREHOUSES_FILTER = ['All Warehouses', 'Colombo', 'Galle', 'Kandy', 'Nugeg
 const STATUSES_FILTER   = ['All Statuses', 'Pending', 'Approved', 'Rejected', 'Completed'];
 
 export default function StockAdjustments() {
-  const [adjustments,  setAdjustments]  = useState(INITIAL_ADJUSTMENTS);
+  const { data: adjData, isLoading } = useAdjustments();
+  const approveAdj = useApproveAdjustment();
+  const rejectAdj  = useRejectAdjustment();
+  const [localAdjs, setLocalAdjs] = useState(INITIAL_ADJUSTMENTS);
+  const adjustments = adjData?.adjustments?.length ? adjData.adjustments : localAdjs;
+
   const [search,       setSearch]       = useState('');
   const [category,     setCategory]     = useState('All Categories');
   const [warehouse,    setWarehouse]    = useState('All Warehouses');
@@ -701,22 +738,36 @@ export default function StockAdjustments() {
   }, [adjustments, search, category, warehouse, statusFilter, startDate, endDate]);
 
   function handleApprove(id) {
-    setAdjustments(list => list.map(a => a.id === id ? { ...a, status: 'Approved' } : a));
-    toast.success('Adjustment approved successfully');
+    if (adjData) {
+      approveAdj.mutate(id, {
+        onSuccess: () => toast.success('Adjustment approved successfully'),
+        onError:   () => toast.error('Failed to approve adjustment'),
+      });
+    } else {
+      setLocalAdjs(prev => prev.map(a => a.id === id ? { ...a, status: 'Approved' } : a));
+      toast.success('Adjustment approved');
+    }
   }
   function handleReject(id) {
-    setAdjustments(list => list.map(a => a.id === id ? { ...a, status: 'Rejected' } : a));
-    toast.error('Adjustment rejected');
+    if (adjData) {
+      rejectAdj.mutate({ id, rejectionReason: '' }, {
+        onSuccess: () => toast.error('Adjustment rejected'),
+        onError:   () => toast.error('Failed to reject adjustment'),
+      });
+    } else {
+      setLocalAdjs(prev => prev.map(a => a.id === id ? { ...a, status: 'Rejected' } : a));
+      toast.error('Adjustment rejected');
+    }
   }
   function handleSave(newItem) {
-    setAdjustments(list => [{ id: Date.now(), ...newItem }, ...list]);
+    setLocalAdjs(prev => [{ id: Date.now(), ...newItem }, ...prev]);
     toast.success('Adjustment submitted for approval');
   }
 
   return (
     <div className="space-y-5 fade-up">
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      {/*  Header  */}
       <PageHeader
         title="Inventory Adjustments"
         description="Manage manual stock corrections, damage reports, and cycle count adjustments."
@@ -730,7 +781,7 @@ export default function StockAdjustments() {
         }
       />
 
-      {/* ── Filter bar ─────────────────────────────────────────────────────── */}
+      {/*  Filter bar  */}
       <div className="flex flex-wrap gap-2 items-center">
         <div className="relative flex-1 min-w-[180px]">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -757,7 +808,7 @@ export default function StockAdjustments() {
         )}
       </div>
 
-      {/* ── Table ──────────────────────────────────────────────────────────── */}
+      {/*  Table  */}
       <div className="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full text-left border-collapse min-w-[820px]">
           <thead>
@@ -768,7 +819,17 @@ export default function StockAdjustments() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
-            {filtered.length === 0 ? (
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i}>
+                  {Array.from({ length: 10 }).map((__, j) => (
+                    <td key={j} className="px-4 py-3">
+                      <div className="h-4 bg-slate-100 rounded animate-pulse" />
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={10} className="px-6 py-14 text-center text-slate-400">
                   No adjustments match the current filters.
@@ -846,11 +907,12 @@ export default function StockAdjustments() {
           <div className="px-4 py-2.5 border-t border-slate-100 text-xs text-slate-400">
             Showing <span className="font-semibold text-slate-600">{filtered.length}</span> of{' '}
             <span className="font-semibold text-slate-600">{adjustments.length}</span> adjustments
+
           </div>
         )}
       </div>
 
-      {/* ── Modals ─────────────────────────────────────────────────────────── */}
+      {/*  Modals  */}
       {showCreate && <CreateModal onClose={() => setShowCreate(false)} onSave={handleSave} />}
       {viewItem   && <ViewModal  item={viewItem}                      onClose={() => setViewItem(null)} />}
     </div>

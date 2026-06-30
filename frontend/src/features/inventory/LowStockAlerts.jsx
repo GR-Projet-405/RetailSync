@@ -5,16 +5,14 @@ import {
   AlertTriangle, AlertOctagon, RefreshCw, BellRing,
   Package, Building2, Truck, Tag, CalendarDays, FileText,
   CheckCircle2, Settings, Clock, XCircle, TrendingDown,
-  ShieldAlert,
+  ShieldAlert, Loader2,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import { cn } from '../../utils/cn';
 import { toast } from '../../utils/toast';
+import { useLowStockAlerts, useLowStockStats } from '../../hooks/useInventory';
 
-// ─── Mock alert data ──────────────────────────────────────────────────────────
-// daysRemaining: estimated days until stockout (based on avg sales velocity)
-// SRS REQ-INV-003: alerts triggered when stock < reorder level
-// SRS REQ-INV-007: configurable reorder levels per product per warehouse
+// Mock alert data 
 
 const INITIAL_ALERTS = [
   { id:  1, sku: 'SKU-ELE-000123', product: 'Samsung Galaxy S24 128GB',     category: 'Electronics',   warehouse: 'Colombo', supplier: 'Samsung Lanka (Pvt) Ltd',    currentStock:  40, reservedStock:  5, reorderLevel: 100, daysRemaining:  4, lastPurchase: '15 March 2026',  alertSince: '10 Jun 2026', acknowledged: false, image: null },
@@ -31,7 +29,7 @@ const INITIAL_ALERTS = [
   { id: 12, sku: 'SKU-CLO-000401', product: "Men's Cotton T-Shirt (M)",      category: 'Clothing',      warehouse: 'Colombo', supplier: 'Fashion Hub (Pvt) Ltd',      currentStock:  80, reservedStock: 20, reorderLevel:  50, daysRemaining: 12, lastPurchase: '18 March 2026',  alertSince: '14 Jun 2026', acknowledged: false, image: null },
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// Helpers 
 
 const avail = (a) => Math.max(0, a.currentStock - a.reservedStock);
 
@@ -57,7 +55,7 @@ function daysColor(days, severity) {
   return 'text-slate-600';
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// Constants 
 
 const CATEGORIES_F = ['All Categories', 'Electronics', 'Grocery', 'Clothing', 'Beverages', 'Stationery', 'Household', 'Personal Care'];
 const WAREHOUSES_F = ['All Warehouses', 'Colombo', 'Galle', 'Kandy'];
@@ -65,7 +63,7 @@ const SEVERITY_F   = ['All Alerts', 'Out of Stock', 'Critical', 'Low Stock', 'Re
 
 const SEV_FILTER_MAP = { 'Out of Stock': 'out', 'Critical': 'critical', 'Low Stock': 'low', 'Reorder Due': 'reorder' };
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+//  Sub-components 
 
 function FilterSelect({ value, onChange, options }) {
   return (
@@ -110,7 +108,7 @@ function DaysLeftCell({ days, severity }) {
   );
 }
 
-// ─── View Details Modal ───────────────────────────────────────────────────────
+// View Details Modal 
 
 function ViewModal({ item, onClose }) {
   const navigate = useNavigate();
@@ -235,7 +233,7 @@ function ViewModal({ item, onClose }) {
   );
 }
 
-// ─── Date helpers ─────────────────────────────────────────────────────────────
+// Date helpers 
 
 function fmtISOLabel(iso) {
   if (!iso) return '';
@@ -351,7 +349,7 @@ function ActionMenu({ item, onView, onDismiss, onSetReorder }) {
           </button>
           <div className="border-t border-slate-100 mt-1 pt-1">
             <button
-              onClick={() => { onDismiss(item.id); setOpen(false); }}
+              onClick={() => { onDismiss(item._id ?? item.id); setOpen(false); }}
               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-500 hover:bg-slate-50 transition-colors"
             >
               <CheckCircle2 size={13} /> Dismiss Alert
@@ -363,7 +361,7 @@ function ActionMenu({ item, onView, onDismiss, onSetReorder }) {
   );
 }
 
-// ─── Set Reorder Level mini-modal ─────────────────────────────────────────────
+// Set Reorder Level 
 
 function SetReorderModal({ item, onClose, onSave }) {
   const [level, setLevel] = useState(String(item.reorderLevel));
@@ -415,7 +413,7 @@ function SetReorderModal({ item, onClose, onSave }) {
   );
 }
 
-// ─── Full Details panel ───────────────────────────────────────────────────────
+//  Full Details panel 
 
 function DetailPanel({ item, onClose, onDismiss }) {
   const navigate = useNavigate();
@@ -507,7 +505,7 @@ function DetailPanel({ item, onClose, onDismiss }) {
         {/* Secondary: Dismiss */}
         <button
           onClick={() => {
-            onDismiss(item.id);
+            onDismiss(item._id ?? item.id);
             toast.success(`Alert dismissed for ${item.product}`);
             onClose();
           }}
@@ -544,10 +542,14 @@ function InfoRow({ icon: Icon, label, value }) {
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// Main Component 
 
 export default function LowStockAlerts() {
-  const [alerts,       setAlerts]       = useState(INITIAL_ALERTS);
+  const { data: alertData, isLoading } = useLowStockAlerts();
+  const { data: statsData } = useLowStockStats();
+  const [localAlerts,  setLocalAlerts]  = useState(INITIAL_ALERTS);
+  const [dismissedIds, setDismissedIds] = useState(new Set());
+
   const [search,       setSearch]       = useState('');
   const [category,     setCategory]     = useState('All Categories');
   const [warehouse,    setWarehouse]    = useState('All Warehouses');
@@ -569,8 +571,12 @@ export default function LowStockAlerts() {
     setEndDate('');
   };
 
-  // Only show non-dismissed alerts
-  const visible = useMemo(() => alerts.filter(a => !a.acknowledged), [alerts]);
+  const visible = useMemo(() => {
+    if (alertData?.alerts?.length) {
+      return alertData.alerts.filter(a => !dismissedIds.has(String(a._id)));
+    }
+    return localAlerts.filter(a => !a.acknowledged);
+  }, [alertData, localAlerts, dismissedIds]);
 
   const filtered = useMemo(() => {
     const q  = search.toLowerCase();
@@ -585,7 +591,6 @@ export default function LowStockAlerts() {
     });
   }, [visible, search, category, warehouse, sevFilter, startDate, endDate]);
 
-  // KPI counts (from all visible alerts, not just filtered)
   const kpis = useMemo(() => {
     const outCount      = visible.filter(a => getSeverity(a) === 'out').length;
     const critCount     = visible.filter(a => getSeverity(a) === 'critical').length;
@@ -600,29 +605,38 @@ export default function LowStockAlerts() {
   }, [visible]);
 
   function handleDismiss(id) {
-    setAlerts(list => list.map(a => a.id === id ? { ...a, acknowledged: true } : a));
-    if (selectedItem?.id === id) setSelectedItem(null);
+    if (alertData?.alerts) {
+      setDismissedIds(prev => new Set([...prev, String(id)]));
+      if (selectedItem?._id && String(selectedItem._id) === String(id)) setSelectedItem(null);
+    } else {
+      setLocalAlerts(list => list.map(a => a.id === id ? { ...a, acknowledged: true } : a));
+      if (selectedItem?.id === id) setSelectedItem(null);
+    }
   }
 
   function handleSetReorder(id, level) {
-    setAlerts(list => list.map(a => a.id === id ? { ...a, reorderLevel: level } : a));
+    setLocalAlerts(list => list.map(a => a.id === id ? { ...a, reorderLevel: level } : a));
     if (selectedItem?.id === id) setSelectedItem(a => a ? { ...a, reorderLevel: level } : a);
   }
 
   function handleRowClick(item) {
-    setSelectedItem(prev => prev?.id === item.id ? null : item);
+    const iid = item._id ?? item.id;
+    setSelectedItem(prev => {
+      const pid = prev?._id ?? prev?.id;
+      return String(pid) === String(iid) ? null : item;
+    });
   }
 
   return (
     <div className="space-y-5 fade-up">
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      {/* Header  */}
       <PageHeader
         title="Low Stock Alerts"
         description="Monitor critical inventory levels and take immediate reorder action."
       />
 
-      {/* ── KPI Cards ──────────────────────────────────────────────────────── */}
+      {/* KPI Cards  */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map(k => {
           const Icon = k.Icon;
@@ -645,7 +659,7 @@ export default function LowStockAlerts() {
         })}
       </div>
 
-      {/* ── Filter bar ─────────────────────────────────────────────────────── */}
+      {/*Filter bar  */}
       <div className="flex flex-wrap gap-2 items-center">
         <div className="relative flex-1 min-w-[180px]">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -672,7 +686,6 @@ export default function LowStockAlerts() {
         )}
       </div>
 
-      {/* ── Table + Detail Panel ────────────────────────────────────────────── */}
       <div className="flex gap-4 items-start">
 
         {/* Table */}
@@ -686,7 +699,17 @@ export default function LowStockAlerts() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
-              {filtered.length === 0 ? (
+              {isLoading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={i}>
+                    {Array.from({ length: 9 }).map((__, j) => (
+                      <td key={j} className="px-4 py-3">
+                        <div className="h-4 bg-slate-100 rounded animate-pulse" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-6 py-16 text-center">
                     <TrendingDown size={32} className="mx-auto text-slate-200 mb-2" />
@@ -696,11 +719,12 @@ export default function LowStockAlerts() {
               ) : filtered.map(item => {
                 const severity   = getSeverity(item);
                 const av         = avail(item);
-                const isSelected = selectedItem?.id === item.id;
+                const iid        = item._id ?? item.id;
+                const isSelected = String(selectedItem?._id ?? selectedItem?.id) === String(iid);
 
                 return (
                   <tr
-                    key={item.id}
+                    key={String(iid)}
                     onClick={() => handleRowClick(item)}
                     className={cn(
                       'cursor-pointer transition-colors duration-100',

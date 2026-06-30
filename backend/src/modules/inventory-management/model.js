@@ -1,9 +1,5 @@
-const mongoose = require('mongoose');
-
-const InventoryPageSchema = new mongoose.Schema({
-  // Mongoose schema declaration boilerplate
-}, { 
-  timestamps: true 
-});
-
-module.exports = mongoose.model('InventoryPage', InventoryPageSchema);
+// Pre-load all inventory models so they are registered with Mongoose
+// before any populate() calls reference them.
+require('./inventoryItem.model');
+require('./stockMovement.model');
+require('./stockAdjustment.model');

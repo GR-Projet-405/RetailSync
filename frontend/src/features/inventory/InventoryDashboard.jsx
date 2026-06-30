@@ -3,15 +3,32 @@ import { useNavigate } from 'react-router-dom';
 import {
   TrendingUp, TrendingDown, ChevronDown, ArrowUpRight,
   ShoppingCart, FileCheck2, ArrowLeftRight, SlidersHorizontal,
-  Package, ExternalLink,
+  Package, ExternalLink, Loader2,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { useDashboardKPIs, useCategoryBreakdown, useDashboardRecentMovements } from '../../hooks/useInventory';
 
-// ─── Mock data ─────────────────────────────────────────────────────────────────
+// Static 
 
 const BRANCHES = ['Colombo', 'Kandy', 'Galle'];
 
-// Per-branch KPI snapshots — swapped in when user selects a branch
+// Colour palette cycled over dynamic categories from the API
+const CAT_COLORS = ['#22C55E','#14B8A6','#8B5CF6','#F97316','#3B82F6','#EC4899','#F59E0B','#EF4444'];
+
+// Map API movement type → icon + colour class for the dashboard feed
+const MOVEMENT_META = {
+  SALE:              { Icon: ShoppingCart,      colorClass: 'bg-emerald-100 text-emerald-600' },
+  PURCHASE:          { Icon: FileCheck2,        colorClass: 'bg-blue-100    text-blue-600'    },
+  TRANSFER_IN:       { Icon: ArrowLeftRight,    colorClass: 'bg-violet-100  text-violet-600'  },
+  TRANSFER_OUT:      { Icon: ArrowLeftRight,    colorClass: 'bg-violet-100  text-violet-600'  },
+  ADJUSTMENT_ADD:    { Icon: SlidersHorizontal, colorClass: 'bg-amber-100   text-amber-600'   },
+  ADJUSTMENT_REMOVE: { Icon: SlidersHorizontal, colorClass: 'bg-red-100     text-red-600'     },
+  RETURN_IN:         { Icon: FileCheck2,        colorClass: 'bg-teal-100    text-teal-600'    },
+  RETURN_OUT:        { Icon: ShoppingCart,      colorClass: 'bg-orange-100  text-orange-600'  },
+  DAMAGE_WRITE_OFF:  { Icon: Package,           colorClass: 'bg-red-100     text-red-600'     },
+};
+
+// Forecast stays static until the AI forecasting module is built
 const BRANCH_KPIS = {
   'All Branches': [
     { label: 'Total Inventory Value', value: 'LKR 900,000.00', trend: 5.5, up: true,  badWhenUp: false },
@@ -72,7 +89,7 @@ const FORECAST_DATA = [
   { month: 'Sep', actual: null, forecast: 14.1 },
 ];
 
-// ─── SVG Donut Chart ─────────────────────────────────────────────────────────
+// SVG Donut Chart 
 
 function DonutChart({ categories }) {
   const [hovered, setHovered] = useState(null);
@@ -125,7 +142,7 @@ function DonutChart({ categories }) {
   );
 }
 
-// ─── SVG Line Chart (Forecast) ───────────────────────────────────────────────
+//  SVG Line Chart (Forecast) 
 
 function smoothPath(pts) {
   if (pts.length === 0) return '';
@@ -224,7 +241,7 @@ function ForecastLineChart({ data }) {
   );
 }
 
-// ─── Branch Dropdown ─────────────────────────────────────────────────────────
+//  Branch Dropdown 
 
 function BranchDropdown({ activeBranch, onChange }) {
   const [open, setOpen] = useState(false);
@@ -263,7 +280,7 @@ function BranchDropdown({ activeBranch, onChange }) {
   );
 }
 
-// ─── KPI Card ────────────────────────────────────────────────────────────────
+//  KPI Card 
 
 function KPICard({ label, value, trend, up, badWhenUp, onClick, linkLabel }) {
   const isBad = (up && badWhenUp) || (!up && !badWhenUp);
@@ -296,21 +313,39 @@ function KPICard({ label, value, trend, up, badWhenUp, onClick, linkLabel }) {
   );
 }
 
-// ─── Main Inventory Dashboard ─────────────────────────────────────────────────
+//  Main Inventory Dashboard 
 
 export default function InventoryDashboard() {
   const navigate = useNavigate();
   const [activeBranch, setActiveBranch] = useState('All Branches');
 
-  const kpiData = BRANCH_KPIS[activeBranch];
-  const visibleMovements = activeBranch === 'All Branches'
-    ? RECENT_MOVEMENTS
-    : RECENT_MOVEMENTS.filter(m => m.branch === activeBranch);
+  const { data: apiKPIs,       isLoading: kpiLoading  } = useDashboardKPIs();
+  const { data: apiCategories, isLoading: catLoading  } = useCategoryBreakdown();
+  const { data: apiMovements,  isLoading: movLoading  } = useDashboardRecentMovements(5);
+
+  const kpiData = apiKPIs ?? BRANCH_KPIS[activeBranch];
+
+  const categoryData = useMemo(() => {
+    if (apiCategories?.length) {
+      return apiCategories.map((c, i) => ({ ...c, color: CAT_COLORS[i % CAT_COLORS.length] }));
+    }
+    return STOCK_CATEGORIES;
+  }, [apiCategories]);
+
+  const visibleMovements = useMemo(() => {
+    if (apiMovements?.length) {
+      return apiMovements
+        .filter(m => activeBranch === 'All Branches' || m.warehouse?.includes(activeBranch))
+        .map(m => ({ ...m, ...(MOVEMENT_META[m.rawType] ?? MOVEMENT_META.PURCHASE) }));
+    }
+    return (activeBranch === 'All Branches'
+      ? RECENT_MOVEMENTS
+      : RECENT_MOVEMENTS.filter(m => m.branch === activeBranch));
+  }, [apiMovements, activeBranch]);
 
   return (
     <div className="space-y-5 fade-up">
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-5 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium mb-1">
@@ -323,9 +358,12 @@ export default function InventoryDashboard() {
         <BranchDropdown activeBranch={activeBranch} onChange={setActiveBranch} />
       </div>
 
-      {/* ── KPI Cards ──────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
-        {kpiData.map((kpi, i) => (
+        {kpiLoading
+          ? Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4 h-24 animate-pulse" />
+            ))
+          : kpiData.map((kpi, i) => (
           <KPICard
             key={i}
             {...kpi}
@@ -347,7 +385,6 @@ export default function InventoryDashboard() {
         ))}
       </div>
 
-      {/* ── Middle row: Stock Overview + Recent Movements ──────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
         {/* Stock Overview */}
@@ -358,10 +395,10 @@ export default function InventoryDashboard() {
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-6">
             <div className="w-44 h-44 shrink-0">
-              <DonutChart categories={STOCK_CATEGORIES} />
+              <DonutChart categories={categoryData} />
             </div>
             <div className="flex flex-col gap-2.5 flex-1 w-full">
-              {STOCK_CATEGORIES.map(cat => (
+              {categoryData.map(cat => (
                 <div key={cat.name} className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-[3px] shrink-0" style={{ backgroundColor: cat.color }} />
                   <span className="text-xs text-slate-600 flex-1">{cat.name}</span>
@@ -391,20 +428,20 @@ export default function InventoryDashboard() {
             </div>
           ) : (
             <div className="space-y-1">
-              {visibleMovements.map(({ id, type, branch, date, Icon, colorClass }) => (
+              {visibleMovements.map((mv) => (
                 <div
-                  key={id}
+                  key={mv.id}
                   onClick={() => navigate('/stock-movements')}
                   className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center shrink-0', colorClass)}>
-                    <Icon size={15} />
+                  <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center shrink-0', mv.colorClass)}>
+                    <mv.Icon size={15} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 leading-tight">{type}</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5 font-medium">{id} · {branch}</p>
+                    <p className="text-sm font-semibold text-slate-800 leading-tight">{mv.type}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 font-medium">{mv.id} · {mv.warehouse ?? mv.branch}</p>
                   </div>
-                  <p className="text-[10px] text-slate-400 shrink-0 text-right leading-tight">{date}</p>
+                  <p className="text-[10px] text-slate-400 shrink-0 text-right leading-tight">{mv.date}</p>
                 </div>
               ))}
             </div>

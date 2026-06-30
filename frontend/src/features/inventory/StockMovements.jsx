@@ -4,14 +4,13 @@ import {
   ArrowLeftRight, PackagePlus, Shuffle, SlidersHorizontal,
   CheckCircle2, Clock, Ban, ArrowDownToLine, ArrowUpFromLine,
   RefreshCw, Undo2, Package, User, Building2, Truck,
-  AlertTriangle, Info, MoreVertical, Eye, ArrowRight,
+  AlertTriangle, Info, MoreVertical, Eye, ArrowRight, Loader2,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import { cn } from '../../utils/cn';
+import { useMovements } from '../../hooks/useInventory';
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-// Types per SRS REQ-INV-002: Received | Transfer In | Transfer Out | Adjustment | Return
-// Reason required for Adjustment per SRS REQ-INV-004 / BR-INV-002
+// Mock data 
 
 const MOCK_MOVEMENTS = [
   { id:  1, referenceId: 'GRN-000123', sku: 'SKU-ELE-000123', product: 'Samsung Galaxy S24 128GB',    category: 'Electronics',   type: 'Received',     qty: +250, source: 'Supplier (Samsung Lanka)',  destination: 'Main Warehouse',   staff: 'Nimal',   status: 'Completed', date: '19 Jun 2026', time: '10:30 a.m.', reason: null,                                         transferId: null          },
@@ -28,7 +27,7 @@ const MOCK_MOVEMENTS = [
   { id: 12, referenceId: 'RTN-000051', sku: 'SKU-BEV-000301', product: 'Red Bull Energy Drink 250ml', category: 'Beverages',    type: 'Return',       qty:   +6, source: 'Supplier Return',           destination: 'Galle Warehouse',  staff: 'Priya',   status: 'Completed', date: '14 Jun 2026', time: '10:00 a.m.', reason: 'Short expiry — returned to supplier',       transferId: null          },
 ];
 
-// All transfer tracker data — keyed by Transfer ID (REQ-INV-003)
+// All transfer tracker data — keyed by Transfer ID 
 const TRACKERS = {
   TID0000122: {
     id: 'TID0000122',
@@ -86,7 +85,7 @@ const CATEGORIES = ['All Categories', 'Electronics', 'Clothing', 'Groceries', 'B
 const WAREHOUSES = ['All Warehouses', 'Colombo Branch', 'Kandy Branch', 'Galle Branch', 'Main Warehouse', 'Colombo Warehouse', 'Kandy Warehouse', 'Galle Warehouse'];
 const TYPES      = ['All Types', 'Received', 'Transfer In', 'Transfer Out', 'Adjustment', 'Return'];
 
-// ─── Type config ──────────────────────────────────────────────────────────────
+// ─── Type config 
 
 const TYPE_CFG = {
   'Received':     { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', Icon: ArrowDownToLine  },
@@ -96,7 +95,7 @@ const TYPE_CFG = {
   'Return':       { color: 'bg-amber-100   text-amber-700   border-amber-200',   Icon: Undo2            },
 };
 
-// ─── Status config ────────────────────────────────────────────────────────────
+// ─── Status config 
 
 const STATUS_CFG = {
   'Completed': { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', Icon: CheckCircle2 },
@@ -105,7 +104,7 @@ const STATUS_CFG = {
   'Rejected':  { color: 'bg-red-100     text-red-700     border-red-200',     Icon: Ban          },
 };
 
-// ─── KPI data derived from MOCK_MOVEMENTS ─────────────────────────────────────
+// ─── KPI data derived from MOCK_MOVEMENTS 
 
 function buildKpis(movements) {
   const received    = movements.filter(m => m.type === 'Received').reduce((s, m) => s + m.qty, 0);
@@ -119,7 +118,7 @@ function buildKpis(movements) {
   ];
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Sub-components 
 
 function FilterSelect({ value, onChange, options }) {
   return (
@@ -160,7 +159,7 @@ function StatusBadge({ status }) {
   );
 }
 
-// ─── Date + time sorter ───────────────────────────────────────────────────────
+// ─── Date + time sorter 
 
 function parseDatetime(date, time) {
   // date: '19 Jun 2026'  time: '10:30 a.m.' | '14:00 p.m.'
@@ -298,7 +297,7 @@ function TransferTracker({ tracker }) {
   );
 }
 
-// ─── Date helpers ─────────────────────────────────────────────────────────────
+//  Date helpers 
 
 function fmtISOLabel(iso) {
   if (!iso) return '';
@@ -316,7 +315,7 @@ function inDateRange(dateStr, startISO, endISO) {
   return true;
 }
 
-// ─── Date Range Filter chip ───────────────────────────────────────────────────
+// ─── Date Range Filter chip 
 
 function DateRangeFilter({ startDate, endDate, onChange }) {
   const [open, setOpen] = useState(false);
@@ -375,7 +374,7 @@ function DateRangeFilter({ startDate, endDate, onChange }) {
   );
 }
 
-// ─── Action Menu (three-dot) ─────────────────────────────────────────────────
+// ─── Action Menu
 
 function ActionMenu({ item, onView }) {
   const [open, setOpen] = useState(false);
@@ -409,7 +408,7 @@ function ActionMenu({ item, onView }) {
   );
 }
 
-// ─── View Details Modal ───────────────────────────────────────────────────────
+// ─── View Details Modal 
 
 function ViewModal({ item, onClose }) {
   useEffect(() => {
@@ -516,9 +515,12 @@ function ViewModal({ item, onClose }) {
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Main component 
 
 export default function StockMovements() {
+  const { data: movData, isLoading } = useMovements();
+  const movements = movData?.movements?.length ? movData.movements : MOCK_MOVEMENTS;
+
   const [search,          setSearch]          = useState('');
   const [category,        setCategory]        = useState('All Categories');
   const [warehouse,       setWarehouse]       = useState('All Warehouses');
@@ -541,33 +543,29 @@ export default function StockMovements() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return MOCK_MOVEMENTS.filter(m => {
-      const matchQ  = !q || m.product.toLowerCase().includes(q) || m.sku.toLowerCase().includes(q) || m.referenceId.toLowerCase().includes(q);
+    return movements.filter(m => {
+      const matchQ  = !q || m.product.toLowerCase().includes(q) || m.sku.toLowerCase().includes(q) || (m.referenceId ?? '').toLowerCase().includes(q);
       const matchC  = category  === 'All Categories' || m.category === category;
-      const matchW  = warehouse === 'All Warehouses' || m.source.includes(warehouse) || m.destination.includes(warehouse);
+      const matchW  = warehouse === 'All Warehouses' || (m.source ?? '').includes(warehouse) || (m.destination ?? '').includes(warehouse);
       const matchT  = typeFilter === 'All Types'     || m.type     === typeFilter;
       const matchD  = inDateRange(m.date, startDate, endDate);
       return matchQ && matchC && matchW && matchT && matchD;
     });
-  }, [search, category, warehouse, typeFilter, startDate, endDate]);
+  }, [movements, search, category, warehouse, typeFilter, startDate, endDate]);
 
-  const kpis         = useMemo(() => buildKpis(filtered), [filtered]);
-  const recentItems  = useMemo(() => (
-    [...MOCK_MOVEMENTS]
-      .sort((a, b) => parseDatetime(b.date, b.time) - parseDatetime(a.date, a.time))
-      .slice(0, 4)
-  ), []);
+  const kpis        = useMemo(() => buildKpis(filtered), [filtered]);
+  const recentItems = useMemo(() => movements.slice(0, 4), [movements]);
 
   return (
     <div className="space-y-5 fade-up">
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      {/* ── Header  */}
       <PageHeader
         title="Stock Movements"
         description="Track all inventory transactions — receipts, transfers, adjustments, and returns."
       />
 
-      {/* ── KPI Cards ──────────────────────────────────────────────────────── */}
+      {/* ── KPI Cards  */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map(k => {
           const Icon = k.Icon;
@@ -586,7 +584,7 @@ export default function StockMovements() {
         })}
       </div>
 
-      {/* ── Filter bar ─────────────────────────────────────────────────────── */}
+      {/* ── Filter bar  */}
       <div className="flex flex-wrap gap-2 items-center">
         {/* Search */}
         <div className="relative flex-1 min-w-[180px]">
@@ -620,7 +618,7 @@ export default function StockMovements() {
         )}
       </div>
 
-      {/* ── Table ──────────────────────────────────────────────────────────── */}
+      {/* ── Table  */}
       <div className="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full text-left border-collapse min-w-[900px]">
           <thead>
@@ -631,7 +629,17 @@ export default function StockMovements() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
-            {filtered.length === 0 ? (
+            {isLoading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <tr key={i}>
+                  {Array.from({ length: 10 }).map((__, j) => (
+                    <td key={j} className="px-4 py-3">
+                      <div className="h-4 bg-slate-100 rounded animate-pulse" />
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={10} className="px-6 py-14 text-center text-slate-400">
                   No movements match the current filters.
@@ -726,7 +734,7 @@ export default function StockMovements() {
         {filtered.length > 0 && (
           <div className="px-4 py-2.5 border-t border-slate-100 text-xs text-slate-400">
             Showing <span className="font-semibold text-slate-600">{filtered.length}</span> of{' '}
-            <span className="font-semibold text-slate-600">{MOCK_MOVEMENTS.length}</span> movements
+            <span className="font-semibold text-slate-600">{movements.length}</span> movements
           </div>
         )}
       </div>
