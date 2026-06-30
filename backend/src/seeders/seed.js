@@ -2,8 +2,9 @@ require('dotenv').config({ path: '../../.env' });
 const mongoose = require('mongoose');
 const env = require('../config/env');
 const seedBranches = require('./branches.seeder');
-const seedRoles = require('./roles.seeder');
-const seedUsers = require('./users.seeder');
+const seedRoles    = require('./roles.seeder');
+const seedUsers    = require('./users.seeder');
+const seedReports  = require('./reports.seeder');
 
 const runSeeders = async () => {
   try {
@@ -15,6 +16,7 @@ const runSeeders = async () => {
     await seedBranches();
     await seedRoles();
     await seedUsers();
+    await seedReports();
     console.log('--- Seed Process Completed Successfully ---');
 
     process.exit(0);

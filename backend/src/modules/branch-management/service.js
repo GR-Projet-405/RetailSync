@@ -1,10 +1,17 @@
+const Branch = require('./branch.model');
+
 class BranchPageService {
   async fetchDetails() {
-    // Skeletons to be populated by development teams
     return {
       module: 'Branch Management',
-      status: 'Under Development'
+      status: 'Under Development',
     };
+  }
+
+  async fetchActiveBranches() {
+    return Branch.find({ status: 'ACTIVE' })
+      .select('_id name code location')
+      .sort({ name: 1 });
   }
 }
 
