@@ -41,6 +41,7 @@ import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
 import AddCustomerPage from '../pages/AddCustomerPage';
 import CustomerProfilePage from '../pages/CustomerProfilePage';
+import CustomerHistoryPage from '../pages/CustomerHistoryPage';
 
 
 
@@ -233,6 +234,11 @@ export const AppRoutes = () => {
         <Route path="/customers/:id" element={
           <ProtectedRoute allowedRoles={SALES_ROLES}>
             <CustomerProfilePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/customers/:id/history" element={
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <CustomerHistoryPage />
           </ProtectedRoute>
         } />
 
