@@ -42,6 +42,7 @@ import HelpSupportPage from '../pages/HelpSupportPage';
 import AddCustomerPage from '../pages/AddCustomerPage';
 import CustomerProfilePage from '../pages/CustomerProfilePage';
 import CustomerHistoryPage from '../pages/CustomerHistoryPage';
+import CustomerSearchPage from '../pages/CustomerSearchPage';
 
 
 
@@ -229,6 +230,11 @@ export const AppRoutes = () => {
         <Route path="/customers/new" element={
           <ProtectedRoute allowedRoles={SALES_ROLES}>
             <AddCustomerPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/customers/search" element={
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <CustomerSearchPage />
           </ProtectedRoute>
         } />
         <Route path="/customers/:id" element={
