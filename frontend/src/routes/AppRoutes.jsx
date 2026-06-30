@@ -40,6 +40,7 @@ import AIAssistantPage from '../pages/AIAssistantPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
 import AddCustomerPage from '../pages/AddCustomerPage';
+import CustomerProfilePage from '../pages/CustomerProfilePage';
 
 
 
@@ -227,6 +228,11 @@ export const AppRoutes = () => {
         <Route path="/customers/new" element={
           <ProtectedRoute allowedRoles={SALES_ROLES}>
             <AddCustomerPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/customers/:id" element={
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <CustomerProfilePage />
           </ProtectedRoute>
         } />
 
