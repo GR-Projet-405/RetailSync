@@ -191,9 +191,9 @@ export const AppRoutes = () => {
 
         {/* Payment Processing */}
         <Route path="/payment-processing" element={
-          <ProtectedRoute allowedRoles={SALES_ROLES}>
-            <PaymentProcessingPage />
-          </ProtectedRoute>
+
+          <PaymentProcessingPage />
+
         } />
 
         {/* Sales History */}
