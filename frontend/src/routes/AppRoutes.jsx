@@ -31,6 +31,8 @@ import POSBillingPage from '../pages/POSBillingPage';
 import PaymentProcessingPage from '../pages/PaymentProcessingPage';
 import SalesHistoryPage from '../pages/SalesHistoryPage';
 import ReturnsRefundsPage from '../pages/ReturnsRefundsPage';
+import ReturnStatusPage from '../pages/ReturnStatusPage';
+import ReviewReturnRequestPage from '../pages/ReviewReturnRequestPage';
 import PromotionsDiscountsPage from '../pages/PromotionsDiscountsPage';
 import ReportsPage from '../pages/ReportsPage';
 import BusinessAnalyticsPage from '../pages/BusinessAnalyticsPage';
@@ -209,6 +211,20 @@ export const AppRoutes = () => {
             <ReturnsRefundsPage />
           </ProtectedRoute>
 
+        } />
+
+        {/* Return Approval (Manager Only) */}
+        <Route path="/returns/approval/:transactionId" element={
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+            <ReviewReturnRequestPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Track Return Status */}
+        <Route path="/returns/status/:returnId" element={
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <ReturnStatusPage />
+          </ProtectedRoute>
         } />
 
         {/* Promotions & Discounts */}

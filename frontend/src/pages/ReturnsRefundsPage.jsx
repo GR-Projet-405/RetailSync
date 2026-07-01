@@ -1,3 +1,4 @@
+import ReturnStatusPage from './ReturnStatusPage';
 import { useState, useEffect } from 'react';
 import PageHeader from '../components/PageHeader';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/Card';
@@ -100,6 +101,15 @@ export default function ReturnsRefundsPage() {
 
   const activeItemInfo = RECEIPT_ITEMS.find(item => item.sku === activeDetailSku);
   const activeFormInfo = formStates[activeDetailSku] || { reason: 'Defective/Damaged Product', condition: 'Opened', comments: '', isSaved: false };
+
+  if (uiState === 'TRACKING') {
+      return (
+        <ReturnStatusPage 
+          returnId="RET-0091" 
+          onGoBack={() => setUiState('IDLE')} 
+        />
+      );
+    }
 
   return (
     <div className="space-y-5 fade-up pt-2 pb-10">
@@ -310,6 +320,7 @@ export default function ReturnsRefundsPage() {
                 
                 <button 
                   disabled={uiState !== 'VALID' || selectedSkus.length === 0}
+                  onClick={() => setUiState('TRACKING')}
                   className={`w-full h-10 font-bold text-[13px] flex items-center justify-center gap-2 rounded-lg transition-all ${
                     uiState === 'VALID' && selectedSkus.length > 0
                       ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer' 
