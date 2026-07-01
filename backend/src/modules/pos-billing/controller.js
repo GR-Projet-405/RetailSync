@@ -1,7 +1,6 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const service = require('./service');
 
-// GET Boilerplate handler
 const getDetails = asyncHandler(async (req, res) => {
   const data = await service.fetchDetails();
   res.status(200).json({

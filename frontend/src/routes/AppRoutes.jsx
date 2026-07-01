@@ -28,6 +28,8 @@ import PurchaseOrderPage from '../pages/PurchaseOrderPage';
 import GoodsReceivingPage from '../pages/GoodsReceivingPage';
 import StockTransferPage from '../pages/StockTransferPage';
 import POSBillingPage from '../pages/POSBillingPage';
+import POSCheckoutPage from '../pages/POSCheckoutPage';
+import ReceiptPreviewPage from '../pages/ReceiptPreviewPage';
 import PaymentProcessingPage from '../pages/PaymentProcessingPage';
 import SalesHistoryPage from '../pages/SalesHistoryPage';
 import ReturnsRefundsPage from '../pages/ReturnsRefundsPage';
@@ -56,13 +58,15 @@ export const AppRoutes = () => {
       {/* Auth Routes */}
       <Route path="/login" element={<LoginPage />} />
 
-      {/* POS Billing Route - Full-screen layout */}
+      {/* POS Routes - Full-screen layout */}
       <Route element={
         <ProtectedRoute allowedRoles={POS_ROLES}>
           <POSLayout />
         </ProtectedRoute>
       }>
         <Route path="/pos-billing" element={<POSBillingPage />} />
+        <Route path="/pos-checkout" element={<POSCheckoutPage />} />
+        <Route path="/pos-receipt" element={<ReceiptPreviewPage />} />
       </Route>
 
       {/* Main Dashboard Panel Layout */}
