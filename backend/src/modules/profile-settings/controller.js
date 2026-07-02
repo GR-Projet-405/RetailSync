@@ -5,9 +5,7 @@ const service = require('./service');
 // @route   GET /api/v1/profile-settings
 // @access  Private
 const getDetails = asyncHandler(async (req, res) => {
-  // Pass the already fetched and populated user object from the middleware to the service
   const data = await service.fetchDetails(req.user);
-  
   res.status(200).json({
     success: true,
     message: 'Profile details fetched successfully.',
@@ -16,6 +14,28 @@ const getDetails = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Update logged-in user profile fields
+// @route   PUT /api/v1/profile-settings/update
+// @access  Private
+const updateProfile = asyncHandler(async (req, res) => {
+  const { firstName, lastName, phoneNumber } = req.body;
+  
+  // Pass the updated values along with the active user context
+  const updatedData = await service.modifyProfile(req.user, { 
+    firstName, 
+    lastName, 
+    phoneNumber 
+  });
+
+  res.status(200).json({
+    success: true,
+    message: 'Profile updated successfully.',
+    timestamp: new Date().toISOString(),
+    data: updatedData
+  });
+});
+
 module.exports = {
-  getDetails
+  getDetails,
+  updateProfile
 };

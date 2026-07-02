@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('./controller');
-const { verifyToken } = require('../../middleware/auth.middleware'); // Adjust relative path to your auth middleware
+const { verifyToken } = require('../../middleware/auth.middleware');
 
-// Secure the route so only logged-in, verified users can fetch their details
+// Fetch current details
 router.get('/', verifyToken, controller.getDetails);
+
+// Update editable textual details
+router.put('/update', verifyToken, controller.updateProfile);
 
 module.exports = router;
