@@ -266,11 +266,126 @@ function RecentTicketsTable({ tickets, selectedId, onSelect }) {
   );
 }
 
-function TicketChatPanel (){
+function TicketChatPanel({ ticket }) {
+  const [message, setMessage] = useState('');
+
+  if (!ticket) {
+    return (
+      <Card>
+        <CardContent className="p-6 pt-6 text-sm text-slate-500">
+          Select a ticket to view the conversation.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const handleSendMessage = (e) => {
+    e.preventDefault();
+
+    if (!message.trim()) return;
+
+    console.log('New message:', message);
+    setMessage('');
+  };
+
   return (
     <Card>
-      <CardContent className="p-6 pt-6">
-        Ticket Chat
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 border-b border-slate-100 pb-4">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white">
+            <MessageSquare size={18} />
+          </span>
+
+          <div>
+            <CardTitle className="text-lg">{ticket.subject}</CardTitle>
+            <p className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400">
+              Ticket #{ticket.id} • Priority: {ticket.priority}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs font-medium text-blue-600">
+          <span className="h-2 w-2 rounded-full bg-blue-600" />
+          Agent is typing...
+        </div>
+      </CardHeader>
+
+      <CardContent className="p-0">
+        <div className="h-[320px] space-y-4 overflow-y-auto bg-slate-50/60 p-5">
+          {ticket.messages.map((item) => {
+            if (item.type === 'system') {
+              return (
+                <div key={item.id} className="text-center">
+                  <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-500">
+                    {item.text}
+                  </span>
+                </div>
+              );
+            }
+
+            const isAgent = item.type === 'agent';
+
+            return (
+              <div
+                key={item.id}
+                className={`flex ${isAgent ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                    isAgent
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-blue-100 text-slate-700'
+                  }`}
+                >
+                  <p>{item.text}</p>
+                  {item.time && (
+                    <p
+                      className={`mt-2 text-[11px] ${
+                        isAgent ? 'text-blue-100' : 'text-slate-400'
+                      }`}
+                    >
+                      {item.time}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <form
+          onSubmit={handleSendMessage}
+          className="flex items-center gap-2 border-t border-slate-100 bg-white p-4"
+        >
+          <button
+            type="button"
+            className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          >
+            <Paperclip size={18} />
+          </button>
+
+          <input
+            type="text"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Type your message here..."
+            className="flex-1 rounded-full border border-slate-200 px-4 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          />
+
+          <button
+            type="button"
+            className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          >
+            <Smile size={18} />
+          </button>
+
+          <button
+            type="submit"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700"
+          >
+            <Send size={18} />
+          </button>
+        </form>
       </CardContent>
     </Card>
   );
@@ -289,7 +404,7 @@ export default function HelpSupportPage() {
       </div>
       <div className="xl:col-span-7 flex flex-col gap-6">
         <RecentTicketsTable tickets={tickets} selectedId={selectedId} onSelect={setSelectedId} />
-        <TicketChatPanel />
+        <TicketChatPanel ticket={selectedTicket} />
       </div>
     </div>
   );
