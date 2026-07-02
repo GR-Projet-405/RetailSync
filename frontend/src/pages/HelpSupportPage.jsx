@@ -24,10 +24,10 @@ const STATUS_VARIANT = {
 //Mocked Data
 const INITIAL_TICKETS = [
   {
-    id: 1,
+    id: 'JK-2983',
     subject: 'API Connection Error',
     category: 'Technical Issue',
-    date: '2023-08-15',
+    date: 'Oct 12, 2023',
     status: 'In Progress',
     priority: 'High',
     messages: [
@@ -36,6 +36,34 @@ const INITIAL_TICKETS = [
         type: 'user',
         text: 'Our POS terminal cannot connect to the API since this morning.',
         time: 'Oct 12, 2023, 9:15 AM',
+      },
+    ],
+  },
+  {
+    id: 'JK-2984',
+    subject: 'Unable to upgrade plan',
+    category: 'Billing',
+    date: 'Oct 14, 2023',
+    status: 'Open',
+    priority: 'High',
+    messages: [
+      {
+        id: 1,
+        type: 'user',
+        text: "I'm trying to upgrade to the Enterprise plan but I keep getting a payment error (402). My card is valid and works elsewhere. Can you help?",
+        time: 'Today, 10:45 AM',
+      },
+      {
+        id: 2,
+        type: 'system',
+        text: 'Support Agent Sarah joined the chat',
+      },
+      {
+        id: 3,
+        type: 'agent',
+        sender: 'Sarah',
+        text: "Hi there! I'm Sarah from the billing department. I can see the failed transaction attempt. Could you please confirm the last 4 digits of the card you're trying to use?",
+        time: 'Today, 10:48 AM',
       },
     ],
   },
@@ -151,11 +179,88 @@ function CreateTicketForm (){
   )
 }
 
-function RecentTicketsTable (){
+function RecentTicketsTable({ tickets, selectedId, onSelect }) {
+  const [statusFilter, setStatusFilter] = useState('All Status');
+
+  const filteredTickets = tickets.filter((ticket) => {
+    if (statusFilter === 'All Status') return true;
+    return ticket.status === statusFilter;
+  });
+
   return (
     <Card>
-      <CardContent className="p-6 pt-6">
-        Recent Tickets
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <CardTitle className="text-lg">Recent Tickets</CardTitle>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setStatusFilter('All Status')}
+            className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+          >
+            <Filter size={14} />
+            {statusFilter}
+          </button>
+          <button
+            type="button"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+          >
+            Newest First
+            <ChevronDown size={14} />
+          </button>
+        </div>
+      </CardHeader>
+
+      <CardContent className="pt-0">
+        <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <th className="px-4 py-3">Ticket ID</th>
+                <th className="px-4 py-3">Subject</th>
+                <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredTickets.map((ticket) => (
+                <tr
+                  key={ticket.id}
+                  className={`transition-colors hover:bg-blue-50/40 ${
+                    selectedId === ticket.id ? 'bg-blue-50/60' : ''
+                  }`}
+                >
+                  <td className="px-4 py-3 font-medium text-slate-800">
+                    #{ticket.id}
+                  </td>
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-slate-800">{ticket.subject}</p>
+                    <p className="text-xs text-slate-400">{ticket.category}</p>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{ticket.date}</td>
+                  <td className="px-4 py-3">
+                    <Badge variant={STATUS_VARIANT[ticket.status]}>
+                      {ticket.status}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      type="button"
+                      onClick={() => onSelect(ticket.id)}
+                      className={`inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+                        selectedId === ticket.id
+                          ? 'bg-blue-600 text-white'
+                          : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                      }`}
+                    >
+                      <Eye size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </CardContent>
     </Card>
   );
@@ -173,7 +278,7 @@ function TicketChatPanel (){
 
 export default function HelpSupportPage() {
   const [tickets, setTickets] = useState(INITIAL_TICKETS);
-  const [selectedId, setSelectedId] = useState(1);
+  const [selectedId, setSelectedId] = useState('JK-2984');
   
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedId)
 
@@ -183,7 +288,7 @@ export default function HelpSupportPage() {
         <CreateTicketForm />
       </div>
       <div className="xl:col-span-7 flex flex-col gap-6">
-        <RecentTicketsTable />
+        <RecentTicketsTable tickets={tickets} selectedId={selectedId} onSelect={setSelectedId} />
         <TicketChatPanel />
       </div>
     </div>
