@@ -39,6 +39,7 @@ import AIReorderingPage from '../pages/AIReorderingPage';
 import AIAssistantPage from '../pages/AIAssistantPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
+import PaymentSuccessPage from '../pages/PaymentSuccessPage';
 
 
 
@@ -194,6 +195,11 @@ export const AppRoutes = () => {
 
           <PaymentProcessingPage />
 
+        } />
+
+        {/* Payment Success */}
+        <Route path="/payment-success" element={
+          <PaymentSuccessPage />
         } />
 
         {/* Sales History */}
