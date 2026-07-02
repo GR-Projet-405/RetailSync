@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Plus, Send, Eye, CloudUpload, Smile, Paperclip, MessageSquare, Filter, ChevronDown, } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
+import { getSupportTickets, createSupportTicket } from '../services/helpSupportService';
 
 const categories = [
   'Technical Issue',
@@ -13,6 +14,9 @@ const categories = [
 ];
 
 const PRIORITIES = ['High', 'Med', 'Low'];
+
+const ALLOWED_FILE_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 
 const STATUS_VARIANT = {
   Open: 'primary',
@@ -69,15 +73,90 @@ const INITIAL_TICKETS = [
   },
 ];
 
-function CreateTicketForm (){
+function CreateTicketForm ({ onTicketCreated }){
   const [subject, setSubject] = useState('');
   const [category, setCategory] = useState('Technical Issue');
   const [priority, setPriority] = useState('Med');
   const [description, setDescription] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [files, setFiles] = useState([]);
+  const [fileError, setFileError] = useState('');
+  const fileInputRef = useRef(null);
 
-  const handleSubmit = (e) => {
+  const validateAndAddFiles = (selectedFiles) => {
+    const validFiles = [];
+
+    Array.from(selectedFiles).forEach((file) => {
+      if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+        setFileError('Only PNG, JPG, and PDF files are allowd.');
+        return;
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        setFileError('Each file must be 25MB or less.');
+        return;
+      }
+
+      validFiles.push(file);
+    });
+
+    if (validFiles.length > 0) {
+      setFiles((prev) => [...prev, ...validFiles]);
+      setFileError('');
+    }
+  };
+
+  const handleFileChange = (e) => {
+    validateAndAddFiles(e.target.files);
+    e.target.value = '';
+  };
+
+  const handleDrop = (e) => {
     e.preventDefault();
-    console.log({ subject, category, priority, description });
+    validateAndAddFiles(e.dataTransfer.files);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const removeFile = (index) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+  
+    if (!subject.trim() || !description.trim()) return;
+  
+    try {
+      setSubmitting(true);
+  
+      const newTicket = await createSupportTicket({
+        subject,
+        category,
+        priority,
+        description,
+        senderName: 'Customer',
+        attachments: files.map((file) => ({
+          fileName: file.name,
+          fileType: file.type,
+          fileUrl: file.name,
+        })),
+      });
+  
+      onTicketCreated(newTicket);
+  
+      setSubject('');
+      setCategory('Technical Issue');
+      setPriority('Med');
+      setDescription('');
+      setFiles([]);
+    } catch (err) {
+      console.error(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -158,21 +237,63 @@ function CreateTicketForm (){
             />
           </div>
           {/* Attachments */}
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Attachments
-            </label>
-            <div className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center transition-colors hover:border-blue-300 hover:bg-blue-50/30">
-              <CloudUpload size={28} className="mb-2 text-blue-500" />
-              <p className="text-sm font-medium text-slate-700">Click or drag to upload files</p>
-              <p className="mt-1 text-xs text-slate-400">Max size 25MB (PNG, JPG, PDF)</p>
-            </div>
-          </div>
+<div>
+  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+    Attachments
+  </label>
+
+  <input
+    ref={fileInputRef}
+    type="file"
+    accept=".png,.jpg,.jpeg,.pdf"
+    multiple
+    className="hidden"
+    onChange={handleFileChange}
+  />
+
+  <div
+    onClick={() => fileInputRef.current?.click()}
+    onDrop={handleDrop}
+    onDragOver={handleDragOver}
+    className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center transition-colors hover:border-blue-300 hover:bg-blue-50/30"
+  >
+    <CloudUpload size={28} className="mb-2 text-blue-500" />
+    <p className="text-sm font-medium text-slate-700">Click or drag to upload files</p>
+    <p className="mt-1 text-xs text-slate-400">Max size 25MB (PNG, JPG, PDF)</p>
+  </div>
+
+  {fileError && (
+    <p className="mt-2 text-xs text-red-600">{fileError}</p>
+  )}
+
+  {files.length > 0 && (
+    <div className="mt-3 space-y-2">
+      {files.map((file, index) => (
+        <div
+          key={`${file.name}-${index}`}
+          className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+        >
+          <span className="truncate text-slate-700">{file.name}</span>
+          <button
+            type="button"
+            onClick={() => removeFile(index)}
+            className="text-xs font-medium text-red-500 hover:text-red-600"
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
           {/* Submit */}
-          <Button type="submit" className="w-full gap-2 py-2.5">
-            <Send size={16} />
-            Submit Ticket
-          </Button>
+          <Button type="submit" disabled={submitting} className="w-full gap-2 py-2.5">
+            {submitting ? 'Submitting...' : (
+              <>
+              <Send size={16} /> Submit Ticket
+              </>
+            )}
+            </Button>
         </form>
       </CardContent>
     </Card>
@@ -231,7 +352,7 @@ function RecentTicketsTable({ tickets, selectedId, onSelect }) {
                   }`}
                 >
                   <td className="px-4 py-3 font-medium text-slate-800">
-                    #{ticket.id}
+                    #{ticket.ticketId}
                   </td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-slate-800">{ticket.subject}</p>
@@ -299,7 +420,7 @@ function TicketChatPanel({ ticket }) {
           <div>
             <CardTitle className="text-lg">{ticket.subject}</CardTitle>
             <p className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400">
-              Ticket #{ticket.id} • Priority: {ticket.priority}
+              Ticket #{ticket.ticketId} • Priority: {ticket.priority}
             </p>
           </div>
         </div>
@@ -392,15 +513,59 @@ function TicketChatPanel({ ticket }) {
 }
 
 export default function HelpSupportPage() {
-  const [tickets, setTickets] = useState(INITIAL_TICKETS);
-  const [selectedId, setSelectedId] = useState('JK-2984');
+  const [tickets, setTickets] = useState([]);
+  const [selectedId, setSelectedId] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const loadTickets = async () => {
+      try {
+        setLoading(true);
+        setError('');
+  
+        const data = await getSupportTickets();
+        setTickets(data);
+      } catch (err) {
+        setError(err.message || 'Failed to load support tickets.');
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    loadTickets();
+  }, []);
   
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedId)
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-6 pt-6 text-sm text-slate-500">
+          Loading support tickets...
+        </CardContent>
+      </Card>
+    );
+  }
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6 pt-6 text-sm text-red-600">
+          {error}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const handleTicketCreated = (newTicket) => {
+    setTickets((prev) => [newTicket, ...prev]);
+    setSelectedId(newTicket.ticketId);
+  };
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
       <div className="xl:col-span-5">
-        <CreateTicketForm />
+        <CreateTicketForm onTicketCreated={handleTicketCreated} />
       </div>
       <div className="xl:col-span-7 flex flex-col gap-6">
         <RecentTicketsTable tickets={tickets} selectedId={selectedId} onSelect={setSelectedId} />
