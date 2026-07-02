@@ -35,7 +35,24 @@ const updateProfile = asyncHandler(async (req, res) => {
   });
 });
 
+
+// @desc    Change logged-in user password
+// @route   PUT /api/v1/profile-settings/change-password
+// @access  Private
+const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  await service.modifyPassword(req.user, currentPassword, newPassword);
+
+  res.status(200).json({
+    success: true,
+    message: 'Your password was modified successfully.',
+    timestamp: new Date().toISOString()
+  });
+});
+
 module.exports = {
   getDetails,
-  updateProfile
+  updateProfile,
+  changePassword
 };
