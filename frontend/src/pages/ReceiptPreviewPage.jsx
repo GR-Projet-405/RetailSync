@@ -1,14 +1,16 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   CheckCircle2, Printer, Download, Mail, PlusCircle,
   Store, FileText, User, CreditCard, Banknote, Smartphone, QrCode,
   Receipt, Clock, Hash, UserCircle, Gift, Percent, Package,
-  Truck, Shield, Phone, MapPin, Calendar, Building2
+  Truck, Shield, Phone, MapPin, Calendar, Building2, Share2,
+  Copy, Check, AlertCircle, X, ExternalLink, Eye
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
 import Card, { CardContent, CardHeader, CardTitle } from '../components/Card';
+import Modal from '../components/Modal';
 
 const currency = new Intl.NumberFormat('en-LK', {
   style: 'currency',
@@ -21,7 +23,13 @@ export default function ReceiptPreviewPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const receiptRef = useRef(null);
+  const thermalRef = useRef(null);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isThermalPrinting, setIsThermalPrinting] = useState(false);
+  const [showDigitalInvoice, setShowDigitalInvoice] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const state = location.state || {};
   const {
@@ -36,19 +44,35 @@ export default function ReceiptPreviewPage() {
     amountReceived = 0,
     changeDue = 0,
     customer = null,
-    invoiceNumber = 'INV-20260701-00025',
-    date = '01 Jul 2026',
-    time = '10:45 AM',
-    cashierName = 'John Doe',
+    invoiceNumber = `INV-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`,
+    date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+    time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+    cashierName = 'Nipuni Perera',
     counterNumber = '01',
     storeName = 'RetailSync',
     storeAddress = 'No.120, Galle Road, Colombo 03',
     storePhone = '011-1234567',
-    storeEmail = 'info@retailsync.lk',
+    storeEmail = 'info@freshmart.lk',
     storeBranch = 'Colombo Main',
     taxNumber = 'REG-2024-00123',
-    receiptFooter = 'Thank you for shopping with us! Visit again.'
+    receiptFooter = 'Thank you for shopping with us! Visit again.',
+    storeLogo = '🛒'
   } = state;
+
+  // Generate QR code data for digital invoice
+  const generateInvoiceData = () => {
+    return {
+      invoiceNumber,
+      date,
+      time,
+      total: currency.format(total),
+      paymentMethod,
+      items: cart.length,
+      storeName,
+      storeBranch,
+      cashierName
+    };
+  };
 
   const handlePrint = () => {
     setIsPrinting(true);
@@ -58,7 +82,217 @@ export default function ReceiptPreviewPage() {
     }, 300);
   };
 
+  const handleThermalPrint = () => {
+    setIsThermalPrinting(true);
+    // Simulate thermal printer output
+    setTimeout(() => {
+      // In a real implementation, this would send to a thermal printer
+      // For demo, we'll open a print dialog with thermal formatting
+      const thermalContent = generateThermalReceipt();
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(thermalContent);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        setTimeout(() => {
+          printWindow.close();
+        }, 1000);
+      }
+      setIsThermalPrinting(false);
+    }, 500);
+  };
+
+  const generateThermalReceipt = () => {
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Thermal Receipt</title>
+          <style>
+            @page {
+              size: 80mm auto;
+              margin: 0;
+            }
+            body {
+              font-family: 'Courier New', monospace;
+              width: 80mm;
+              margin: 0 auto;
+              padding: 8px;
+              font-size: 12px;
+              line-height: 1.4;
+              background: white;
+            }
+            .receipt {
+              text-align: center;
+            }
+            .header {
+              border-bottom: 1px dashed #333;
+              padding-bottom: 8px;
+              margin-bottom: 8px;
+            }
+            .store-name {
+              font-size: 18px;
+              font-weight: bold;
+            }
+            .store-details {
+              font-size: 10px;
+              color: #666;
+            }
+            .divider {
+              border-top: 1px dashed #333;
+              margin: 6px 0;
+            }
+            .item-row {
+              display: flex;
+              justify-content: space-between;
+              font-size: 11px;
+              padding: 2px 0;
+            }
+            .item-name {
+              flex: 1;
+              text-align: left;
+            }
+            .item-qty {
+              width: 30px;
+              text-align: center;
+            }
+            .item-price {
+              width: 60px;
+              text-align: right;
+            }
+            .totals {
+              border-top: 1px solid #333;
+              padding-top: 8px;
+              margin-top: 8px;
+            }
+            .total-row {
+              display: flex;
+              justify-content: space-between;
+              font-weight: bold;
+              font-size: 14px;
+            }
+            .footer {
+              border-top: 1px dashed #333;
+              margin-top: 8px;
+              padding-top: 8px;
+              font-size: 10px;
+              color: #666;
+            }
+            .payment-info {
+              text-align: left;
+              font-size: 10px;
+              margin: 4px 0;
+            }
+            .barcode {
+              font-family: 'Code128', monospace;
+              letter-spacing: 2px;
+              font-size: 16px;
+              margin: 4px 0;
+            }
+            @media print {
+              body { margin: 0; padding: 8px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="receipt">
+            <div class="header">
+              <div class="store-name">${storeName}</div>
+              <div class="store-details">${storeBranch}</div>
+              <div class="store-details">${storeAddress}</div>
+              <div class="store-details">Tel: ${storePhone}</div>
+              <div class="store-details">${storeEmail}</div>
+              <div class="divider"></div>
+              <div style="font-size:10px;">
+                ${invoiceNumber} | ${date} ${time}
+              </div>
+              <div style="font-size:10px;">
+                Cashier: ${cashierName} | Counter: ${counterNumber}
+              </div>
+            </div>
+
+            <div style="text-align:left; margin: 4px 0;">
+              <div style="font-size:10px; font-weight:bold;">ITEMS</div>
+              ${cart.map(item => `
+                <div class="item-row">
+                  <span class="item-name">${item.name}</span>
+                  <span class="item-qty">x${item.quantity}</span>
+                  <span class="item-price">${currency.format(item.price * item.quantity)}</span>
+                </div>
+                ${item.itemDiscount > 0 ? `
+                  <div style="font-size:9px; color:#666; text-align:right; padding-left:20px;">
+                    Discount: -${currency.format(item.itemDiscount)}
+                  </div>
+                ` : ''}
+              `).join('')}
+            </div>
+
+            <div class="divider"></div>
+
+            <div style="text-align:left; font-size:11px;">
+              <div style="display:flex; justify-content:space-between;">
+                <span>Subtotal</span>
+                <span>${currency.format(subtotal)}</span>
+              </div>
+              ${itemSavings > 0 ? `
+                <div style="display:flex; justify-content:space-between; color:#666;">
+                  <span>Item Discounts</span>
+                  <span>-${currency.format(itemSavings)}</span>
+                </div>
+              ` : ''}
+              ${orderDiscountAmount > 0 ? `
+                <div style="display:flex; justify-content:space-between; color:#666;">
+                  <span>Cart Discount</span>
+                  <span>-${currency.format(orderDiscountAmount)}</span>
+                </div>
+              ` : ''}
+              <div style="display:flex; justify-content:space-between;">
+                <span>Tax (VAT)</span>
+                <span>${currency.format(tax)}</span>
+              </div>
+            </div>
+
+            <div class="totals">
+              <div class="total-row">
+                <span>TOTAL</span>
+                <span>${currency.format(total)}</span>
+              </div>
+            </div>
+
+            <div class="payment-info">
+              <div>Payment: ${paymentMethod.toUpperCase()}</div>
+              ${paymentMethod === 'cash' ? `
+                <div>Amount Received: ${currency.format(amountReceived)}</div>
+                ${changeDue > 0 ? `<div>Change: ${currency.format(changeDue)}</div>` : ''}
+              ` : ''}
+              <div>Status: PAID ✓</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="barcode">
+              ${invoiceNumber.slice(-8)}
+            </div>
+
+            <div class="footer">
+              <div>${receiptFooter}</div>
+              <div style="margin-top:4px;">
+                Tax Invoice: ${taxNumber}
+              </div>
+              <div style="margin-top:4px; font-size:8px;">
+                Powered by FreshMart POS v4.2.1
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+  };
+
   const handleDownloadPdf = () => {
+    // In a real implementation, this would generate a PDF
+    // For demo, we'll use the print dialog with PDF option
     window.print();
   };
 
@@ -85,17 +319,192 @@ export default function ReceiptPreviewPage() {
     ].join('\n'));
 
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    
+    // Simulate email sent
+    setEmailSent(true);
+    setTimeout(() => setEmailSent(false), 3000);
+  };
+
+  const handleCopyInvoice = () => {
+    const invoiceData = generateInvoiceData();
+    const text = `
+      INVOICE #${invoiceData.invoiceNumber}
+      ${storeName} - ${storeBranch}
+      Date: ${invoiceData.date} ${invoiceData.time}
+      Cashier: ${cashierName}
+      Items: ${invoiceData.items}
+      Total: ${invoiceData.total}
+      Payment: ${invoiceData.paymentMethod}
+      ${receiptFooter}
+    `;
+    navigator.clipboard.writeText(text.trim());
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 3000);
+  };
+
+  const handleShareInvoice = () => {
+    setShowShareModal(true);
   };
 
   const handleNewSale = () => {
-    navigate('/pos-billing', { state: { cart: [] } });
+    if (window.confirm('Start a new sale? The current receipt will be saved.')) {
+      navigate('/pos-billing', { state: { cart: [] } });
+    }
   };
 
   const PaymentIcon = {
     cash: Banknote,
     card: CreditCard,
-    mobile: Smartphone,
+    wallet: Smartphone,
   }[paymentMethod] || Banknote;
+
+  // Digital Invoice Modal
+  const DigitalInvoiceModal = () => (
+    <Modal isOpen={showDigitalInvoice} onClose={() => setShowDigitalInvoice(false)} title="Digital Invoice" size="lg">
+      <div className="space-y-4">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200/50">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Store className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-slate-800">{storeName}</h3>
+              </div>
+              <p className="text-sm text-slate-600">{storeAddress}</p>
+              <p className="text-sm text-slate-600">{storePhone}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-slate-500">INVOICE</p>
+              <p className="font-bold text-slate-800">{invoiceNumber}</p>
+              <p className="text-xs text-slate-500">{date} {time}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-slate-50 rounded-lg p-3">
+            <p className="text-xs text-slate-500">Cashier</p>
+            <p className="font-semibold text-slate-800">{cashierName}</p>
+            <p className="text-xs text-slate-400">Counter #{counterNumber}</p>
+          </div>
+          <div className="bg-slate-50 rounded-lg p-3">
+            <p className="text-xs text-slate-500">Payment Method</p>
+            <p className="font-semibold text-slate-800 capitalize">{paymentMethod}</p>
+            <p className="text-xs text-emerald-600">✓ Paid</p>
+          </div>
+        </div>
+
+        <div className="border rounded-xl overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50">
+              <tr className="text-left text-slate-600">
+                <th className="px-3 py-2 text-xs font-semibold">Item</th>
+                <th className="px-3 py-2 text-xs font-semibold text-center">Qty</th>
+                <th className="px-3 py-2 text-xs font-semibold text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {cart.map((item, idx) => (
+                <tr key={idx}>
+                  <td className="px-3 py-2">
+                    <p className="font-medium text-slate-800">{item.name}</p>
+                  </td>
+                  <td className="px-3 py-2 text-center">{item.quantity}</td>
+                  <td className="px-3 py-2 text-right font-medium">
+                    {currency.format(item.price * item.quantity)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="bg-slate-50 rounded-xl p-4">
+          <div className="space-y-1">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600">Subtotal</span>
+              <span>{currency.format(subtotal)}</span>
+            </div>
+            {itemSavings > 0 && (
+              <div className="flex justify-between text-sm text-emerald-600">
+                <span>Discounts</span>
+                <span>-{currency.format(itemSavings + orderDiscountAmount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600">Tax</span>
+              <span>{currency.format(tax)}</span>
+            </div>
+            <div className="flex justify-between text-lg font-bold text-blue-600 border-t border-slate-200 pt-2">
+              <span>Total</span>
+              <span>{currency.format(total)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+          <div className="flex items-center gap-2">
+            <QrCode className="w-8 h-8 text-slate-400" />
+            <div>
+              <p className="text-xs text-slate-500">Scan to verify</p>
+              <p className="text-xs font-mono text-slate-400">{invoiceNumber.slice(-8)}</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleCopyInvoice}>
+              <Copy className="w-3 h-3 mr-1" />
+              Copy
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleShareInvoice}>
+              <Share2 className="w-3 h-3 mr-1" />
+              Share
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+
+  // Share Modal
+  const ShareModal = () => (
+    <Modal isOpen={showShareModal} onClose={() => setShowShareModal(false)} title="Share Invoice" size="sm">
+      <div className="space-y-4">
+        <p className="text-sm text-slate-600">Share this invoice via:</p>
+        <div className="grid grid-cols-3 gap-3">
+          <button className="p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors text-center">
+            <Mail className="w-6 h-6 mx-auto text-blue-600 mb-1" />
+            <span className="text-xs font-medium text-blue-700">Email</span>
+          </button>
+          <button className="p-4 bg-green-50 rounded-xl hover:bg-green-100 transition-colors text-center">
+            <Smartphone className="w-6 h-6 mx-auto text-green-600 mb-1" />
+            <span className="text-xs font-medium text-green-700">SMS</span>
+          </button>
+          <button className="p-4 bg-purple-50 rounded-xl hover:bg-purple-100 transition-colors text-center">
+            <Share2 className="w-6 h-6 mx-auto text-purple-600 mb-1" />
+            <span className="text-xs font-medium text-purple-700">Other</span>
+          </button>
+        </div>
+        <div className="bg-slate-50 rounded-xl p-3">
+          <p className="text-xs text-slate-500 mb-1">Link</p>
+          <div className="flex items-center gap-2">
+            <input 
+              type="text" 
+              value={`https://RetailSync.lk/invoice/${invoiceNumber}`}
+              readOnly
+              className="flex-1 text-sm bg-white border border-slate-200 rounded-lg px-3 py-2"
+            />
+            <Button size="sm" onClick={handleCopyInvoice}>
+              <Copy className="w-3 h-3" />
+            </Button>
+          </div>
+          {copySuccess && (
+            <p className="text-xs text-emerald-600 mt-2 flex items-center gap-1">
+              <Check className="w-3 h-3" /> Copied to clipboard!
+            </p>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 max-w-4xl mx-auto space-y-6 pb-12 print:bg-white print:max-w-none print:pb-0">
@@ -116,7 +525,47 @@ export default function ReceiptPreviewPage() {
         </div>
       </div>
 
-      {/* Receipt Container */}
+      {/* Quick Actions Bar */}
+      <div className="flex flex-wrap gap-2 print:hidden">
+        <Button 
+          size="sm"
+          variant="outline" 
+          className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+          onClick={() => setShowDigitalInvoice(true)}
+        >
+          <Eye className="w-4 h-4 mr-1" /> Digital Invoice
+        </Button>
+        <Button 
+          size="sm"
+          variant="outline" 
+          className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+          onClick={handleThermalPrint}
+          disabled={isThermalPrinting}
+        >
+          <Printer className="w-4 h-4 mr-1" /> 
+          {isThermalPrinting ? 'Printing...' : 'Thermal Receipt'}
+        </Button>
+        <Button 
+          size="sm"
+          variant="outline" 
+          className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+          onClick={handleEmailReceipt}
+        >
+          <Mail className="w-4 h-4 mr-1" /> Email
+        </Button>
+        {emailSent && (
+          <span className="text-xs text-emerald-600 flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-full">
+            <Check className="w-3 h-3" /> Sent!
+          </span>
+        )}
+        {copySuccess && (
+          <span className="text-xs text-emerald-600 flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-full">
+            <Check className="w-3 h-3" /> Copied!
+          </span>
+        )}
+      </div>
+
+      {/* Main Receipt */}
       <div 
         ref={receiptRef} 
         className="bg-white rounded-2xl shadow-lg overflow-hidden print:shadow-none print:rounded-none"
@@ -126,7 +575,7 @@ export default function ReceiptPreviewPage() {
           <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <Store className="w-6 h-6" />
+                <span className="text-2xl">{storeLogo}</span>
                 <h2 className="text-xl font-bold">{storeName}</h2>
               </div>
               <div className="text-sm opacity-90 space-y-1">
@@ -200,7 +649,7 @@ export default function ReceiptPreviewPage() {
                   <p className="text-slate-500">{customer.phone}</p>
                   <div className="flex items-center gap-2 mt-1 text-emerald-600">
                     <Gift className="w-3 h-3" />
-                    <span className="text-xs font-medium">{customer.loyaltyPoints} Points</span>
+                    <span className="text-xs font-medium">{customer.points || 0} Points</span>
                   </div>
                 </div>
               ) : (
@@ -334,7 +783,7 @@ export default function ReceiptPreviewPage() {
             </div>
             <p className="font-medium text-slate-700">{receiptFooter}</p>
             <div className="mt-2 flex justify-center items-center gap-4 text-xs text-slate-400">
-              <span>Powered by FreshMart POS</span>
+              <span>Powered by Retailsync </span>
               <span>•</span>
               <span>v4.2.1</span>
             </div>
@@ -354,18 +803,20 @@ export default function ReceiptPreviewPage() {
           {isPrinting ? 'Printing...' : 'Print'}
         </Button>
         <Button 
+          onClick={handleThermalPrint} 
+          variant="outline" 
+          className="h-12 bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all"
+          disabled={isThermalPrinting}
+        >
+          <Printer className="w-4 h-4 mr-2" /> 
+          {isThermalPrinting ? 'Printing...' : 'Thermal'}
+        </Button>
+        <Button 
           onClick={handleDownloadPdf} 
           variant="outline" 
           className="h-12 bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all"
         >
           <Download className="w-4 h-4 mr-2" /> PDF
-        </Button>
-        <Button 
-          onClick={handleEmailReceipt} 
-          variant="outline" 
-          className="h-12 bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all"
-        >
-          <Mail className="w-4 h-4 mr-2" /> Email
         </Button>
         <Button 
           onClick={handleNewSale} 
@@ -374,6 +825,10 @@ export default function ReceiptPreviewPage() {
           <PlusCircle className="w-4 h-4 mr-2" /> New Sale
         </Button>
       </div>
+
+      {/* Modals */}
+      <DigitalInvoiceModal />
+      <ShareModal />
 
       {/* Print Styles */}
       <style dangerouslySetInnerHTML={{__html: `

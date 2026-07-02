@@ -39,4 +39,8 @@ Thumbs.db
 
 # Mock inventory demo files
 backend/src/modules/product-management/inventory.mock.js
+backend/src/modules/product-management/controller.js
+backend/src/modules/product-management/model.js
+backend/src/modules/product-management/route.js
+backend/src/modules/product-management/service.js
 frontend/src/services/inventoryService.js

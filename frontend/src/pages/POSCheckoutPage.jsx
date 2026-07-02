@@ -52,6 +52,9 @@ export default function POSCheckoutPage() {
     tax = 0,
     total = 0,
     totalUnits = 0,
+    orderDiscount = '',
+    orderDiscountMode = 'none',
+    taxRate = 8,
   } = state;
 
   const [customerSearch, setCustomerSearch] = useState('');
@@ -110,7 +113,13 @@ export default function POSCheckoutPage() {
 
   const handleNewSale = () => {
     if (window.confirm('Are you sure you want to cancel this transaction?')) {
-      navigate('/pos-billing');
+      navigate('/pos-billing', {
+        state: {
+          orderDiscount: state.orderDiscount || '',
+          orderDiscountMode: state.orderDiscountMode || 'none',
+          taxRate: state.taxRate || 8
+        }
+      });
     }
   };
 
@@ -586,7 +595,14 @@ export default function POSCheckoutPage() {
                     type="button"
                     variant="outline"
                     className="rounded-xl border-slate-200 bg-white text-slate-700 hover:bg-slate-50 h-12 font-semibold"
-                    onClick={() => navigate('/pos-billing', { state })}
+                    onClick={() => navigate('/pos-billing', { 
+                      state: { 
+                        cart,
+                        orderDiscount: state.orderDiscount || '',
+                        orderDiscountMode: state.orderDiscountMode || 'none',
+                        taxRate: state.taxRate || 8
+                      } 
+                    })}
                   >
                     Cart
                   </Button>

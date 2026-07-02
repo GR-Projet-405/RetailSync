@@ -585,12 +585,19 @@ export default function POSBillingPage() {
     };
   }, []);
 
+  // Restore state from navigation
   React.useEffect(() => {
     if (Array.isArray(restoredState.cart)) {
       setCart(restoredState.cart);
-      if (typeof restoredState.orderDiscount === 'string') setOrderDiscount(restoredState.orderDiscount);
-      if (restoredState.orderDiscountMode) setOrderDiscountMode(restoredState.orderDiscountMode);
-      if (typeof restoredState.taxRate === 'number') setTaxRate(restoredState.taxRate);
+    }
+    if (typeof restoredState.orderDiscount === 'string' || typeof restoredState.orderDiscount === 'number') {
+      setOrderDiscount(String(restoredState.orderDiscount || ''));
+    }
+    if (restoredState.orderDiscountMode) {
+      setOrderDiscountMode(restoredState.orderDiscountMode);
+    }
+    if (typeof restoredState.taxRate === 'number') {
+      setTaxRate(restoredState.taxRate);
     }
   }, [restoredState.cart, restoredState.orderDiscount, restoredState.orderDiscountMode, restoredState.taxRate]);
 
@@ -1149,7 +1156,20 @@ export default function POSBillingPage() {
                   type="button"
                   className="rounded-xl bg-[#2563EB] hover:bg-[#1E40AF] shadow-lg shadow-blue-500/25 h-11 font-semibold"
                   disabled={cart.length === 0}
-                  onClick={() => navigate('/pos-checkout', { state: { cart, subtotal, itemSavings, orderDiscountAmount, tax, total, totalUnits } })}
+                  onClick={() => navigate('/pos-checkout', { 
+                    state: { 
+                      cart, 
+                      subtotal, 
+                      itemSavings, 
+                      orderDiscountAmount, 
+                      tax, 
+                      total, 
+                      totalUnits,
+                      orderDiscount,
+                      orderDiscountMode,
+                      taxRate
+                    } 
+                  })}
                 >
                   <Receipt className="w-4 h-4 mr-2" /> Checkout
                 </Button>
