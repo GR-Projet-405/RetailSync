@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import api from "../../services/api"; // Relative route location mapping [cite: 713]
+import api from "../../services/api"; // Relative route location mapping
 
 export default function UserProfileForm({
   profile,
@@ -25,6 +25,21 @@ export default function UserProfileForm({
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
+    // Strict number filter: allow ONLY digits
+    if (name === "phoneNumber") {
+      const onlyDigits = value.replace(/\D/g, "");
+      setFormData((prev) => ({ ...prev, [name]: onlyDigits }));
+      return;
+    }
+
+    // Strict name filter: strip out all numbers (digits 0-9)
+    if (name === "firstName" || name === "lastName") {
+      const lettersOnly = value.replace(/[0-9]/g, "");
+      setFormData((prev) => ({ ...prev, [name]: lettersOnly }));
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -32,7 +47,7 @@ export default function UserProfileForm({
     e.preventDefault();
     try {
       setSaveLoading(true);
-      const response = await api.put("/profile-settings/update", formData); // Triggers our backend logic route [cite: 727]
+      const response = await api.put("/profile-settings/update", formData); // Triggers our backend logic route
 
       if (response.data?.success) {
         setIsEditing(false);
@@ -78,6 +93,9 @@ export default function UserProfileForm({
                 value={formData.firstName}
                 onChange={handleInputChange}
                 required
+                maxLength={50} // Enforces Mongoose model constraint
+                pattern="^[A-Za-z\s\-]+$" // Rejects numbers if pasted via context menu
+                title="First name can only contain letters, spaces, or hyphens."
                 className="w-full text-slate-700 bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 px-3 py-2 rounded-lg outline-none font-medium"
               />
             ) : (
@@ -98,6 +116,9 @@ export default function UserProfileForm({
                 value={formData.lastName}
                 onChange={handleInputChange}
                 required
+                maxLength={50} // Enforces Mongoose model constraint
+                pattern="^[A-Za-z\s\-]+$" // Rejects numbers if pasted via context menu
+                title="Last name can only contain letters, spaces, or hyphens."
                 className="w-full text-slate-700 bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 px-3 py-2 rounded-lg outline-none font-medium"
               />
             ) : (
@@ -126,6 +147,10 @@ export default function UserProfileForm({
                 name="phoneNumber"
                 value={formData.phoneNumber}
                 onChange={handleInputChange}
+                maxLength={15} // Enforces typical international standard lengths
+                pattern="\d{9,15}" // Form submission validation check
+                title="Please enter a valid phone number containing numbers only (9 to 15 digits)."
+                placeholder="e.g. 94771234567"
                 className="w-full text-slate-700 bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 px-3 py-2 rounded-lg outline-none font-medium"
               />
             ) : (
@@ -136,13 +161,13 @@ export default function UserProfileForm({
           </div>
         </div>
 
-        {/* Repositioned Active Control Area */}
+        {/* Control Button Section */}
         <div className="mt-8 pt-4 border-t border-slate-100 flex justify-end">
           {!isEditing ? (
             <button
               type="button"
               onClick={() => setIsEditing(true)}
-              className="inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-5 py-2.5 border border-slate-200 hover:border-slate-300 rounded-xl shadow-sm text-sm transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-slate-100"
+              className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2.5 rounded-xl shadow-sm text-sm transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-100"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -150,7 +175,7 @@ export default function UserProfileForm({
                 viewBox="0 0 24 24"
                 strokeWidth={2}
                 stroke="currentColor"
-                className="w-4 h-4 text-slate-500"
+                className="w-4 h-4 text-white"
               >
                 <path
                   strokeLinecap="round"
@@ -164,7 +189,15 @@ export default function UserProfileForm({
             <div className="flex gap-3 w-full sm:w-auto">
               <button
                 type="button"
-                onClick={() => setIsEditing(false)}
+                onClick={() => {
+                  setIsEditing(false);
+                  // Resets form fields back to prop states if editing is canceled
+                  setFormData({
+                    firstName: profile.firstName || "",
+                    lastName: profile.lastName || "",
+                    phoneNumber: profile.phoneNumber || "",
+                  });
+                }}
                 className="w-full sm:w-auto py-2.5 px-5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-sm rounded-xl transition duration-150"
               >
                 Cancel
