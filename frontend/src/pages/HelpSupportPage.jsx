@@ -4,8 +4,12 @@ import PageHeader from '../components/PageHeader';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
-import { getSupportTickets, createSupportTicket } from '../services/helpSupportService';
-
+import Modal from '../components/Modal';
+import {
+  getSupportTickets,
+  createSupportTicket,
+  updateSupportTicketStatus,
+} from '../services/helpSupportService';
 const categories = [
   'Technical Issue',
   'Billing',
@@ -24,8 +28,15 @@ const STATUS_VARIANT = {
   'In Progress': 'info',
   Resolved: 'success',
   Closed: 'neutral',
-}
+};
 
+const STATUS_OPTIONS = ['Open', 'In Progress', 'Resolved', 'Closed'];
+
+const PRIORITY_VARIANT = {
+  High: 'danger',
+  Med: 'warning',
+  Low: 'neutral',
+};
 //Mocked Data
 const INITIAL_TICKETS = [
   {
@@ -326,12 +337,133 @@ function CreateTicketForm ({ onTicketCreated }){
   )
 }
 
+function TicketDetailModal({ ticket, isOpen, onClose, onStatusUpdate }) {
+  const [status, setStatus] = useState('Open');
+  const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState('');
+
+  useEffect(() => {
+    if (ticket) {
+      setStatus(ticket.status);
+      setUpdateError('');
+    }
+  }, [ticket]);
+
+  if (!ticket) return null;
+
+  const handleStatusUpdate = async () => {
+    if (status === ticket.status) return;
+
+    try {
+      setUpdating(true);
+      setUpdateError('');
+      await onStatusUpdate(ticket.id, status);
+    } catch (err) {
+      setUpdateError(err.message || 'Failed to update status.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Ticket Details" size="lg">
+      <div className="space-y-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Ticket ID
+            </p>
+            <p className="text-sm font-semibold text-slate-800">#{ticket.ticketId}</p>
+          </div>
+          <div>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Date
+            </p>
+            <p className="text-sm text-slate-800">{ticket.date}</p>
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Subject
+          </p>
+          <p className="text-sm font-medium text-slate-800">{ticket.subject}</p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Category
+            </p>
+            <p className="text-sm text-slate-800">{ticket.category}</p>
+          </div>
+          <div>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Priority
+            </p>
+            <Badge variant={PRIORITY_VARIANT[ticket.priority] || 'neutral'}>
+              {ticket.priority}
+            </Badge>
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Description
+          </p>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">
+            {ticket.description}
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200 pt-5">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Status
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2.5 pr-8 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={handleStatusUpdate}
+              disabled={updating || status === ticket.status}
+              className="sm:w-auto"
+            >
+              {updating ? 'Updating...' : 'Update Status'}
+            </Button>
+          </div>
+          {updateError && (
+            <p className="mt-2 text-xs text-red-600">{updateError}</p>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 function RecentTicketsTable({ tickets, selectedId, onSelect }) {
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [sortOption, setSortOption] = useState('Newest First');
   const [sortOpen, setSortOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const SORT_OPTIONS = ['Newest First', 'Oldest First', 'Subject A-Z', 'Subject Z-A'];
+  const FILTER_OPTIONS = ['All Status', ...STATUS_OPTIONS];
 
   const filteredTickets = tickets.filter((ticket) => {
     if (statusFilter === 'All Status') return true;
@@ -359,14 +491,40 @@ function RecentTicketsTable({ tickets, selectedId, onSelect }) {
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-lg">Recent Tickets</CardTitle>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setStatusFilter('All Status')}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
-          >
-            <Filter size={14} />
-            {statusFilter}
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setFilterOpen((v) => !v)}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+            >
+              <Filter size={14} />
+              {statusFilter}
+              <ChevronDown size={14} />
+            </button>
+
+            {filterOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setFilterOpen(false)} />
+                <div className="absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                  {FILTER_OPTIONS.map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => {
+                        setStatusFilter(option);
+                        setFilterOpen(false);
+                      }}
+                      className={`block w-full px-3.5 py-2 text-left text-xs font-medium transition-colors hover:bg-slate-50 ${
+                        statusFilter === option ? 'text-blue-600' : 'text-slate-600'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           <div className="relative">
           <button
             type="button"
@@ -429,7 +587,7 @@ function RecentTicketsTable({ tickets, selectedId, onSelect }) {
                   <td className="px-4 py-3 text-center">
                     <button
                       type="button"
-                      onClick={() => onSelect(ticket.id)}
+                      onClick={() => onSelect(selectedId === ticket.id ? '' : ticket.id)}
                       className={`inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
                         selectedId === ticket.id
                           ? 'bg-blue-600 text-white'
@@ -497,14 +655,34 @@ export default function HelpSupportPage() {
     setSelectedId(newTicket.id);
   };
 
+  const handleStatusUpdate = async (ticketId, status) => {
+    const updatedTicket = await updateSupportTicketStatus(ticketId, status);
+    setTickets((prev) =>
+      prev.map((ticket) => (ticket.id === ticketId ? updatedTicket : ticket))
+    );
+  };
+
+  const selectedTicket = tickets.find((ticket) => ticket.id === selectedId) || null;
+
   return (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
       <div className="xl:col-span-5">
         <CreateTicketForm onTicketCreated={handleTicketCreated} />
       </div>
       <div className="xl:col-span-7">
-        <RecentTicketsTable tickets={tickets} selectedId={selectedId} onSelect={setSelectedId} />
+        <RecentTicketsTable
+          tickets={tickets}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+        />
       </div>
+
+      <TicketDetailModal
+        ticket={selectedTicket}
+        isOpen={!!selectedTicket}
+        onClose={() => setSelectedId('')}
+        onStatusUpdate={handleStatusUpdate}
+      />
     </div>
   );
 }
