@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { useLocation, NavLink } from 'react-router-dom';
 import * as Icons from 'lucide-react';
 import { NAVIGATION_GROUPS } from '../config/navigation';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +9,7 @@ import { cn } from '../utils/cn';
 export const Sidebar = () => {
   const { user, hasRole } = useAuth();
   const { isSidebarCollapsed, isSidebarOpen, toggleSidebar } = useSidebar();
+  const location = useLocation();
 
   // Helper to render Lucide Icons by name dynamically
   const renderIcon = (iconName) => {
@@ -76,35 +77,61 @@ export const Sidebar = () => {
                 </h2>
                 <div className="space-y-1">
                   {visibleItems.map((item) => (
-                    <NavLink
-                      key={item.id}
-                      to={item.path}
-                      title={isSidebarCollapsed ? item.name : undefined}
-                      className={({ isActive }) => cn(
-                        "flex items-center gap-2.5 px-2.5 min-h-[44px] text-[14px] font-[500] tracking-[-0.01em] leading-[1.5] rounded-lg transition-all duration-150 ease-in-out relative group",
-                        isActive
-                          ? "bg-blue-600 text-white shadow-[0_6px_18px_rgba(37,99,235,0.20)] border border-white/[0.08] font-[600]"
-                          : "text-[#E2E8F0] hover:bg-white/[0.05] hover:text-white border border-transparent",
-                        isSidebarCollapsed && "lg:justify-center lg:gap-0 lg:px-2"
-                      )}
-                    >
-                    {renderIcon(item.icon)}
-                    <span
-                      className={cn(
-                        "transition-all duration-300 whitespace-nowrap leading-none",
-                        isSidebarCollapsed ? "lg:opacity-0 lg:w-0 overflow-hidden" : "opacity-100 lg:w-auto"
-                      )}
-                    >
-                      {item.name}
-                    </span>
+                    <div key={item.id} className="space-y-1">
+                      <NavLink
+                        to={item.path}
+                        title={isSidebarCollapsed ? item.name : undefined}
+                        className={({ isActive }) => cn(
+                          "flex items-center gap-2.5 px-2.5 min-h-[44px] text-[14px] font-[500] tracking-[-0.01em] leading-[1.5] rounded-lg transition-all duration-150 ease-in-out relative group",
+                          isActive
+                            ? "bg-blue-600 text-white shadow-[0_6px_18px_rgba(37,99,235,0.20)] border border-white/[0.08] font-[600]"
+                            : "text-[#E2E8F0] hover:bg-white/[0.05] hover:text-white border border-transparent",
+                          isSidebarCollapsed && "lg:justify-center lg:gap-0 lg:px-2"
+                        )}
+                      >
+                        {renderIcon(item.icon)}
+                        <span
+                          className={cn(
+                            "transition-all duration-300 whitespace-nowrap leading-none",
+                            isSidebarCollapsed ? "lg:opacity-0 lg:w-0 overflow-hidden" : "opacity-100 lg:w-auto"
+                          )}
+                        >
+                          {item.name}
+                        </span>
 
-                    {/* Premium CSS Tooltip (Desktop collapsed hover only) */}
-                    {isSidebarCollapsed && (
-                      <div className="absolute left-full ml-3 px-2 py-1 text-xs bg-slate-950 text-slate-100 rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap border border-slate-800 shadow-xl hidden lg:block z-50">
-                        {item.name}
-                      </div>
-                    )}
-                  </NavLink>
+                        {isSidebarCollapsed && (
+                          <div className="absolute left-full ml-3 px-2 py-1 text-xs bg-slate-950 text-slate-100 rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap border border-slate-800 shadow-xl hidden lg:block z-50">
+                            {item.name}
+                          </div>
+                        )}
+                      </NavLink>
+
+                      {item.children && item.children.length > 0 && !isSidebarCollapsed && (
+                        <div className="ml-7 pl-2 space-y-1 border-l border-white/[0.06]">
+                          {item.children
+                            .filter((child) => !user || (child.allowedRoles && hasRole(...child.allowedRoles)))
+                            .map((child) => {
+                              const childActive = location.pathname === child.path;
+
+                              return (
+                                <NavLink
+                                  key={child.id}
+                                  to={child.path}
+                                  className={cn(
+                                    "flex items-center gap-2 px-2 py-2 rounded-md text-[13px] transition-all duration-150",
+                                    childActive
+                                      ? "bg-white/[0.08] text-white font-[600]"
+                                      : "text-[#CBD5E1] hover:bg-white/[0.05] hover:text-white"
+                                  )}
+                                >
+                                  {renderIcon(child.icon)}
+                                  <span>{child.name}</span>
+                                </NavLink>
+                              );
+                            })}
+                        </div>
+                      )}
+                    </div>
                 ))}
               </div>
             </div>
