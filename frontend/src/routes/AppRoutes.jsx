@@ -39,6 +39,7 @@ import AIReorderingPage from '../pages/AIReorderingPage';
 import AIAssistantPage from '../pages/AIAssistantPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
+import UserActionsPage from '../pages/UserActionsPage';
 
 
 
@@ -109,6 +110,13 @@ export const AppRoutes = () => {
         <Route path="/audit-logs" element={
           <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
             <AuditLogsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* User Actions */}
+        <Route path="/user-actions" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
+            <UserActionsPage />
           </ProtectedRoute>
         } />
 
