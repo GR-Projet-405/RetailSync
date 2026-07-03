@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { generateReportPDF } from '../../utils/reportPdfExport';
 import { useParams, useLocation, Link } from 'react-router-dom';
 import {
   BarChart2, Package, DollarSign, Users, UserCheck,
-  ChevronRight, ChevronLeft, RefreshCw, Printer, Download, Calendar,
+  ChevronRight, ChevronLeft, RefreshCw, Download, Calendar,
   MapPin, Search, Filter, ArrowUpRight, ArrowDownRight, Clock, FileText,
   User as UserIcon,
 } from 'lucide-react';
@@ -717,6 +717,7 @@ export default function ReportViewPage() {
   const meta            = REPORT_META[reportType];
   const [search, setSearch]           = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   if (!meta) return (
     <div className="flex items-center justify-center h-64 text-slate-500 text-sm">
@@ -757,6 +758,14 @@ export default function ReportViewPage() {
   const pageRows   = filteredRows.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
 
   const handleSearch = (e) => { setSearch(e.target.value); setCurrentPage(1); };
+
+  const handleRefresh = useCallback(() => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    setSearch('');
+    setCurrentPage(1);
+    setTimeout(() => setIsRefreshing(false), 800);
+  }, [isRefreshing]);
 
   const handleExportPDF = () =>
     generateReportPDF({
@@ -825,16 +834,13 @@ export default function ReportViewPage() {
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
             title="Refresh"
-            className="w-9 h-9 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-blue-600 transition-colors shadow-sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="w-9 h-9 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-blue-600 transition-colors shadow-sm disabled:opacity-60"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
           </button>
-          <button
-            title="Print"
-            className="w-9 h-9 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-blue-600 transition-colors shadow-sm"
-          >
-            <Printer className="w-4 h-4" />
-          </button>
+
           <Button variant="outline" size="sm" onClick={handleExportPDF} className="flex items-center gap-1.5 h-9 shadow-sm">
             <Download className="w-3.5 h-3.5" />
             Export PDF
