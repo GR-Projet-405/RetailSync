@@ -11,7 +11,6 @@ import {
   ChevronDown,
   ArrowLeft,
   Download,
-  Save,
   Calendar,
   RefreshCw,
   Tag,
@@ -1183,10 +1182,6 @@ export default function ReportConfigPage() {
           Back to Dashboard
         </Link>
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="md" className="flex items-center gap-2" disabled>
-            <Save className="w-4 h-4" />
-            Save Configuration
-          </Button>
           <Button
             variant="primary"
             size="md"
