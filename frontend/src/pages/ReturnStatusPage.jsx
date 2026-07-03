@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Clock, ArrowRight, CheckCircle2, Info, PlusSquare } from 'lucide-react';
+import { Check, Clock, ArrowRight, CheckCircle2, Info, PlusSquare, Trophy, Printer } from 'lucide-react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 
 export default function ReturnStatusPage() {
@@ -7,12 +7,12 @@ export default function ReturnStatusPage() {
   const location = useLocation();
   const { returnId: paramId } = useParams();
 
-  
   const returnId = paramId || "RET-0091";
 
   
   const status = location.state?.status || 'Pending';
-  const isApproved = status === 'Approved';
+  const isApproved = status === 'Approved' || status === 'Completed';
+  const isCompleted = status === 'Completed';
 
   return (
     <div className="space-y-6 p-6 max-w-5xl mx-auto fade-up">
@@ -31,7 +31,13 @@ export default function ReturnStatusPage() {
         
         <div className="text-center space-y-2">
           <h2 className="text-xl font-bold text-slate-800">Return Status for {returnId}</h2>
-          {isApproved ? (
+          
+          {isCompleted ? (
+            <div className="flex items-center justify-center gap-1.5 text-emerald-600 font-semibold text-xs">
+              <CheckCircle2 size={15} />
+              <span>Completed Successfully</span>
+            </div>
+          ) : isApproved ? (
             <div className="flex items-center justify-center gap-1.5 text-blue-600 font-semibold text-xs">
               <CheckCircle2 size={14} />
               <span>Return Approved & Ready for Refund</span>
@@ -64,7 +70,6 @@ export default function ReturnStatusPage() {
             <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white z-10 shadow-sm">
               <Check size={20} strokeWidth={3} />
             </div>
-            
             <div className={`absolute top-5 left-1/2 w-full ${isApproved ? 'h-[3px] bg-blue-600' : 'h-[2px] border-t-2 border-dashed border-slate-200'} -z-0`}></div>
             <div className="text-center mt-3 space-y-0.5">
               <p className="text-xs font-bold text-slate-800">Item Inspected</p>
@@ -77,7 +82,7 @@ export default function ReturnStatusPage() {
             <div className={`w-10 h-10 rounded-full flex items-center justify-center z-10 shadow-sm ${isApproved ? 'bg-emerald-500 text-white' : 'bg-slate-100 border-2 border-slate-200 text-slate-700 font-bold text-sm'}`}>
               {isApproved ? <Check size={20} strokeWidth={3} /> : '3'}
             </div>
-            <div className="absolute top-5 left-1/2 w-full h-[2px] border-t-2 border-dashed border-slate-200 -z-0"></div>
+            <div className={`absolute top-5 left-1/2 w-full ${isCompleted ? 'h-[3px] bg-blue-600' : 'h-[2px] border-t-2 border-dashed border-slate-200'} -z-0`}></div>
             <div className="text-center mt-3 space-y-0.5">
               <p className={`text-xs font-bold ${isApproved ? 'text-slate-800' : 'text-slate-400'}`}>Return Approved</p>
               {isApproved && <p className="text-[10px] text-slate-400 font-medium">09 Jun, 11:45 AM</p>}
@@ -86,11 +91,12 @@ export default function ReturnStatusPage() {
 
           
           <div className="flex flex-col items-center flex-1 relative group">
-            <div className="w-10 h-10 rounded-full bg-slate-100 border-2 border-slate-200 flex items-center justify-center text-slate-700 font-bold text-sm z-10">
-              4
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center z-10 shadow-sm transition-all ${isCompleted ? 'bg-emerald-500 text-white ring-4 ring-emerald-100' : 'bg-slate-100 border-2 border-slate-200 text-slate-700 font-bold text-sm'}`}>
+              {isCompleted ? <Trophy size={18} strokeWidth={2.5} /> : '4'}
             </div>
             <div className="text-center mt-3 space-y-0.5">
-              <p className="text-xs font-bold text-slate-400">Refund Issued</p>
+              <p className={`text-xs font-bold ${isCompleted ? 'text-emerald-500 font-extrabold' : 'text-slate-400'}`}>Refund Issued</p>
+              {isCompleted && <p className="text-[10px] text-slate-400 font-medium">09 Jun, 12:15 PM</p>}
             </div>
           </div>
 
@@ -100,8 +106,13 @@ export default function ReturnStatusPage() {
         <div className="flex justify-end w-full mt-2">
           <button 
             type="button"
-            onClick={() => navigate('/returns/history')}
-            className="flex items-center gap-1 text-blue-600 hover:text-blue-700 font-bold text-xs transition-colors focus:outline-none"
+            onClick={() => navigate('/returns/history', { 
+              state: { 
+                updatedReturnId: returnId, 
+                updatedStatus: isCompleted ? 'Refunded' : 'Approved' 
+              } 
+            })}
+            className="flex items-center gap-1 text-blue-600 hover:text-blue-700 font-bold text-xs transition-colors focus:outline-none cursor-pointer"
           >
             <span>Go to History</span>
             <ArrowRight size={14} strokeWidth={2.5} />
@@ -110,9 +121,36 @@ export default function ReturnStatusPage() {
       </div>
 
       
-      {isApproved && (
+      {isCompleted ? (
+        
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
+          
+          <div className="bg-emerald-50/30 border border-emerald-200/80 rounded-xl p-5 shadow-sm space-y-2">
+            <h3 className="text-sm font-bold text-emerald-900">Refund Successful</h3>
+            <p className="text-xs text-slate-600 leading-relaxed font-normal">
+              An amount of <span className="font-bold text-slate-800">Rs. 17,480.00</span> has been successfully credited back to the original payment method (<span className="font-bold text-slate-800">Visa ****4242</span>). An email receipt has been sent to <span className="font-bold text-slate-800">Nimal Silva</span>.
+            </p>
+          </div>
+
+          
+          <div 
+            onClick={() => window.print()}
+            className="bg-white border-2 border-dashed border-slate-300 rounded-xl p-5 flex items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors shadow-sm"
+          >
+            <div className="flex items-center gap-2 text-blue-600 font-bold text-sm">
+              <Printer size={18} />
+              <span>Print Return Slip</span>
+            </div>
+          </div>
+
+        </div>
+
+      ) : status === 'Approved' ? (
+
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-start gap-3">
             <Info className="text-blue-600 shrink-0 mt-0.5" size={18} />
@@ -124,16 +162,18 @@ export default function ReturnStatusPage() {
             </div>
           </div>
 
-          
-          <div className="bg-blue-50/40 border-2 border-dashed border-blue-300 rounded-xl p-5 flex items-center justify-center cursor-pointer hover:bg-blue-50 transition-colors">
+          <div 
+            onClick={() => navigate(`/returns/process-refund/${returnId}`)}
+            className="bg-blue-50/40 border-2 border-dashed border-blue-300 rounded-xl p-5 flex items-center justify-center cursor-pointer hover:bg-blue-50 transition-colors"
+          >
             <div className="flex items-center gap-2 text-blue-600 font-semibold text-sm">
               <PlusSquare size={18} />
               <span>Add Refund Method</span>
             </div>
           </div>
-          
+
         </div>
-      )}
+      ) : null}
 
     </div>
   );

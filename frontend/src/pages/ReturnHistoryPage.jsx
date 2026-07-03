@@ -1,17 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Building2, Filter, Calendar } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function ReturnHistoryPage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const historyData = [
+  
+  const initialData = [
     { id: 'RET-0091', date: '09 Jun 2026', receipt: 'TXN-88492A', customer: 'Nimal Silva', cashier: 'Nuwan Silva', amount: '17,480.00', status: 'Approved' },
     { id: 'RET-0090', date: '08 Jun 2026', receipt: 'TXN-88110B', customer: 'Amali Fernando', cashier: 'Kamal Dias', amount: '4,500.00', status: 'Pending' },
     { id: 'RET-0089', date: '07 Jun 2026', receipt: 'TXN-88005C', customer: 'Kasun Perera', cashier: 'Nuwan Silva', amount: '0.00', status: 'Refunded' },
     { id: 'RET-0088', date: '05 Jun 2026', receipt: 'TXN-87999D', customer: 'Walk-in Customer', cashier: 'Kamal Dias', amount: '1,200.00', status: 'Rejected' },
     { id: 'RET-0087', date: '03 Jun 2026', receipt: 'TXN-87668D', customer: 'Nimali Perera', cashier: 'Nuwan Silva', amount: '3,100.00', status: 'Refunded' },
   ];
+
+  const [historyData, setHistoryData] = useState(initialData);
+
+  
+  useEffect(() => {
+    if (location.state?.updatedReturnId && location.state?.updatedStatus) {
+      setHistoryData(prevData =>
+        prevData.map(item =>
+          item.id === location.state.updatedReturnId
+            ? { ...item, status: location.state.updatedStatus }
+            : item
+        )
+      );
+    }
+  }, [location.state]);
 
   const getStatusStyle = (status) => {
     switch (status) {
@@ -23,9 +40,7 @@ export default function ReturnHistoryPage() {
     }
   };
 
-
   const handleViewClick = (row) => {
-    
     navigate(`/returns/status/${row.id}`, { state: { status: row.status } });
   };
 

@@ -34,6 +34,7 @@ import ReturnsRefundsPage from '../pages/ReturnsRefundsPage';
 import ReturnStatusPage from '../pages/ReturnStatusPage';
 import ReturnHistoryPage from '../pages/ReturnHistoryPage'; 
 import ReviewReturnRequestPage from '../pages/ReviewReturnRequestPage';
+import ProcessRefundPage from '../pages/ProcessRefundPage'; 
 import PromotionsDiscountsPage from '../pages/PromotionsDiscountsPage';
 import ReportsPage from '../pages/ReportsPage';
 import BusinessAnalyticsPage from '../pages/BusinessAnalyticsPage';
@@ -225,6 +226,13 @@ export const AppRoutes = () => {
         <Route path="/returns/status/:returnId" element={
           <ProtectedRoute allowedRoles={SALES_ROLES}>
             <ReturnStatusPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Process Refund */}
+        <Route path="/returns/process-refund/:returnId" element={
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <ProcessRefundPage />
           </ProtectedRoute>
         } />
 
