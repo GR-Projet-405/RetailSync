@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   BarChart2,
   ClipboardList,
@@ -15,8 +15,6 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  Calendar,
   ArrowRight,
   Package,
   RefreshCw,
@@ -25,7 +23,6 @@ import PageHeader from '../../components/PageHeader';
 import Button from '../../components/Button';
 import { Card } from '../../components/Card';
 import DataTable from '../../components/DataTable';
-import Spinner from '../../components/Spinner';
 import { cn } from '../../utils/cn';
 import { reportService, REPORT_KEYS } from '../../services/reportService';
 import { computeReportData, generateReportPDF } from '../../utils/reportPdfExport';
@@ -82,15 +79,6 @@ const TYPE_META = {
   EMPLOYEE:  { label: 'Employee',  icon: Users,      color: 'text-violet-600',  bg: 'bg-violet-50' },
   CUSTOMER:  { label: 'Customer',  icon: UserCheck,  color: 'text-rose-600',    bg: 'bg-rose-50' },
 };
-
-const TIME_FILTERS = [
-  { id: 'today',   label: 'Today' },
-  { id: 'weekly',  label: 'Weekly' },
-  { id: 'monthly', label: 'Monthly' },
-  { id: 'custom',  label: 'Custom Range', icon: Calendar },
-];
-
-const BRANCHES = ['All Branches', 'Downtown Flagship', 'Westside Mall', 'Airport Hub', 'North District'];
 
 const PER_PAGE = 5;
 
@@ -239,40 +227,6 @@ function StatusPill({ status }) {
   );
 }
 
-function BranchDropdown({ value, onChange }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors duration-150"
-      >
-        {value}
-        <ChevronDown className={cn('w-4 h-4 text-slate-400 transition-transform duration-150', open && 'rotate-180')} />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 overflow-hidden">
-            {BRANCHES.map((b) => (
-              <button
-                key={b}
-                onClick={() => { onChange(b); setOpen(false); }}
-                className={cn(
-                  'w-full text-left px-4 py-2.5 text-sm transition-colors duration-150 hover:bg-blue-50 hover:text-blue-700',
-                  value === b ? 'text-blue-700 font-semibold bg-blue-50' : 'text-slate-700'
-                )}
-              >
-                {b}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
 function TableSkeleton() {
   return (
     <div className="space-y-3 py-2">
@@ -301,10 +255,6 @@ function TableSkeleton() {
 
 export default function ReportsPage() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
-  const [activeFilter, setActiveFilter] = useState('today');
-  const [selectedBranch, setSelectedBranch] = useState('All Branches');
   const [selectedType, setSelectedType] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState('');
@@ -340,15 +290,6 @@ export default function ReportsPage() {
     placeholderData: (prev) => prev,
   });
 
-  // ── Mutation ───────────────────────────────────────────────────────────────
-
-  const generateMutation = useMutation({
-    mutationFn: reportService.generateReport,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: REPORT_KEYS.lists() });
-      queryClient.invalidateQueries({ queryKey: REPORT_KEYS.summary() });
-    },
-  });
 
   // ── Derived state ──────────────────────────────────────────────────────────
 
@@ -504,28 +445,7 @@ export default function ReportsPage() {
       <PageHeader
         title="Reports & Analytics"
         description="Monitor your business performance across all branches"
-        actions={
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 gap-0.5">
-              {TIME_FILTERS.map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => setActiveFilter(f.id)}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-150',
-                    activeFilter === f.id
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  )}
-                >
-                  {f.icon && <f.icon className="w-3.5 h-3.5" />}
-                  {f.label}
-                </button>
-              ))}
-            </div>
-            <BranchDropdown value={selectedBranch} onChange={setSelectedBranch} />
-          </div>
-        }
+        actions={null}
       />
 
       {/* ── Summary Cards ── */}
@@ -595,20 +515,6 @@ export default function ReportsPage() {
               ))}
             </div>
 
-            <Button
-              variant="primary"
-              size="sm"
-              className="flex items-center gap-1.5"
-              onClick={() => navigate('/reports/configure/sales')}
-              disabled={generateMutation.isPending}
-            >
-              {generateMutation.isPending ? (
-                <Spinner size="sm" />
-              ) : (
-                <Plus className="w-3.5 h-3.5" />
-              )}
-              Generate New
-            </Button>
           </div>
         </div>
 
