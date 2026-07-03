@@ -3,12 +3,13 @@ import api from './api';
 // ─── Query key factory ────────────────────────────────────────────────────────
 
 export const REPORT_KEYS = {
-  all:      () => ['reports'],
-  lists:    () => ['reports', 'list'],
-  list:     (params) => ['reports', 'list', params],
-  summary:  () => ['reports', 'summary'],
-  detail:   (id) => ['reports', 'detail', id],
-  branches: () => ['branches', 'active'],
+  all:               () => ['reports'],
+  lists:             () => ['reports', 'list'],
+  list:              (params) => ['reports', 'list', params],
+  summary:           () => ['reports', 'summary'],
+  detail:            (id) => ['reports', 'detail', id],
+  branches:          () => ['branches', 'active'],
+  branchPerformance: () => ['reports', 'branch-performance'],
 };
 
 // ─── API calls ────────────────────────────────────────────────────────────────
@@ -51,4 +52,10 @@ export const reportService = {
    */
   getBranches: () =>
     api.get('/branch-management/active').then((r) => r.data),
+
+  /**
+   * Fetch branch performance ranking derived from report metadata.
+   */
+  getBranchPerformance: () =>
+    api.get('/reports/branch-performance').then((r) => r.data),
 };

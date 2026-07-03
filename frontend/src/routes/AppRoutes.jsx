@@ -33,6 +33,7 @@ import SalesHistoryPage from '../pages/SalesHistoryPage';
 import ReturnsRefundsPage from '../pages/ReturnsRefundsPage';
 import PromotionsDiscountsPage from '../pages/PromotionsDiscountsPage';
 import ReportsPage from '../pages/reports/ReportsPage';
+import BranchManagerReportsPage from '../pages/reports/BranchManagerReportsPage';
 import ReportConfigPage from '../pages/reports/ReportConfigPage';
 import ReportViewPage from '../pages/reports/ReportViewPage';
 import BusinessAnalyticsPage from '../pages/BusinessAnalyticsPage';
@@ -43,6 +44,16 @@ import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
 
 
+
+// Renders the correct reports dashboard based on the logged-in user's role
+// user.roleId.name holds the role string (e.g. "BRANCH_MANAGER")
+function ReportsRouter() {
+  const { user } = useAuth();
+  if (user?.roleId?.name === ROLES.BRANCH_MANAGER) {
+    return <BranchManagerReportsPage />;
+  }
+  return <ReportsPage />;
+}
 
 // Convenience arrays
 const ALL_ROLES = Object.values(ROLES);
@@ -226,10 +237,10 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
-        {/* Reports */}
+        {/* Reports — Admin sees ReportsPage, Branch Manager sees BranchManagerReportsPage */}
         <Route path="/reports" element={
           <ProtectedRoute allowedRoles={[...MANAGEMENT_ROLES, ROLES.AUDITOR]}>
-            <ReportsPage />
+            <ReportsRouter />
           </ProtectedRoute>
         } />
 

@@ -20,6 +20,17 @@ const getRecentReports = asyncHandler(async (req, res) => {
   });
 });
 
+// GET /api/v1/reports/branch-performance
+const getBranchPerformance = asyncHandler(async (req, res) => {
+  const data = await service.getBranchPerformance();
+
+  res.status(200).json({
+    success: true,
+    message: 'Branch performance fetched successfully',
+    data,
+  });
+});
+
 // GET /api/v1/reports/summary
 const getSummaryStats = asyncHandler(async (req, res) => {
   const data = await service.getSummaryStats();
@@ -67,6 +78,7 @@ const deleteReport = asyncHandler(async (req, res) => {
 module.exports = {
   getRecentReports,
   getSummaryStats,
+  getBranchPerformance,
   generateReport,
   getReportById,
   deleteReport,

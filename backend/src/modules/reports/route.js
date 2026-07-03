@@ -8,8 +8,9 @@ const { verifyToken, hasPermission }     = require('../../middleware/auth.middle
 // All report endpoints require a valid session
 router.use(verifyToken);
 
-// Summary stats — must come before /:id so it isn't swallowed as an id param
-router.get('/summary', hasPermission('reports.view'), controller.getSummaryStats);
+// Named routes — must all come before /:id so they aren't swallowed as id params
+router.get('/summary',           hasPermission('reports.view'), controller.getSummaryStats);
+router.get('/branch-performance',hasPermission('reports.view'), controller.getBranchPerformance);
 
 // Recent reports list
 router.get('/', hasPermission('reports.view'), controller.getRecentReports);
