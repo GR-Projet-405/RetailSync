@@ -37,53 +37,6 @@ const PRIORITY_VARIANT = {
   Med: 'warning',
   Low: 'neutral',
 };
-//Mocked Data
-const INITIAL_TICKETS = [
-  {
-    id: 'JK-2983',
-    subject: 'API Connection Error',
-    category: 'Technical Issue',
-    date: 'Oct 12, 2023',
-    status: 'In Progress',
-    priority: 'High',
-    messages: [
-      {
-        id: 1,
-        type: 'user',
-        text: 'Our POS terminal cannot connect to the API since this morning.',
-        time: 'Oct 12, 2023, 9:15 AM',
-      },
-    ],
-  },
-  {
-    id: 'JK-2984',
-    subject: 'Unable to upgrade plan',
-    category: 'Billing',
-    date: 'Oct 14, 2023',
-    status: 'Open',
-    priority: 'High',
-    messages: [
-      {
-        id: 1,
-        type: 'user',
-        text: "I'm trying to upgrade to the Enterprise plan but I keep getting a payment error (402). My card is valid and works elsewhere. Can you help?",
-        time: 'Today, 10:45 AM',
-      },
-      {
-        id: 2,
-        type: 'system',
-        text: 'Support Agent Sarah joined the chat',
-      },
-      {
-        id: 3,
-        type: 'agent',
-        sender: 'Sarah',
-        text: "Hi there! I'm Sarah from the billing department. I can see the failed transaction attempt. Could you please confirm the last 4 digits of the card you're trying to use?",
-        time: 'Today, 10:48 AM',
-      },
-    ],
-  },
-];
 
 function CreateTicketForm ({ onTicketCreated }){
   const [subject, setSubject] = useState('');
