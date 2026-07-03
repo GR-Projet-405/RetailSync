@@ -58,40 +58,51 @@ class ProfileSettingsPageService {
     };
   }
 
-  /**
-   * Validate current password and apply a new secure password string
-   * @param {Object} userInstance - Live Mongoose Document for current user context [cite: 730]
-   * @param {string} currentPassword - Current user password input string
-   * @param {string} newPassword - Selected new password string replacement
-   */
-  async modifyPassword(userInstance, currentPassword, newPassword) {
-    if (!currentPassword || !newPassword) {
-      const error = new Error('Both current and new password strings are mandatory fields.');
-      error.statusCode = 400;
-      throw error;
-    }
-
-    // Explicitly check password against the database hash using the schema method [cite: 599]
-    const isMatch = await userInstance.comparePassword(currentPassword);
-    if (!isMatch) {
-      const error = new Error('The current password provided does not match our records.');
-      error.statusCode = 401;
-      throw error;
-    }
-
-    // Verify minimal security layout length [cite: 595, 611]
-    if (newPassword.length < 8) {
-      const error = new Error('The new password must contain at least 8 characters.');
-      error.statusCode = 400;
-      throw error;
-    }
-
-    // Re-assign plain text string. The user.model pre('save') hook handles re-hashing [cite: 495, 598]
-    userInstance.password = newPassword;
-    await userInstance.save(); // [cite: 730]
-
-    return true;
+/**
+ * Validate current password and apply a new secure password string
+ * @param {Object} userInstance - Live Mongoose Document for current user context
+ * @param {string} currentPassword - Current user password input string
+ * @param {string} newPassword - Selected new password string replacement
+ */
+async modifyPassword(userInstance, currentPassword, newPassword) {
+  if (!currentPassword || !newPassword) {
+    const error = new Error('Both current and new password strings are mandatory fields.');
+    error.statusCode = 400;
+    throw error;
   }
+
+  // 1. Fetch a fresh copy of the user using the logged-in user's ID
+  // We explicitly use .select('+password') to force Mongoose to return the password hash
+  const User = userInstance.constructor; // Dynamically gets the User model
+  const freshUser = await User.findById(userInstance._id).select('+password');
+
+  if (!freshUser) {
+    const error = new Error('User account context could not be verified.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // 2. Explicitly check password against the database hash using the schema method
+  const isMatch = await freshUser.comparePassword(currentPassword);
+  if (!isMatch) {
+    const error = new Error('The current password provided does not match our records.');
+    error.statusCode = 401;
+    throw error;
+  }
+
+  // 3. Verify minimal security layout length
+  if (newPassword.length < 8) {
+    const error = new Error('The new password must contain at least 8 characters.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // 4. Re-assign plain text string. The user.model pre('save') hook handles re-hashing
+  freshUser.password = newPassword;
+  await freshUser.save(); 
+
+  return true;
+}
 }
 
 module.exports = new ProfileSettingsPageService();
