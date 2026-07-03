@@ -82,6 +82,11 @@ function CreateTicketForm ({ onTicketCreated }){
   const [files, setFiles] = useState([]);
   const [fileError, setFileError] = useState('');
   const fileInputRef = useRef(null);
+  
+  const [errors, setErrors] = useState({
+    subject: '',
+    description: '',
+  });
 
   const validateAndAddFiles = (selectedFiles) => {
     const validFiles = [];
@@ -127,11 +132,16 @@ function CreateTicketForm ({ onTicketCreated }){
   const handleSubmit = async (e) => {
     e.preventDefault();
   
-    if (!subject.trim() || !description.trim()) return;
+    const newErrors = {
+      subject: subject.trim() ? '' : 'Subject is required.',
+      description: description.trim() ? '' : 'Description is required.',
+    };
   
+    setErrors(newErrors);
+  
+    if (newErrors.subject || newErrors.description) return;
+
     try {
-      setSubmitting(true);
-  
       const newTicket = await createSupportTicket({
         subject,
         category,
@@ -177,7 +187,15 @@ function CreateTicketForm ({ onTicketCreated }){
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
               Subject
             </label>
-            <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Brief summary of the issue" className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+            <input type="text" value={subject} onChange={(e) => { setSubject(e.target.value);
+              if (errors.subject) {
+                setErrors((prev) => ({ ...prev, subject: ''}));
+              }
+            }}
+             placeholder="Brief summary of the issue" className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+             {errors.subject && (
+              <p className='mt-1.5 text-xs text-red-600'>{errors.subject}</p>
+             )}
           </div>
 
           {/* Category + Priority */}
@@ -230,11 +248,18 @@ function CreateTicketForm ({ onTicketCreated }){
             </label>
             <textarea
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => { setDescription(e.target.value);
+                if (errors.description) {
+                  setErrors((prev) => ({ ...prev, description: ''}));
+                }
+              }}
               rows={5}
               placeholder="Describe your problem in detail..."
               className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
+            {errors.description && (
+              <p className='mt-1.5 text-xs text-red-600'>{errors.description}</p>
+            )}
           </div>
           {/* Attachments */}
 <div>
@@ -302,10 +327,30 @@ function CreateTicketForm ({ onTicketCreated }){
 
 function RecentTicketsTable({ tickets, selectedId, onSelect }) {
   const [statusFilter, setStatusFilter] = useState('All Status');
+  const [sortOption, setSortOption] = useState('Newest First');
+  const [sortOpen, setSortOpen] = useState(false);
+
+  const SORT_OPTIONS = ['Newest First', 'Oldest First', 'Subject A-Z', 'Subject Z-A'];
 
   const filteredTickets = tickets.filter((ticket) => {
     if (statusFilter === 'All Status') return true;
     return ticket.status === statusFilter;
+  });
+
+  const sortedTickets = [...filteredTickets].sort((a, b) => {
+    if (sortOption === 'Oldest First') {
+      return new Date(a.createdAt) - new Date(b.createdAt);
+    }
+
+    if (sortOption === 'Subject A-Z') {
+      return b.subject.localeCompare(a.subject);
+    }
+
+    if (sortOption === 'Subject Z-A') {
+      return a.subject.localeCompare(b.subject);
+    }
+
+    return new Date(b.createdAt) - new Date(a.createdAt);
   });
 
   return (
@@ -321,13 +366,29 @@ function RecentTicketsTable({ tickets, selectedId, onSelect }) {
             <Filter size={14} />
             {statusFilter}
           </button>
+          <div className="relative">
           <button
             type="button"
+            onClick={() => setSortOpen((v) => !v)}
             className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
           >
-            Newest First
+            {sortOption}
             <ChevronDown size={14} />
           </button>
+
+          {sortOpen && (
+            <>
+            <div className='fixed inset-0 z-10' onClick={() => setSortOpen(false)}/>
+            <div className='absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg'>
+             {SORT_OPTIONS.map((option) => (
+              <button key={option} type="button" onClick={() => {setSortOption(option); setSortOpen(false); }} className={`block w-full px-3.5 py-2 text-left text-xs font-medium transition-colors hover:bg-slate-50 ${ sortOption === option ? 'text-blue-600' : 'text-slate-600' }`}>
+                {option}
+              </button>
+             ))}
+             </div>
+             </>
+            )}
+            </div>
         </div>
       </CardHeader>
 
@@ -344,7 +405,7 @@ function RecentTicketsTable({ tickets, selectedId, onSelect }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredTickets.map((ticket) => (
+              {sortedTickets.map((ticket) => (
                 <tr
                   key={ticket.id}
                   className={`transition-colors hover:bg-blue-50/40 ${

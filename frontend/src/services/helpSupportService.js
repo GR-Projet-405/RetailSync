@@ -35,6 +35,7 @@ const mapTicket = (ticket) => ({
   subject: ticket.subject,
   category: ticket.category,
   date: formatDate(ticket.createdAt),
+  createdAt: ticket.createdAt,
   status: ticket.status,
   priority: ticket.priority,
   description: ticket.description,
