@@ -4,4 +4,6 @@ const controller = require('./controller');
 
 router.get('/', controller.getDetails);
 
+router.get('/branches', controller.getBranches);
+
 module.exports = router;
