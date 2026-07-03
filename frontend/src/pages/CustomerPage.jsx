@@ -1,24 +1,27 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatCard from '../components/StatCard';
 import Pagination from '../components/Pagination';
 import CustomerSearchBar from '../features/customer-management/components/CustomerSearchBar';
 import CustomerTable from '../features/customer-management/components/CustomerTable';
 import { useCustomers } from '../features/customer-management/hooks/useCustomers';
+import customerService from '../features/customer-management/services/customerService';
 import Spinner from '../components/Spinner';
 
-const STAT_SUMMARY = [
-  { title: 'Total Customers', value: '2,458', change: '+12% vs last period' },
-  { title: 'Active Customers', value: '2,156', change: '+9% vs last period' },
-  { title: 'New This Month', value: '142', change: '+18% vs last period' },
-  { title: 'Total Loyalty Points', value: '125,450', change: '+15% vs last period' },
-];
+const INITIAL_STATS = {
+  totalCustomers: 0,
+  activeCustomers: 0,
+  newThisMonth: 0,
+  totalLoyaltyPoints: 0,
+};
 
 export default function CustomerPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [page, setPage] = useState(1);
+  const [stats, setStats] = useState(INITIAL_STATS);
+  const [statsLoading, setStatsLoading] = useState(true);
   const pageSize = 6;
 
   const { customers, loading, totalCount } = useCustomers({ search, status: statusFilter, page, limit: pageSize });
@@ -29,6 +32,35 @@ export default function CustomerPage() {
   const customerCountLabel = useMemo(() => {
     return String(totalCount).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   }, [totalCount]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadStats = async () => {
+      setStatsLoading(true);
+      try {
+        const data = await customerService.getCustomerStats();
+        if (isMounted) {
+          setStats({
+            totalCustomers: data.totalCustomers || 0,
+            activeCustomers: data.activeCustomers || 0,
+            newThisMonth: data.newThisMonth || 0,
+            totalLoyaltyPoints: data.totalLoyaltyPoints || 0,
+          });
+        }
+      } catch (error) {
+        console.error('Unable to load customer stats:', error);
+      } finally {
+        if (isMounted) setStatsLoading(false);
+      }
+    };
+
+    loadStats();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="space-y-8 fade-up">
@@ -56,8 +88,13 @@ export default function CustomerPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {STAT_SUMMARY.map((stat) => (
-          <StatCard key={stat.title} title={stat.title} value={stat.value} change={stat.change} />
+        {[
+          { title: 'Total Customers', value: stats.totalCustomers },
+          { title: 'Active Customers', value: stats.activeCustomers },
+          { title: 'New This Month', value: stats.newThisMonth },
+          { title: 'Total Loyalty Points', value: stats.totalLoyaltyPoints },
+        ].map((stat) => (
+          <StatCard key={stat.title} title={stat.title} value={stat.value} />
         ))}
       </div>
 

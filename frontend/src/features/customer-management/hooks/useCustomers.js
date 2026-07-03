@@ -1,33 +1,59 @@
 import { useMemo, useState, useEffect } from 'react';
-import { mockCustomers } from '../data/mockCustomers';
+import customerService from '../services/customerService';
 
-export function useCustomers({ search = '', status = 'All', page = 1, limit = 6 } = {}) {
+export function useCustomers({
+  search = '',
+  status = 'All',
+  customerType = '',
+  sortBy = '',
+  page = 1,
+  limit = 6,
+  phoneNumber = '',
+} = {}) {
   const [loading, setLoading] = useState(true);
   const [customers, setCustomers] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
-
-  const normalizedSearch = search.trim().toLowerCase();
+  const [error, setError] = useState(null);
 
   useEffect(() => {
+    let isMounted = true;
     setLoading(true);
-    const timer = window.setTimeout(() => {
-      const filtered = mockCustomers.filter((item) => {
-        const matchesSearch = normalizedSearch
-          ? [item.name, item.phone, item.email].some((value) => value.toLowerCase().includes(normalizedSearch))
-          : true;
-        const matchesStatus = status === 'All' || status === '' ? true : item.status === status;
-        return matchesSearch && matchesStatus;
+    setError(null);
+
+    const params = {
+      search: [search, phoneNumber].filter(Boolean).join(' ').trim() || undefined,
+      status: status === 'All' ? undefined : status,
+      customerType: customerType || undefined,
+      sortBy: sortBy || undefined,
+      page,
+      limit,
+    };
+
+    customerService
+      .getCustomers(params)
+      .then((result) => {
+        if (!isMounted) return;
+        setCustomers(result.customers || []);
+        setTotalCount(result.totalCount || 0);
+      })
+      .catch((fetchError) => {
+        console.error('Error loading customers:', fetchError.message);
+        if (!isMounted) return;
+        setError(fetchError);
+        setCustomers([]);
+        setTotalCount(0);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
       });
 
-      setTotalCount(filtered.length);
-      const startIndex = (page - 1) * limit;
-      const paged = filtered.slice(startIndex, startIndex + limit);
-      setCustomers(paged);
-      setLoading(false);
-    }, 120);
+    return () => {
+      isMounted = false;
+    };
+  }, [search, status, customerType, sortBy, page, limit, phoneNumber]);
 
-    return () => window.clearTimeout(timer);
-  }, [normalizedSearch, status, page, limit]);
-
-  return useMemo(() => ({ customers, loading, totalCount }), [customers, loading, totalCount]);
+  return useMemo(
+    () => ({ customers, loading, totalCount, error }),
+    [customers, loading, totalCount, error]
+  );
 }

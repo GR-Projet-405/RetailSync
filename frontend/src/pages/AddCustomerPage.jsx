@@ -1,32 +1,19 @@
 import { useNavigate } from 'react-router-dom';
-import PageHeader from '../components/PageHeader';
 import AddCustomerForm from '../features/customer-management/components/AddCustomerForm';
-import { mockCustomers } from '../features/customer-management/data/mockCustomers';
+import customerService from '../features/customer-management/services/customerService';
 import { toast } from '../utils/toast';
 
 export default function AddCustomerPage() {
   const navigate = useNavigate();
 
-  const handleSubmit = (customerData) => {
-    const newCustomer = {
-      _id: `c${Date.now()}`,
-      name: `${customerData.firstName} ${customerData.lastName}`,
-      email: customerData.email,
-      phone: customerData.phone,
-      address: customerData.address,
-      dateOfBirth: customerData.dateOfBirth,
-      gender: customerData.gender,
-      customerType: customerData.customerType,
-      loyaltyProgram: customerData.loyaltyProgram,
-      totalOrders: 0,
-      loyaltyPoints: 0,
-      status: 'Active',
-      avatarUrl: null,
-    };
-
-    mockCustomers.unshift(newCustomer);
-    toast.success('Customer created successfully.');
-    navigate('/customers');
+  const handleSubmit = async (customerData) => {
+    try {
+      await customerService.createCustomer(customerData);
+      toast.success('Customer created successfully.');
+      navigate('/customers');
+    } catch (error) {
+      toast.error(error.message || 'Failed to create customer.');
+    }
   };
 
   return (

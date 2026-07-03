@@ -1,28 +1,46 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import PageHeader from '../components/PageHeader';
 import CustomerProfileCard from '../features/customer-management/components/CustomerProfileCard';
 import CustomerStatsGrid from '../features/customer-management/components/CustomerStatsGrid';
 import RecentOrdersTable from '../features/customer-management/components/RecentOrdersTable';
-import { mockCustomers } from '../features/customer-management/data/mockCustomers';
-import { mockOrders } from '../features/customer-management/data/mockOrders';
+import Spinner from '../components/Spinner';
+import customerService from '../features/customer-management/services/customerService';
 
 export default function CustomerProfilePage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [customer, setCustomer] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const customer = mockCustomers.find((item) => item._id === id);
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    setError(null);
 
-  const customerOrders = useMemo(
-    () => mockOrders.filter((order) => order.customerId === id).slice(0, 4),
-    [id]
-  );
+    customerService
+      .getCustomerById(id)
+      .then((result) => {
+        if (!isMounted) return;
+        setCustomer(result);
+      })
+      .catch((fetchError) => {
+        if (!isMounted) return;
+        setError(fetchError.message || 'Unable to load customer profile.');
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
 
-  const totalSpending = customerOrders.reduce((sum, order) => sum + order.amount, 0);
-  const averageOrderValue = customerOrders.length > 0 ? totalSpending / customerOrders.length : 0;
-  const lastOrderDate = customerOrders.length > 0
-    ? new Date(customerOrders[0].date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-    : 'N/A';
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  const customerOrders = [];
+  const totalSpending = 0;
+  const averageOrderValue = 0;
+  const lastOrderDate = 'N/A';
 
   const stats = {
     totalOrders: customer?.totalOrders ?? 0,
@@ -31,11 +49,19 @@ export default function CustomerProfilePage() {
     lastOrderDate,
   };
 
-  if (!customer) {
+  if (loading) {
+    return (
+      <div className="flex h-[420px] items-center justify-center rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (error || !customer) {
     return (
       <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center text-slate-600 shadow-sm">
         <h1 className="text-2xl font-semibold text-slate-900">Customer not found</h1>
-        <p className="mt-3 text-sm">We couldn’t find a customer matching that profile. Please return to the customer list.</p>
+        <p className="mt-3 text-sm">{error || 'We couldn’t find a customer matching that profile. Please return to the customer list.'}</p>
         <button
           type="button"
           onClick={() => navigate('/customers')}

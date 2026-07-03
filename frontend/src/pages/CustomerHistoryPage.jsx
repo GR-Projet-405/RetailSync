@@ -1,28 +1,57 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import PurchaseHistoryTable from '../features/customer-management/components/PurchaseHistoryTable';
 import PurchaseStatsGrid from '../features/customer-management/components/PurchaseStatsGrid';
-import { mockCustomers } from '../features/customer-management/data/mockCustomers';
-import { mockOrders } from '../features/customer-management/data/mockOrders';
+import customerService from '../features/customer-management/services/customerService';
 import { toast } from '../utils/toast';
 import Pagination from '../components/Pagination';
+import Spinner from '../components/Spinner';
 
 export default function CustomerHistoryPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [customer, setCustomer] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const pageSize = 5;
 
-  const customer = mockCustomers.find((item) => item._id === id);
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    setError(null);
+
+    Promise.all([
+      customerService.getCustomerById(id),
+      customerService.getCustomerPurchaseHistory(id),
+    ])
+      .then(([customerResult, historyResult]) => {
+        if (!isMounted) return;
+        setCustomer(customerResult);
+        setHistory(historyResult?.purchaseHistory || []);
+      })
+      .catch((fetchError) => {
+        if (!isMounted) return;
+        setError(fetchError.message || 'Unable to load customer history.');
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
 
   const customerOrders = useMemo(
-    () => mockOrders
-      .filter((order) => order.customerId === id)
+    () => history
+      .slice()
       .sort((a, b) => new Date(b.date) - new Date(a.date)),
-    [id]
+    [history]
   );
 
   const filteredOrders = useMemo(() => {
@@ -48,11 +77,19 @@ export default function CustomerHistoryPage() {
     averageOrderValue: `Rs. ${averageOrderValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
   };
 
-  if (!customer) {
+  if (loading) {
+    return (
+      <div className="flex h-[420px] items-center justify-center rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (error || !customer) {
     return (
       <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center text-slate-600 shadow-sm">
         <h1 className="text-2xl font-semibold text-slate-900">Customer not found</h1>
-        <p className="mt-3 text-sm">We couldn’t find that customer. Please return to the customer list.</p>
+        <p className="mt-3 text-sm">{error || 'We couldn’t find that customer. Please return to the customer list.'}</p>
         <button
           type="button"
           onClick={() => navigate('/customers')}
