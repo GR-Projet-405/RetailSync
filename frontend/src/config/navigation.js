@@ -172,18 +172,44 @@ export const NAVIGATION_GROUPS = [
         allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
       },
       {
-        id: 'promotions-discounts',
-        name: 'Promotions & Discounts',
-        path: '/promotions-discounts',
-        icon: 'Percent',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
-      },
-      {
         id: 'customer-management',
         name: 'Customer Management',
         path: '/customers',
         icon: 'Users',
         allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
+      }
+    ]
+  },
+  {
+    title: 'Promotions',
+    items: [
+      {
+        id: 'promotions-dashboard',
+        name: 'Promotion Dashboard',
+        path: '/promotions-discounts',
+        icon: 'Percent',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]
+      },
+      {
+        id: 'discount-rules',
+        name: 'Discount Rules',
+        path: '/discount-rules',
+        icon: 'Tag',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]
+      },
+      {
+        id: 'coupon-management',
+        name: 'Coupon Management',
+        path: '/coupon-management',
+        icon: 'Ticket',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]
+      },
+      {
+        id: 'promotion-analytics',
+        name: 'Promotion Analytics',
+        path: '/promotion-analytics',
+        icon: 'BarChart3',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN]
       }
     ]
   },
