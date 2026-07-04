@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, Paperclip, Send } from 'lucide-react';
+import { ChevronDown, Paperclip, Send, MessageCircle, Mail, Clock, Zap, ShieldCheck } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,6 +17,92 @@ const inputClassName = 'w-full rounded-lg border border-slate-200 px-3 py-2.5 te
 
 const labelClassName = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500';
 
+function SupportInfoPanel() {
+    return (
+    <div className="space-y-4">
+        {/* Instant Live Chat */}
+        <div className="rounded-2xl bg-gradient-to-br from-[#0B3D91] to-[#1E56B8] p-4 text-white shadow-lg">
+          <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-white/15">
+            <MessageCircle size={16} />
+          </div>
+          <h3 className="text-base font-semibold">Instant Live Chat</h3>
+          <p className="mt-1 text-xs text-blue-100">Available for Enterprise Users</p>
+          <p className="mt-2 text-xs leading-snug text-blue-50/90">
+            Need an answer right now? Our expert support team is online and ready to chat.
+            Typical wait time is less than 2 minutes.
+          </p>
+          <button
+            type="button"
+            className="mt-3 w-full rounded-lg bg-white py-2 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-50"
+          >
+            Start Live Chat
+          </button>
+        </div>
+  
+        {/* Email + Working Hours */}
+        <div className="grid grid-cols-2 gap-4">
+          <Card>
+            <CardContent className="p-5 pt-5">
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                <Mail size={18} />
+              </div>
+              <p className="text-sm font-semibold text-slate-900">Email Support</p>
+              <p className="mt-1 text-xs text-slate-500">support@jayani.com</p>
+            </CardContent>
+          </Card>
+  
+          <Card>
+            <CardContent className="p-5 pt-5">
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                <Clock size={18} />
+              </div>
+              <p className="text-sm font-semibold text-slate-900">Working Hours</p>
+              <p className="mt-1 text-xs text-slate-500 whitespace-nowrap">Mon-Fri, 9am-6pm EST</p>
+            </CardContent>
+          </Card>
+        </div>
+  
+        {/* Our Commitment */}
+        <Card className="overflow-hidden bg-slate-50/80">
+          <CardContent className="p-5 pt-5">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+              Our Commitment
+            </p>
+  
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <Zap size={16} className="text-blue-600" />
+                  Response Time
+                </div>
+                <span className="text-sm font-bold text-blue-600">&lt; 4h</span>
+              </div>
+  
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <ShieldCheck size={16} className="text-blue-600" />
+                  Resolution Rate
+                </div>
+                <span className="text-sm font-bold text-blue-600">98.4%</span>
+              </div>
+            </div>
+  
+            <div className="mt-5 overflow-hidden rounded-xl">
+              <img
+                src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80"
+                alt="RetailSync headquarters office"
+                className="h-36 w-full object-cover"
+              />
+            </div>
+            <p className="mt-2 text-center text-xs text-slate-400">
+              Global Headquarters: New York City, NY
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
 export default function ContactSupportPage() {
     const { user } = useAuth();
 
@@ -32,9 +118,10 @@ export default function ContactSupportPage() {
     
     return (
     <div>
-        <PageHeader title="Contact Support" description="Get in touch with our support team"/>
-
-        <Card className="max-w-3x1">
+        <PageHeader title="Get in Touch" description="Get in touch with our support team"/>
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+            <div className="xl:col-span-7">
+        <Card>
             <CardHeader className="pb-4">
                 <CardTitle className="text-lg">Send us a Message</CardTitle>
             </CardHeader>
@@ -95,6 +182,12 @@ export default function ContactSupportPage() {
                 </form>
             </CardContent>
         </Card>
+        </div>
+
+        <div className='xl:col-span-5'>
+            <SupportInfoPanel />
+        </div>
+    </div>
     </div>
   );
 }
