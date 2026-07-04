@@ -1,12 +1,9 @@
-import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import { ProtectedRoute } from './ProtectedRoute';
 import { ROLES } from '../config/roles';
 
 // Layouts
 import MainLayout from '../layouts/MainLayout';
-import AuthLayout from '../layouts/AuthLayout';
 import POSLayout from '../layouts/POSLayout';
 
 // Page Imports
