@@ -28,9 +28,17 @@ export const NAVIGATION_GROUPS = [
       {
         id: 'help-support',
         name: 'Help & Support',
-        path: '/help-support',
         icon: 'HelpCircle',
-        allowedRoles: Object.values(ROLES)
+        allowedRoles: Object.values(ROLES),
+        children: [
+          {
+            id: 'support-ticket-system',
+            name: 'Support Ticket System',
+            path: '/help-support',
+            icon: 'LifeBuoy',
+            allowedRoles: Object.values(ROLES)
+          }
+        ]
       }
     ]
   },
@@ -230,5 +238,11 @@ export const NAVIGATION_GROUPS = [
 ];
 
 export const ALL_NAVIGATION_ITEMS = NAVIGATION_GROUPS.reduce((acc, group) => {
-  return [...acc, ...group.items];
+  const items = group.items.flatMap((item) => {
+    if (item.children?.length) {
+      return [item, ...item.children];
+    }
+    return [item];
+  });
+  return [...acc, ...items];
 }, []);
