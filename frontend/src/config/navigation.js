@@ -26,6 +26,13 @@ export const NAVIGATION_GROUPS = [
         allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]
       },
       {
+        id: 'system-events',
+        name: 'System Events',
+        path: '/system-events',
+        icon: 'Activity',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]
+      },
+      {
         id: 'help-support',
         name: 'Help & Support',
         path: '/help-support',
