@@ -36,7 +36,10 @@ import POSBillingPage from '../pages/POSBillingPage';
 import PaymentProcessingPage from '../pages/PaymentProcessingPage';
 import SalesHistoryPage from '../pages/SalesHistoryPage';
 import ReturnsRefundsPage from '../pages/ReturnsRefundsPage';
-import PromotionsDiscountsPage from '../pages/PromotionsDiscountsPage';
+import PromotionsDiscountsPage from '../pages/promotions/PromotionsDashboard';
+import DiscountRulesPage from '../pages/promotions/DiscountRules';
+import CouponManagementPage from '../pages/promotions/CouponManagement';
+import PromotionAnalyticsPage from '../pages/promotions/PromotionAnalytics';
 import ReportsPage from '../pages/ReportsPage';
 import BusinessAnalyticsPage from '../pages/BusinessAnalyticsPage';
 import AIForecastingPage from '../pages/AIForecastingPage';
@@ -225,8 +228,29 @@ export const AppRoutes = () => {
 
         {/* Promotions & Discounts */}
         <Route path="/promotions-discounts" element={
-          <ProtectedRoute allowedRoles={SALES_ROLES}>
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
             <PromotionsDiscountsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Discount Rules */}
+        <Route path="/discount-rules" element={
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+            <DiscountRulesPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Coupon Management */}
+        <Route path="/coupon-management" element={
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+            <CouponManagementPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Promotion Analytics */}
+        <Route path="/promotion-analytics" element={
+          <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+            <PromotionAnalyticsPage />
           </ProtectedRoute>
         } />
 
