@@ -44,6 +44,10 @@ import AIReorderingPage from '../pages/AIReorderingPage';
 import AIAssistantPage from '../pages/AIAssistantPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
+import AddCustomerPage from '../pages/AddCustomerPage';
+import CustomerProfilePage from '../pages/CustomerProfilePage';
+import CustomerHistoryPage from '../pages/CustomerHistoryPage';
+import CustomerSearchPage from '../pages/CustomerSearchPage';
 
 
 
@@ -230,6 +234,26 @@ export const AppRoutes = () => {
         <Route path="/customers" element={
           <ProtectedRoute allowedRoles={SALES_ROLES}>
             <CustomerPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/customers/new" element={
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <AddCustomerPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/customers/search" element={
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <CustomerSearchPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/customers/:id" element={
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <CustomerProfilePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/customers/:id/history" element={
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <CustomerHistoryPage />
           </ProtectedRoute>
         } />
 
