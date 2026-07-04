@@ -1,9 +1,9 @@
 require('dotenv').config({ path: '../../.env' });
 const mongoose = require('mongoose');
 const env = require('../config/env');
-const seedBranches = require('./branches.seeder');
-const seedRoles = require('./roles.seeder');
-const seedUsers = require('./users.seeder');
+const seedBranches = require('./branch.seeder');
+const seedRoles = require('./role.seeder');
+const seedUsers = require('./user.seeder');
 const seedProductsAndInventory = require('./productsAndInventory.seeder');
 
 const runSeeders = async () => {
