@@ -32,6 +32,13 @@ export const NAVIGATION_GROUPS = [
         allowedRoles: Object.values(ROLES),
         children: [
           {
+            id: 'knowledge-base',
+            name: 'Knowledge Base',
+            path: '/knowledge-base',
+            icon: 'BookOpen',
+            allowedRoles: Object.values(ROLES)
+          },
+          {
             id: 'support-ticket-system',
             name: 'Support Ticket System',
             path: '/help-support',

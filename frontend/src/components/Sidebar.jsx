@@ -124,6 +124,7 @@ const SidebarNavItem = ({ item, renderIcon, isSidebarCollapsed }) => {
 export const Sidebar = () => {
   const { user, hasRole } = useAuth();
   const { isSidebarCollapsed, isSidebarOpen, toggleSidebar } = useSidebar();
+  const location = useLocation();
 
   const renderIcon = (iconName) => {
     const IconComponent = Icons[iconName];

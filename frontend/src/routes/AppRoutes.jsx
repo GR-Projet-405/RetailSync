@@ -51,6 +51,7 @@ import AIReorderingPage from '../pages/AIReorderingPage';
 import AIAssistantPage from '../pages/AIAssistantPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
+import KnowledgeBasePage from '../pages/KnowledgeBasePage';
 import AddCustomerPage from '../pages/AddCustomerPage';
 import CustomerProfilePage from '../pages/CustomerProfilePage';
 import CustomerHistoryPage from '../pages/CustomerHistoryPage';
@@ -108,6 +109,13 @@ export const AppRoutes = () => {
         <Route path="/help-support" element={
           <ProtectedRoute allowedRoles={ALL_ROLES}>
             <HelpSupportPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Knowledge Base */}
+        <Route path="/knowledge-base" element={
+          <ProtectedRoute allowedRoles={ALL_ROLES}>
+            <KnowledgeBasePage />
           </ProtectedRoute>
         } />
 

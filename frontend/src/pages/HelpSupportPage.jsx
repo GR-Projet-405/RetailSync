@@ -618,24 +618,30 @@ export default function HelpSupportPage() {
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedId) || null;
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-      <div className="xl:col-span-5">
-        <CreateTicketForm onTicketCreated={handleTicketCreated} />
-      </div>
-      <div className="xl:col-span-7">
-        <RecentTicketsTable
-          tickets={tickets}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
+    <div className="space-y-6">
+      <PageHeader
+        title="Help & Support"
+        description="Submit support tickets and track their status"
+      />
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+        <div className="xl:col-span-5">
+          <CreateTicketForm onTicketCreated={handleTicketCreated} />
+        </div>
+        <div className="xl:col-span-7">
+          <RecentTicketsTable
+            tickets={tickets}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+          />
+        </div>
+
+        <TicketDetailModal
+          ticket={selectedTicket}
+          isOpen={!!selectedTicket}
+          onClose={() => setSelectedId('')}
+          onStatusUpdate={handleStatusUpdate}
         />
       </div>
-
-      <TicketDetailModal
-        ticket={selectedTicket}
-        isOpen={!!selectedTicket}
-        onClose={() => setSelectedId('')}
-        onStatusUpdate={handleStatusUpdate}
-      />
     </div>
   );
 }
