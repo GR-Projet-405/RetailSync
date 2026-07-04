@@ -19,6 +19,11 @@ const PERMISSIONS = {
   INVENTORY_VIEW: 'inventory.view',
   INVENTORY_MANAGE: 'inventory.manage',
 
+  // Goods Receiving 
+  GOODS_RECEIVING_VIEW: 'goods_receiving.view',
+  GOODS_RECEIVING_CREATE: 'goods_receiving.create',
+  GOODS_RECEIVING_VERIFY: 'goods_receiving.verify',
+
   // Branches
   BRANCHES_VIEW: 'branches.view',
   BRANCHES_MANAGE: 'branches.manage',
