@@ -122,6 +122,16 @@ const getLowStockAlerts = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Low stock alerts retrieved', data });
 });
 
+// Branch inventory (origin/dev)
+const getInventory = asyncHandler(async (req, res) => {
+  const { branchId } = req.query;
+  const data = await service.getBranchInventory(branchId);
+  res.status(200).json({
+    success: true,
+    data,
+  });
+});
+
 module.exports = {
   // Dashboard
   getDashboardKPIs,
@@ -143,4 +153,6 @@ module.exports = {
   // Low Stock Alerts
   getLowStockStats,
   getLowStockAlerts,
+  // Branch inventory compatibility
+  getInventory,
 };

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Inventory = require('./model');
 const InventoryItem   = require('./inventoryItem.model');
 const StockMovement   = require('./stockMovement.model');
 const StockAdjustment = require('./stockAdjustment.model');
@@ -12,6 +13,17 @@ function notFound(entity) {
   err.statusCode = 404;
   return err;
 }
+
+const getBranchInventory = async (branchId) => {
+  const filter = {};
+  if (branchId) {
+    filter.branchId = branchId;
+  }
+  return await Inventory.find(filter)
+    .populate('productId')
+    .populate('branchId')
+    .lean();
+};
 
 function badRequest(msg) {
   const err = new Error(msg);
@@ -640,4 +652,7 @@ module.exports = {
   // Low Stock Alerts
   getLowStockAlerts,
   getLowStockStats,
+
+  // Branch inventory compatibility
+  getBranchInventory,
 };

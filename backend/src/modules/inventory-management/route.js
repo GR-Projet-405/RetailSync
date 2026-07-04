@@ -18,6 +18,9 @@ const APPROVER_ROLES  = ['SUPER_ADMIN', 'ADMIN', 'BRANCH_MANAGER'];
 // All routes require a valid JWT
 router.use(verifyToken);
 
+// Branch inventory (origin/dev)
+router.get('/', controller.getInventory);
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 router.get('/dashboard/kpis',              hasRole(...INVENTORY_ROLES), controller.getDashboardKPIs);
 router.get('/dashboard/category-breakdown',hasRole(...INVENTORY_ROLES), controller.getStockCategoryBreakdown);

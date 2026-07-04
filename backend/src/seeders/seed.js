@@ -4,9 +4,10 @@ if (process.platform === 'win32') dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const mongoose = require('mongoose');
 const env = require('../config/env');
-const seedBranches = require('./branches.seeder');
-const seedRoles = require('./roles.seeder');
-const seedUsers = require('./users.seeder');
+const seedBranches = require('./branch.seeder');
+const seedRoles = require('./role.seeder');
+const seedUsers = require('./user.seeder');
+const seedProductsAndInventory = require('./productsAndInventory.seeder');
 
 const runSeeders = async () => {
   try {
@@ -18,6 +19,7 @@ const runSeeders = async () => {
     await seedBranches();
     await seedRoles();
     await seedUsers();
+    await seedProductsAndInventory();
     console.log('--- Seed Process Completed Successfully ---');
 
     process.exit(0);
