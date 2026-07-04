@@ -28,6 +28,10 @@ import UserRolePage from '../pages/UserRolePage';
 import ProductPage from '../pages/ProductPage';
 import CategoryPage from '../pages/CategoryPage';
 import InventoryPage from '../pages/InventoryPage';
+import StockLevelsPage from '../pages/StockLevelsPage';
+import StockMovementsPage from '../pages/StockMovementsPage';
+import StockAdjustmentsPage from '../pages/StockAdjustmentsPage';
+import LowStockAlertsPage from '../pages/LowStockAlertsPage';
 import WarehousePage from '../pages/WarehousePage';
 import PurchaseOrderPage from '../pages/PurchaseOrderPage';
 import GoodsReceivingPage from '../pages/GoodsReceivingPage';
@@ -174,6 +178,34 @@ export const AppRoutes = () => {
         <Route path="/inventory" element={
           <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
             <InventoryPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Stock Levels */}
+        <Route path="/stock-levels" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <StockLevelsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Stock Movements */}
+        <Route path="/stock-movements" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <StockMovementsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Stock Adjustments */}
+        <Route path="/stock-adjustments" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <StockAdjustmentsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Low Stock Alerts */}
+        <Route path="/low-stock-alerts" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <LowStockAlertsPage />
           </ProtectedRoute>
         } />
 

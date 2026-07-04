@@ -5,6 +5,7 @@ const categorySchema = new mongoose.Schema(
     name: {
       type: String,
       required: [true, 'Category name is required'],
+      unique: true,
       trim: true,
       maxlength: [100, 'Category name cannot exceed 100 characters'],
       index: true,
@@ -20,6 +21,11 @@ const categorySchema = new mongoose.Schema(
       trim: true,
       maxlength: [500, 'Description cannot exceed 500 characters'],
       default: '',
+    },
+    status: {
+      type: String,
+      enum: ['ACTIVE', 'INACTIVE'],
+      default: 'ACTIVE',
     },
     parentId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -65,6 +71,16 @@ const categorySchema = new mongoose.Schema(
   }
 );
 
+// Sync status and isActive fields
+categorySchema.pre('validate', function (next) {
+  if (this.isModified('isActive')) {
+    this.status = this.isActive ? 'ACTIVE' : 'INACTIVE';
+  } else if (this.isModified('status')) {
+    this.isActive = this.status === 'ACTIVE';
+  }
+  next();
+});
+
 // Auto-generate code from name if not provided
 categorySchema.pre('save', async function (next) {
   if (this.isNew && !this.code) {
@@ -97,6 +113,7 @@ categorySchema.pre('save', async function (next) {
 });
 
 // Text search index
+categorySchema.index({ status: 1 });
 categorySchema.index({ name: 'text', description: 'text' });
 categorySchema.index({ parentId: 1, isActive: 1 });
 
