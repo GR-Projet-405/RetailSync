@@ -1,49 +1,29 @@
-import axios from 'axios';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
-
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
-  return { Authorization: `Bearer ${token}` };
-};
+import api from './api';  // ✅ Use api instance instead of direct axios
 
 const categoryService = {
   // GET /category-management
   getAll: (params = {}) =>
-    axios.get(`${API_BASE}/category-management`, {
-      headers: getAuthHeaders(),
-      params,
-    }),
+    api.get('/category-management', { params }),
 
   // GET /category-management/tree
   getTree: () =>
-    axios.get(`${API_BASE}/category-management/tree`, {
-      headers: getAuthHeaders(),
-    }),
+    api.get('/category-management/tree'),
 
   // GET /category-management/:id
   getById: (id) =>
-    axios.get(`${API_BASE}/category-management/${id}`, {
-      headers: getAuthHeaders(),
-    }),
+    api.get(`/category-management/${id}`),
 
   // POST /category-management
   create: (data) =>
-    axios.post(`${API_BASE}/category-management`, data, {
-      headers: getAuthHeaders(),
-    }),
+    api.post('/category-management', data),
 
   // PUT /category-management/:id
   update: (id, data) =>
-    axios.put(`${API_BASE}/category-management/${id}`, data, {
-      headers: getAuthHeaders(),
-    }),
+    api.put(`/category-management/${id}`, data),
 
   // DELETE /category-management/:id
   remove: (id) =>
-    axios.delete(`${API_BASE}/category-management/${id}`, {
-      headers: getAuthHeaders(),
-    }),
+    api.delete(`/category-management/${id}`),
 };
 
 export default categoryService;
