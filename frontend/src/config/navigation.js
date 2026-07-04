@@ -98,6 +98,13 @@ export const NAVIGATION_GROUPS = [
     title: 'Inventory Management',
     items: [
       {
+        id: 'inventory-dashboard',
+        name: 'Inventory Dashboard',
+        path: '/inventory',
+        icon: 'LayoutDashboard',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]
+      },
+      {
         id: 'stock-levels',
         name: 'Stock Levels',
         path: '/stock-levels',
