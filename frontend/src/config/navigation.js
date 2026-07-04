@@ -28,7 +28,6 @@ export const NAVIGATION_GROUPS = [
       {
         id: 'help-support',
         name: 'Help & Support',
-        path: '/help-support',
         icon: 'HelpCircle',
         allowedRoles: Object.values(ROLES),
         children: [
@@ -37,6 +36,13 @@ export const NAVIGATION_GROUPS = [
             name: 'Knowledge Base',
             path: '/knowledge-base',
             icon: 'BookOpen',
+            allowedRoles: Object.values(ROLES)
+          },
+          {
+            id: 'support-ticket-system',
+            name: 'Support Ticket System',
+            path: '/help-support',
+            icon: 'LifeBuoy',
             allowedRoles: Object.values(ROLES)
           }
         ]
@@ -96,6 +102,39 @@ export const NAVIGATION_GROUPS = [
     ]
   },
   {
+    title: 'Inventory Management',
+    items: [
+      {
+        id: 'stock-levels',
+        name: 'Stock Levels',
+        path: '/stock-levels',
+        icon: 'Boxes',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]
+      },
+      {
+        id: 'stock-movements',
+        name: 'Stock Movements',
+        path: '/stock-movements',
+        icon: 'ArrowLeftRight',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]
+      },
+      {
+        id: 'stock-adjustments',
+        name: 'Stock Adjustments',
+        path: '/stock-adjustments',
+        icon: 'SlidersHorizontal',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]
+      },
+      {
+        id: 'low-stock-alerts',
+        name: 'Low Stock Alerts',
+        path: '/low-stock-alerts',
+        icon: 'BellRing',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]
+      },
+    ]
+  },
+  {
     title: 'Inventory & Supply',
     items: [
       {
@@ -110,13 +149,6 @@ export const NAVIGATION_GROUPS = [
         name: 'Category Management',
         path: '/categories',
         icon: 'Layers',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]
-      },
-      {
-        id: 'inventory-management',
-        name: 'Inventory Management',
-        path: '/inventory',
-        icon: 'PackageSearch',
         allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]
       },
       {
@@ -181,18 +213,44 @@ export const NAVIGATION_GROUPS = [
         allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
       },
       {
-        id: 'promotions-discounts',
-        name: 'Promotions & Discounts',
-        path: '/promotions-discounts',
-        icon: 'Percent',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
-      },
-      {
         id: 'customer-management',
         name: 'Customer Management',
         path: '/customers',
         icon: 'Users',
         allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
+      }
+    ]
+  },
+  {
+    title: 'Promotions',
+    items: [
+      {
+        id: 'promotions-dashboard',
+        name: 'Promotion Dashboard',
+        path: '/promotions-discounts',
+        icon: 'Percent',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]
+      },
+      {
+        id: 'discount-rules',
+        name: 'Discount Rules',
+        path: '/discount-rules',
+        icon: 'Tag',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]
+      },
+      {
+        id: 'coupon-management',
+        name: 'Coupon Management',
+        path: '/coupon-management',
+        icon: 'Ticket',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]
+      },
+      {
+        id: 'promotion-analytics',
+        name: 'Promotion Analytics',
+        path: '/promotion-analytics',
+        icon: 'BarChart3',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN]
       }
     ]
   },
@@ -239,5 +297,11 @@ export const NAVIGATION_GROUPS = [
 ];
 
 export const ALL_NAVIGATION_ITEMS = NAVIGATION_GROUPS.reduce((acc, group) => {
-  return [...acc, ...group.items];
+  const items = group.items.flatMap((item) => {
+    if (item.children?.length) {
+      return [item, ...item.children];
+    }
+    return [item];
+  });
+  return [...acc, ...items];
 }, []);

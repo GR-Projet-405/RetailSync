@@ -12,7 +12,12 @@ import POSLayout from '../layouts/POSLayout';
 // Page Imports
 import DashboardPage from '../pages/DashboardPage';
 import AuthPage from '../pages/AuthPage';
+import VerifyOTPPage from '../features/auth/VerifyOTPPage';
 import LoginPage from '../features/auth/LoginPage';
+import RegisterPage from '../features/auth/RegisterPage'; 
+import SelectRolePage from '../features/auth/SelectRolePage';
+import ForgotPasswordPage from '../features/auth/ForgotPasswordPage';
+import ResetPasswordPage from '../features/auth/ResetPasswordPage';
 import NotificationsPage from '../pages/NotificationsPage';
 import ProfileSettingsPage from '../pages/ProfileSettingsPage';
 import BranchPage from '../pages/BranchPage';
@@ -23,6 +28,10 @@ import UserRolePage from '../pages/UserRolePage';
 import ProductPage from '../pages/ProductPage';
 import CategoryPage from '../pages/CategoryPage';
 import InventoryPage from '../pages/InventoryPage';
+import StockLevelsPage from '../pages/StockLevelsPage';
+import StockMovementsPage from '../pages/StockMovementsPage';
+import StockAdjustmentsPage from '../pages/StockAdjustmentsPage';
+import LowStockAlertsPage from '../pages/LowStockAlertsPage';
 import WarehousePage from '../pages/WarehousePage';
 import PurchaseOrderPage from '../pages/PurchaseOrderPage';
 import GoodsReceivingPage from '../pages/GoodsReceivingPage';
@@ -31,7 +40,10 @@ import POSBillingPage from '../pages/POSBillingPage';
 import PaymentProcessingPage from '../pages/PaymentProcessingPage';
 import SalesHistoryPage from '../pages/SalesHistoryPage';
 import ReturnsRefundsPage from '../pages/ReturnsRefundsPage';
-import PromotionsDiscountsPage from '../pages/PromotionsDiscountsPage';
+import PromotionsDiscountsPage from '../pages/promotions/PromotionsDashboard';
+import DiscountRulesPage from '../pages/promotions/DiscountRules';
+import CouponManagementPage from '../pages/promotions/CouponManagement';
+import PromotionAnalyticsPage from '../pages/promotions/PromotionAnalytics';
 import ReportsPage from '../pages/ReportsPage';
 import BusinessAnalyticsPage from '../pages/BusinessAnalyticsPage';
 import AIForecastingPage from '../pages/AIForecastingPage';
@@ -40,6 +52,10 @@ import AIAssistantPage from '../pages/AIAssistantPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
 import KnowledgeBasePage from '../pages/KnowledgeBasePage';
+import AddCustomerPage from '../pages/AddCustomerPage';
+import CustomerProfilePage from '../pages/CustomerProfilePage';
+import CustomerHistoryPage from '../pages/CustomerHistoryPage';
+import CustomerSearchPage from '../pages/CustomerSearchPage';
 
 
 
@@ -56,7 +72,11 @@ export const AppRoutes = () => {
     <Routes>
       {/* Auth Routes */}
       <Route path="/login" element={<LoginPage />} />
-
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/verify-otp" element={<VerifyOTPPage />} />
+      <Route path="/select-role" element={<SelectRolePage />} /> 
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       {/* POS Billing Route - Full-screen layout */}
       <Route element={
         <ProtectedRoute allowedRoles={POS_ROLES}>
@@ -169,6 +189,34 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
+        {/* Stock Levels */}
+        <Route path="/stock-levels" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <StockLevelsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Stock Movements */}
+        <Route path="/stock-movements" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <StockMovementsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Stock Adjustments */}
+        <Route path="/stock-adjustments" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <StockAdjustmentsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Low Stock Alerts */}
+        <Route path="/low-stock-alerts" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <LowStockAlertsPage />
+          </ProtectedRoute>
+        } />
+
         {/* Supplier Management */}
         <Route path="/suppliers" element={
           <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
@@ -220,8 +268,29 @@ export const AppRoutes = () => {
 
         {/* Promotions & Discounts */}
         <Route path="/promotions-discounts" element={
-          <ProtectedRoute allowedRoles={SALES_ROLES}>
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
             <PromotionsDiscountsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Discount Rules */}
+        <Route path="/discount-rules" element={
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+            <DiscountRulesPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Coupon Management */}
+        <Route path="/coupon-management" element={
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+            <CouponManagementPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Promotion Analytics */}
+        <Route path="/promotion-analytics" element={
+          <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+            <PromotionAnalyticsPage />
           </ProtectedRoute>
         } />
 
@@ -229,6 +298,26 @@ export const AppRoutes = () => {
         <Route path="/customers" element={
           <ProtectedRoute allowedRoles={SALES_ROLES}>
             <CustomerPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/customers/new" element={
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <AddCustomerPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/customers/search" element={
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <CustomerSearchPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/customers/:id" element={
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <CustomerProfilePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/customers/:id/history" element={
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <CustomerHistoryPage />
           </ProtectedRoute>
         } />
 
