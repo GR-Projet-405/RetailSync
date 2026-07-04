@@ -20,8 +20,7 @@ const SidebarNavItem = ({ item, renderIcon, isSidebarCollapsed }) => {
   const hasChildren = visibleChildren.length > 0;
   const isChildActive = visibleChildren.some(
     (child) =>
-      location.pathname === child.path ||
-      location.pathname.startsWith(`${child.path}/`)
+      location.pathname === child.path
   );
   const [expanded, setExpanded] = useState(isChildActive);
 
@@ -104,6 +103,7 @@ const SidebarNavItem = ({ item, renderIcon, isSidebarCollapsed }) => {
             <NavLink
               key={child.id}
               to={child.path}
+              end
               className={({ isActive }) =>
                 cn(
                   linkClassName({ isActive }),
