@@ -1,17 +1,15 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const service = require('./service');
 
-// GET Boilerplate handler
-const getDetails = asyncHandler(async (req, res) => {
-  const data = await service.fetchDetails();
+const getInventory = asyncHandler(async (req, res) => {
+  const { branchId } = req.query;
+  const data = await service.getBranchInventory(branchId);
   res.status(200).json({
     success: true,
-    message: 'Inventory Management module active. Under development.',
-    timestamp: new Date().toISOString(),
-    data
+    data,
   });
 });
 
 module.exports = {
-  getDetails
+  getInventory,
 };

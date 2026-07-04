@@ -1,10 +1,15 @@
+const Inventory = require('./model');
+
 class InventoryPageService {
-  async fetchDetails() {
-    // Skeletons to be populated by development teams
-    return {
-      module: 'Inventory Management',
-      status: 'Under Development'
-    };
+  async getBranchInventory(branchId) {
+    const filter = {};
+    if (branchId) {
+      filter.branchId = branchId;
+    }
+    return await Inventory.find(filter)
+      .populate('productId')
+      .populate('branchId')
+      .lean();
   }
 }
 
