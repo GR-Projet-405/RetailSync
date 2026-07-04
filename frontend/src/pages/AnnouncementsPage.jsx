@@ -19,6 +19,7 @@ import { cn } from "../utils/cn";
 import {
   NOTIFICATION_QUERY_KEYS,
   getAnnouncements,
+  markNotificationRead,
   updateAnnouncement,
 } from "../services/notificationService";
 
@@ -85,6 +86,14 @@ export default function AnnouncementsPage() {
     },
   });
 
+  const markReadMutation = useMutation({
+    mutationFn: markNotificationRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: announcementsQueryKey });
+      queryClient.invalidateQueries({ queryKey: NOTIFICATION_QUERY_KEYS.all });
+    },
+  });
+
   const announcements = useMemo(
     () => data?.data?.notifications || [],
     [data?.data?.notifications],
@@ -127,6 +136,12 @@ export default function AnnouncementsPage() {
         },
       },
     });
+  };
+
+  const handleReadMore = (announcement) => {
+    if (!announcement.isRead) {
+      markReadMutation.mutate(announcement._id);
+    }
   };
 
   return (
@@ -307,6 +322,8 @@ export default function AnnouncementsPage() {
 
                     <button
                       type="button"
+                      onClick={() => handleReadMore(announcement)}
+                      disabled={markReadMutation.isPending}
                       className="flex items-center gap-1 text-xs font-semibold text-blue-600 transition hover:text-blue-700"
                     >
                       <ChevronDown className="h-4 w-4" />
