@@ -13,6 +13,20 @@ const TransactionSchema = new mongoose.Schema({
   // If guest, this will be null
   customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', default: null },
 
+  // Link to the User (Cashier) who processed the payment
+  cashierId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+
+  // Array to store the purchased items from the Cart
+  items: [{
+    name: { type: String },
+    category: { type: String },
+    sku: { type: String },
+    qty: { type: Number },
+    originalPrice: { type: Number },
+    price: { type: Number }, // Price after any item-level discounts
+    total: { type: Number }
+  }],
+
   // Bill Details
   subTotal: { type: Number, required: true },
   memberDiscount: { type: Number, default: 0 },
