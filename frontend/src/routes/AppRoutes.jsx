@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { ProtectedRoute } from './ProtectedRoute';
 import { ROLES } from '../config/roles';
 
@@ -37,16 +38,14 @@ import POSBillingPage from '../pages/POSBillingPage';
 import PaymentProcessingPage from '../pages/PaymentProcessingPage';
 import SalesHistoryPage from '../pages/SalesHistoryPage';
 import ReturnsRefundsPage from '../pages/ReturnsRefundsPage';
-import PromotionsDiscountsPage from '../pages/PromotionsDiscountsPage';
-import ReportsPage from '../pages/reports/ReportsPage';
-import BranchManagerReportsPage from '../pages/reports/BranchManagerReportsPage';
-import ReportConfigPage from '../pages/reports/ReportConfigPage';
-import ReportViewPage from '../pages/reports/ReportViewPage';
 import PromotionsDiscountsPage from '../pages/promotions/PromotionsDashboard';
 import DiscountRulesPage from '../pages/promotions/DiscountRules';
 import CouponManagementPage from '../pages/promotions/CouponManagement';
 import PromotionAnalyticsPage from '../pages/promotions/PromotionAnalytics';
-import ReportsPage from '../pages/ReportsPage';
+import ReportsPage from '../pages/reports/ReportsPage';
+import BranchManagerReportsPage from '../pages/reports/BranchManagerReportsPage';
+import ReportConfigPage from '../pages/reports/ReportConfigPage';
+import ReportViewPage from '../pages/reports/ReportViewPage';
 import BusinessAnalyticsPage from '../pages/BusinessAnalyticsPage';
 import AIForecastingPage from '../pages/AIForecastingPage';
 import AIReorderingPage from '../pages/AIReorderingPage';
