@@ -23,6 +23,8 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', service: 'RetailSync API Server' });
 });
 
+app.use('/api/sales', require('../routes/salesRoutes'));
+
 // Pre-load core models to avoid MissingSchemaError during population
 require('./modules/branch-management/branch.model');
 require('./modules/role-management/role.model');

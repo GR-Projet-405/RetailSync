@@ -30,6 +30,8 @@ import StockTransferPage from '../pages/StockTransferPage';
 import POSBillingPage from '../pages/POSBillingPage';
 import PaymentProcessingPage from '../pages/PaymentProcessingPage';
 import SalesHistoryPage from '../pages/SalesHistoryPage';
+import SalesDashboardPage from '../pages/SalesDashboardPage';
+import TransactionHistory from '../pages/sales/TransactionHistory';
 import ReturnsRefundsPage from '../pages/ReturnsRefundsPage';
 import PromotionsDiscountsPage from '../pages/PromotionsDiscountsPage';
 import ReportsPage from '../pages/ReportsPage';
@@ -196,12 +198,19 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
-        {/* Sales History */}
-        <Route path="/sales-history" element={
-          <ProtectedRoute allowedRoles={SALES_ROLES}>
-            <SalesHistoryPage />
-          </ProtectedRoute>
-        } />
+        {/* Sales History Module */}
+        <Route
+          path="/sales-history"
+          element={
+            <ProtectedRoute allowedRoles={SALES_ROLES}>
+              <SalesHistoryPage />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<SalesDashboardPage />} />
+          <Route path="dashboard" element={<SalesDashboardPage />} />
+          <Route path="transactions" element={<TransactionHistory />} />
+        </Route>
 
         {/* Returns & Refunds */}
         <Route path="/returns-refunds" element={

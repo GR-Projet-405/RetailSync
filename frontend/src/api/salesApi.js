@@ -31,3 +31,31 @@ export const getDashboardData = async (params = {}) => {
 
   return response.data;
 };
+
+export const getTransactions = async (params = {}) => {
+  const {
+    page,
+    limit,
+    status,
+    paymentMethod,
+    search,
+    startDate,
+    endDate,
+    cashier,
+  } = params;
+
+  const response = await salesApi.get('/sales', {
+    params: {
+      ...(page && { page }),
+      ...(limit && { limit }),
+      ...(status && { status }),
+      ...(paymentMethod && { paymentMethod }),
+      ...(search && { search }),
+      ...(startDate && { startDate }),
+      ...(endDate && { endDate }),
+      ...(cashier && { cashier }),
+    },
+  });
+
+  return response.data;
+};
