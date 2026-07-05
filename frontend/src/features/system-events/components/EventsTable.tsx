@@ -30,7 +30,7 @@ export default function EventsTable({ events, isLoading }: EventsTableProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16 border border-slate-200 rounded-xl bg-white">
-        <Spinner />
+        <Spinner className="" />
       </div>
     );
   }

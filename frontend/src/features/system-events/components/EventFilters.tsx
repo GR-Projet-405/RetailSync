@@ -1,5 +1,8 @@
 import { Download, RefreshCw } from 'lucide-react';
-import Button from '../../../components/Button';
+import { cn } from '../../../utils/cn';
+
+const outlineButtonClass =
+  'inline-flex items-center justify-center font-medium rounded-lg transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 px-3 py-1.5 text-xs';
 
 interface EventFiltersProps {
   severity: string;
@@ -71,20 +74,19 @@ export default function EventFilters({
       </div>
 
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" className="gap-2">
+        <button type="button" className={cn(outlineButtonClass, 'gap-2')}>
           <Download size={14} />
           Export Logs
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="px-2.5"
+        </button>
+        <button
+          type="button"
+          className={cn(outlineButtonClass, 'px-2.5')}
           onClick={onRefresh}
           disabled={isRefreshing}
           aria-label="Refresh events"
         >
           <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
-        </Button>
+        </button>
       </div>
     </div>
   );

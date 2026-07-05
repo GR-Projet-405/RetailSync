@@ -59,6 +59,7 @@ export default function SystemEventsPage() {
       <PageHeader
         title="Systems Event"
         description="Monitor platform health, service activity, and operational event logs in real time."
+        actions={undefined}
       />
 
       <SummaryStats stats={statsQuery.data} isLoading={statsQuery.isLoading} />
