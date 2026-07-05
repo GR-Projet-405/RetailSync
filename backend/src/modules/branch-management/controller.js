@@ -16,7 +16,7 @@ const getDetails = asyncHandler(async (req, res) => {
 
 
 
-// ─── GET /api/v1/branch-management ────────────────────────
+// ─── GET /api/v1/branch-management/branches ───────────────
 const getBranches = asyncHandler(async (req, res) => {
   const branches = await Branch.find({ status: 'ACTIVE' }).sort({ name: 1 });
   
