@@ -66,10 +66,14 @@ export default function ProfileSettingsPage() {
             <UserProfileForm 
               profile={profileData} 
               onSaveSuccess={(msg) => {
+                setError(null);
                 setSuccessMsg(msg);
                 fetchProfile(); // Refetches and triggers clean prop re-renders
               }}
-              onSaveError={(err) => setError(err)}
+              onSaveError={(err) => {
+                setSuccessMsg('');
+                setError(err?.message ?? err);
+              }}
             />
           </div>
         </div>
