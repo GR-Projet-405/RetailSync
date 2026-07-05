@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { ProtectedRoute } from './ProtectedRoute';
 import { ROLES } from '../config/roles';
 
@@ -46,7 +47,10 @@ import PromotionsDiscountsPage from '../pages/promotions/PromotionsDashboard';
 import DiscountRulesPage from '../pages/promotions/DiscountRules';
 import CouponManagementPage from '../pages/promotions/CouponManagement';
 import PromotionAnalyticsPage from '../pages/promotions/PromotionAnalytics';
-import ReportsPage from '../pages/ReportsPage';
+import ReportsPage from '../pages/reports/ReportsPage';
+import BranchManagerReportsPage from '../pages/reports/BranchManagerReportsPage';
+import ReportConfigPage from '../pages/reports/ReportConfigPage';
+import ReportViewPage from '../pages/reports/ReportViewPage';
 import BusinessAnalyticsPage from '../pages/BusinessAnalyticsPage';
 import AIForecastingPage from '../pages/AIForecastingPage';
 import AIReorderingPage from '../pages/AIReorderingPage';
@@ -60,6 +64,16 @@ import CustomerHistoryPage from '../pages/CustomerHistoryPage';
 import CustomerSearchPage from '../pages/CustomerSearchPage';
 
 
+
+// Renders the correct reports dashboard based on the logged-in user's role
+// user.roleId.name holds the role string (e.g. "BRANCH_MANAGER")
+function ReportsRouter() {
+  const { user } = useAuth();
+  if (user?.roleId?.name === ROLES.BRANCH_MANAGER) {
+    return <BranchManagerReportsPage />;
+  }
+  return <ReportsPage />;
+}
 
 // Convenience arrays
 const ALL_ROLES = Object.values(ROLES);
@@ -334,10 +348,24 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
-        {/* Reports */}
+        {/* Reports — Admin sees ReportsPage, Branch Manager sees BranchManagerReportsPage */}
         <Route path="/reports" element={
           <ProtectedRoute allowedRoles={[...MANAGEMENT_ROLES, ROLES.AUDITOR]}>
-            <ReportsPage />
+            <ReportsRouter />
+          </ProtectedRoute>
+        } />
+
+        {/* Report Configuration */}
+        <Route path="/reports/configure/:reportType" element={
+          <ProtectedRoute allowedRoles={[...MANAGEMENT_ROLES, ROLES.AUDITOR]}>
+            <ReportConfigPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Report View */}
+        <Route path="/reports/view/:reportType" element={
+          <ProtectedRoute allowedRoles={[...MANAGEMENT_ROLES, ROLES.AUDITOR]}>
+            <ReportViewPage />
           </ProtectedRoute>
         } />
 
