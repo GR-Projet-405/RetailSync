@@ -36,6 +36,11 @@ import StockTransferPage from '../pages/StockTransferPage';
 import POSBillingPage from '../pages/POSBillingPage';
 import PaymentProcessingPage from '../pages/PaymentProcessingPage';
 import SalesHistoryPage from '../pages/SalesHistoryPage';
+import SalesDashboardPage from '../pages/SalesDashboardPage';
+import TransactionHistory from '../pages/sales/TransactionHistory';
+import SalesDetails from '../pages/sales/SalesDetails';
+import FiltersSearch from '../pages/sales/FiltersSearch';
+import ExportReports from '../pages/sales/ExportReports';
 import ReturnsRefundsPage from '../pages/ReturnsRefundsPage';
 import PromotionsDiscountsPage from '../pages/promotions/PromotionsDashboard';
 import DiscountRulesPage from '../pages/promotions/DiscountRules';
@@ -249,12 +254,23 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
-        {/* Sales History */}
-        <Route path="/sales-history" element={
-          <ProtectedRoute allowedRoles={SALES_ROLES}>
-            <SalesHistoryPage />
-          </ProtectedRoute>
-        } />
+        {/* Sales History Module */}
+        <Route
+          path="/sales-history"
+          element={
+            <ProtectedRoute allowedRoles={SALES_ROLES}>
+              <SalesHistoryPage />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<SalesDashboardPage />} />
+          <Route path="dashboard" element={<SalesDashboardPage />} />
+          <Route path="transactions" element={<TransactionHistory />} />
+          <Route path="details" element={<SalesDetails />} />
+          <Route path="filters" element={<FiltersSearch />} />
+          <Route path="export" element={<ExportReports />} />
+          <Route path=":id" element={<SalesDetails />} />
+        </Route>
 
         {/* Returns & Refunds */}
         <Route path="/returns-refunds" element={
