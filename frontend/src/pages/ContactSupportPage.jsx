@@ -4,6 +4,8 @@ import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
+import { createContactMessage } from '../services/contactSupportService';
+import { toast } from '../utils/toast';
 
 const SUBJECT_OPTIONS = [
     'Technical Issue',
@@ -110,10 +112,33 @@ export default function ContactSupportPage() {
     const [email, setEmail] = useState(user?.email || '');
     const [subject, setSubject] = useState('Technical Issue');
     const [message, setMessage] = useState('');
+    const [submitting, setSubmitting] = useState(false);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log({ fullName, email, subject, message });
+        
+        if (!fullName.trim() || !email.trim() || !subject.trim() || !message.trim()){
+          toast.error('Please fill in all required fields');
+          return;
+        }
+
+        setSubmitting(true);
+
+        try {
+          const result = await createContactMessage({
+            fullName: fullName.trim(),
+            email: email.trim(),
+            subject,
+            message: message.trim(),
+          });
+
+          toast.success(`Message ${result.messageId} submitted successfully!`);
+          setMessage('');
+        }catch(err) {
+          toast.error(err.message || 'Failed to submit message');
+        }finally {
+          setSubmitting(false);
+        }
     };
     
     return (
