@@ -28,7 +28,6 @@ export default function ReceiptPreviewPage() {
   const [isThermalPrinting, setIsThermalPrinting] = useState(false);
   const [showDigitalInvoice, setShowDigitalInvoice] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
 
   const state = location.state || {};
@@ -52,7 +51,7 @@ export default function ReceiptPreviewPage() {
     storeName = 'RetailSync',
     storeAddress = 'No.120, Galle Road, Colombo 03',
     storePhone = '011-1234567',
-    storeEmail = 'info@freshmart.lk',
+    storeEmail = 'info@RetailSync.lk',
     storeBranch = 'Colombo Main',
     taxNumber = 'REG-2024-00123',
     receiptFooter = 'Thank you for shopping with us! Visit again.',
@@ -296,35 +295,7 @@ export default function ReceiptPreviewPage() {
     window.print();
   };
 
-  const handleEmailReceipt = () => {
-    const subject = encodeURIComponent(`Receipt ${invoiceNumber}`);
-    const body = encodeURIComponent([
-      `${storeName}`,
-      `${storeBranch}`,
-      `${storeAddress}`,
-      `${storePhone}`,
-      '',
-      `Invoice No: ${invoiceNumber}`,
-      `Date: ${date}`,
-      `Time: ${time}`,
-      `Cashier: ${cashierName} (Counter ${counterNumber})`,
-      '',
-      `Total: ${currency.format(total)}`,
-      `Payment Method: ${paymentMethod}`,
-      '',
-      'Items Purchased:',
-      ...cart.map(item => `- ${item.name} x${item.quantity} = ${currency.format(item.price * item.quantity)}`),
-      '',
-      receiptFooter
-    ].join('\n'));
-
-    window.location.href = `mailto:?subject=${subject}&body=${body}`;
-    
-    // Simulate email sent
-    setEmailSent(true);
-    setTimeout(() => setEmailSent(false), 3000);
-  };
-
+  
   const handleCopyInvoice = () => {
     const invoiceData = generateInvoiceData();
     const text = `
@@ -454,10 +425,6 @@ export default function ReceiptPreviewPage() {
               <Copy className="w-3 h-3 mr-1" />
               Copy
             </Button>
-            <Button variant="outline" size="sm" onClick={handleShareInvoice}>
-              <Share2 className="w-3 h-3 mr-1" />
-              Share
-            </Button>
           </div>
         </div>
       </div>
@@ -468,21 +435,7 @@ export default function ReceiptPreviewPage() {
   const ShareModal = () => (
     <Modal isOpen={showShareModal} onClose={() => setShowShareModal(false)} title="Share Invoice" size="sm">
       <div className="space-y-4">
-        <p className="text-sm text-slate-600">Share this invoice via:</p>
-        <div className="grid grid-cols-3 gap-3">
-          <button className="p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors text-center">
-            <Mail className="w-6 h-6 mx-auto text-blue-600 mb-1" />
-            <span className="text-xs font-medium text-blue-700">Email</span>
-          </button>
-          <button className="p-4 bg-green-50 rounded-xl hover:bg-green-100 transition-colors text-center">
-            <Smartphone className="w-6 h-6 mx-auto text-green-600 mb-1" />
-            <span className="text-xs font-medium text-green-700">SMS</span>
-          </button>
-          <button className="p-4 bg-purple-50 rounded-xl hover:bg-purple-100 transition-colors text-center">
-            <Share2 className="w-6 h-6 mx-auto text-purple-600 mb-1" />
-            <span className="text-xs font-medium text-purple-700">Other</span>
-          </button>
-        </div>
+        
         <div className="bg-slate-50 rounded-xl p-3">
           <p className="text-xs text-slate-500 mb-1">Link</p>
           <div className="flex items-center gap-2">
@@ -545,19 +498,7 @@ export default function ReceiptPreviewPage() {
           <Printer className="w-4 h-4 mr-1" /> 
           {isThermalPrinting ? 'Printing...' : 'Thermal Receipt'}
         </Button>
-        <Button 
-          size="sm"
-          variant="outline" 
-          className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-          onClick={handleEmailReceipt}
-        >
-          <Mail className="w-4 h-4 mr-1" /> Email
-        </Button>
-        {emailSent && (
-          <span className="text-xs text-emerald-600 flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-full">
-            <Check className="w-3 h-3" /> Sent!
-          </span>
-        )}
+        
         {copySuccess && (
           <span className="text-xs text-emerald-600 flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-full">
             <Check className="w-3 h-3" /> Copied!

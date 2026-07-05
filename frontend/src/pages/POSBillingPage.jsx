@@ -35,6 +35,8 @@ const CATEGORY_COLORS = {
 };
 const defaultCat = { bg: 'bg-slate-50', text: 'text-slate-700', dot: 'bg-slate-400' };
 
+const normalizeLookupValue = (value) => String(value ?? '').trim().toLowerCase().replace(/[\s-]/g, '');
+
  
 // Inline quantity editor
  
@@ -601,6 +603,8 @@ export default function POSBillingPage() {
     }
   }, [restoredState.cart, restoredState.orderDiscount, restoredState.orderDiscountMode, restoredState.taxRate]);
 
+  const mockBarcodeSamples = useMemo(() => inventoryProducts.slice(0, 6), [inventoryProducts]);
+
   /* Order-level discount */
   const [orderDiscount,     setOrderDiscount]     = useState('');
   const [orderDiscountMode, setOrderDiscountMode] = useState(DISCOUNT_MODES.NONE);
@@ -672,26 +676,53 @@ export default function POSBillingPage() {
     notify(`✓ ${product.name} added to cart.`, 'success');
   }, []);
 
-  const findProduct = (raw) => {
-    const v = raw.trim().toLowerCase();
+  const findProduct = useCallback((raw) => {
+    const v = normalizeLookupValue(raw);
     if (!v) return null;
     return inventoryProducts.find((p) =>
-      [p.barcode, p.sku].includes(v) || p.name.toLowerCase().includes(v)
+      [p.barcode, p.sku].some((field) => normalizeLookupValue(field) === v || normalizeLookupValue(field).includes(v))
+      || normalizeLookupValue(p.name).includes(v)
     ) || null;
-  };
+  }, [inventoryProducts]);
+
+  const handleMockBarcodeScan = useCallback((barcode) => {
+    const scanValue = String(barcode ?? '').trim();
+    if (!scanValue) return;
+
+    setBarcodeValue(scanValue);
+    setSearchQuery(scanValue);
+
+    const product = findProduct(scanValue);
+    if (!product) {
+      notify('No product matched that mock barcode. Try another sample barcode.', 'error');
+      return;
+    }
+
+    addProductToCart(product);
+    setBarcodeValue('');
+  }, [addProductToCart, findProduct]);
 
   const handleBarcodeSubmit = (e) => {
     e.preventDefault();
-    const product = findProduct(barcodeValue);
+    const scanValue = barcodeValue.trim();
+    if (!scanValue) {
+      notify('Enter a mock barcode value or pick one of the sample barcodes below.', 'info');
+      return;
+    }
+
+    const product = findProduct(scanValue);
     if (!product) { notify('No product matched that barcode. Try a different scan.', 'error'); return; }
     addProductToCart(product);
+    setSearchQuery(scanValue);
     setBarcodeValue('');
   };
 
   const handleManualAdd = () => {
-    const product = findProduct(manualCode);
+    const lookupValue = manualCode.trim();
+    const product = findProduct(lookupValue);
     if (!product) { notify('SKU / barcode not found in sample inventory.', 'error'); return; }
     addProductToCart(product);
+    setSearchQuery(lookupValue);
     setManualCode('');
   };
 
@@ -848,6 +879,24 @@ export default function POSBillingPage() {
                   Clear
                 </Button>
               </form>
+
+              {mockBarcodeSamples.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-[11px] uppercase tracking-wider text-slate-400 self-center mr-1">Mock barcodes</span>
+                  {mockBarcodeSamples.map((product) => (
+                    <button
+                      key={product.id}
+                      type="button"
+                      onClick={() => handleMockBarcodeScan(product.barcode)}
+                      className="group inline-flex items-center gap-2 rounded-full border border-[#E2E8F0] bg-slate-50 px-3 py-1.5 text-xs text-slate-700 transition hover:border-[#BFDBFE] hover:bg-[#EFF6FF]"
+                      title={`Simulate scanning ${product.barcode}`}
+                    >
+                      <span className="font-mono text-[11px] text-[#2563EB]">{product.barcode}</span>
+                      <span className="max-w-[12rem] truncate group-hover:text-slate-900">{product.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Search + manual SKU */}
               <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
