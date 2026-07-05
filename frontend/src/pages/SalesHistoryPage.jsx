@@ -4,6 +4,9 @@ import { Card } from '../components/Card';
 const moduleTabs = [
   { name: 'Sales Dashboard', path: '/sales-history/dashboard' },
   { name: 'Transaction History', path: '/sales-history/transactions' },
+  { name: 'Sales Details', path: '/sales-history/details' },
+  { name: 'Filters & Search', path: '/sales-history/filters' },
+  { name: 'Export Reports', path: '/sales-history/export' },
 ];
 
 export default function SalesHistoryPage() {
@@ -20,7 +23,7 @@ export default function SalesHistoryPage() {
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.18em] text-[#2563EB]">Sales History Module</p>
             <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#0F172A]">Sales History</h1>
-            <p className="mt-2 text-sm text-slate-500">Use the dashboard for KPIs and the transaction screen for detailed records.</p>
+            <p className="mt-2 text-sm text-slate-500">Use the dashboard for KPIs, the transaction screen for records, Sales Details for a single transaction view, Filters & Search for advanced lookups, and Export Reports for downloads.</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">

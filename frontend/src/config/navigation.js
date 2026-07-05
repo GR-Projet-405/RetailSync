@@ -165,6 +165,13 @@ export const NAVIGATION_GROUPS = [
         allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
       },
       {
+        id: 'filters-search',
+        name: 'Filters & Search',
+        path: '/sales-history/filters',
+        icon: 'Filter',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
+      },
+      {
         id: 'returns-refunds',
         name: 'Returns & Refunds',
         path: '/returns-refunds',

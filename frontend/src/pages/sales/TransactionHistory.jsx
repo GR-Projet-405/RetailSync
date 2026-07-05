@@ -500,7 +500,7 @@ export default function TransactionHistory() {
                             <td className="px-4 py-4">
                               <button
                                 type="button"
-                                onClick={() => navigate(`/sales/${transaction._id || orderId}`)}
+                                onClick={() => navigate(`/sales-history/${transaction._id || orderId}`)}
                                 className="inline-flex items-center gap-2 rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-[#BFDBFE] hover:bg-slate-50"
                               >
                                 <LuEye className="h-4 w-4" />
