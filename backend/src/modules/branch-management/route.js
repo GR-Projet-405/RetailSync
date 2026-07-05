@@ -5,4 +5,6 @@ const { verifyToken } = require('../../middleware/auth.middleware');
 
 router.get('/', verifyToken, controller.getBranches);
 
+router.get('/branches', controller.getBranches);
+
 module.exports = router;
