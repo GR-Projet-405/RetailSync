@@ -8,6 +8,10 @@ class BranchPageService {
     };
   }
 
+  async getAllBranches() {
+    return await Branch.find({ status: 'ACTIVE' }).sort({ name: 1 });
+  }
+
   async fetchActiveBranches() {
     return Branch.find({ status: 'ACTIVE' })
       .select('_id name code location')

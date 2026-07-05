@@ -9,7 +9,7 @@ dns.setServers(['1.1.1.1', '8.8.8.8']);
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(env.MONGODB_URI);
+    const conn = await mongoose.connect(env.MONGODB_URI, { dbName: 'retailsync_db' });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`MongoDB Connection Error: ${error.message}`);
