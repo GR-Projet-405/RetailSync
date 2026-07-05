@@ -127,7 +127,10 @@ export default function PaymentSuccessPage() {
                         <button onClick={() => navigate('/payment-processing')} className="flex items-center gap-1 text-sm font-bold text-blue-600 transition-colors hover:text-blue-700">
                             <Plus size={16} /> New Sale
                         </button>
-                        <button className="flex items-center gap-1 text-sm font-bold transition-colors text-slate-500 hover:text-slate-700">
+                        <button
+                            onClick={() => navigate('/transaction-details', { state: { transaction, customer } })}
+                            className="flex items-center gap-1 text-sm font-bold transition-colors text-slate-500 hover:text-slate-700"
+                        >
                             Go to Details <ArrowRight size={16} />
                         </button>
                     </div>

@@ -40,6 +40,7 @@ import AIAssistantPage from '../pages/AIAssistantPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
 import PaymentSuccessPage from '../pages/PaymentSuccessPage';
+import TransactionDetailsPage from '../pages/TransactionDetailsPage';
 
 
 
@@ -201,6 +202,12 @@ export const AppRoutes = () => {
         <Route path="/payment-success" element={
           <PaymentSuccessPage />
         } />
+
+        {/* Transaction Details */}
+        <Route path="/transaction-details" element={
+          <TransactionDetailsPage />
+        } />
+
 
         {/* Sales History */}
         <Route path="/sales-history" element={
