@@ -39,6 +39,10 @@ import AIReorderingPage from '../pages/AIReorderingPage';
 import AIAssistantPage from '../pages/AIAssistantPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
+import CreatePurchaseOrderPage from "../pages/CreatePurchaseOrderPage";
+import ApprovalWorkflowPage from "../pages/ApprovalWorkflowPage";
+import PurchaseOrderTrackingPage from "../pages/PurchaseOrderTrackingPage";
+import SupplierOrderDetailsPage from '../pages/SupplierOrderDetailsPage';
 
 
 
@@ -170,8 +174,44 @@ export const AppRoutes = () => {
 
         {/* Purchase Orders */}
         <Route path="/purchase-orders" element={
-          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]}>
             <PurchaseOrderPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Create Purchase Order */}
+        <Route path="/purchase-orders/create" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]}>
+            <CreatePurchaseOrderPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Edit an existing DRAFT purchase order — reuses the wizard,
+            opens straight on Step 3 (Review & Submit) */}
+        <Route path="/purchase-orders/:id/edit" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]}>
+            <CreatePurchaseOrderPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Purchase Order Tracking */}
+        <Route path="/purchase-orders/:id/tracking" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]}>
+            <PurchaseOrderTrackingPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Supplier Order Details */}
+        <Route path="/purchase-orders/:id" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]}>
+            <SupplierOrderDetailsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Approval Workflow */}
+        <Route path="/purchase-orders/:id/approval" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]}>
+            <ApprovalWorkflowPage />
           </ProtectedRoute>
         } />
 
