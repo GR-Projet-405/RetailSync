@@ -196,7 +196,7 @@ export default function UserProfileForm({
                 value={formData.phoneNumber}
                 onChange={handleInputChange}
                 maxLength={15}
-                pattern="\d{9,15}"
+                pattern="^[0-9]{9,15}$"
                 title="Please enter a valid phone number containing numbers only (9 to 15 digits)."
                 placeholder="e.g. 94771234567"
                 className="w-full text-slate-700 bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 px-3 py-2 rounded-lg outline-none font-medium"
