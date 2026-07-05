@@ -14,9 +14,12 @@ export default function ProfileSettingsPage() {
   const fetchProfile = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await api.get('/profile-settings'); // Custom wrapper handler [cite: 721, 723]
       if (response.data?.success) {
         setProfileData(response.data.data.profile);
+      } else {
+        setError('Failed to load profile details.');
       }
     } catch (err) {
       console.error('Error fetching profile data:', err);
