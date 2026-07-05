@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { ChevronDown, Paperclip, Send, MessageCircle, Mail, Clock, Zap, ShieldCheck } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
@@ -14,6 +14,9 @@ const SUBJECT_OPTIONS = [
     'Feature Request',
     'Other',
 ];
+
+const ALLOWED_FILE_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; 
 
 const inputClassName = 'w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20';
 
@@ -113,6 +116,38 @@ export default function ContactSupportPage() {
     const [subject, setSubject] = useState('Technical Issue');
     const [message, setMessage] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [files, setFiles] = useState([]);
+    const [fileError, setFileError] = useState('');
+    const fileInputRef = useRef(null);
+
+    const validateAndAddFiles = (selectedFiles) => {
+      const validFiles = [];
+      Array.from(selectedFiles).forEach((file) => {
+        if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+          setFileError('Only PNG, JPG, and PDF files are allowed.');
+          return;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+          setFileError('Each file must be 5MB or less.');
+          return;
+        }
+        validFiles.push(file);
+      });
+      
+      if (validFiles.length > 0) {
+        setFiles((prev) => [...prev, ...validFiles]);
+        setFileError('');
+      }
+    };
+    
+    const handleFileChange = (e) => {
+      validateAndAddFiles(e.target.files);
+      e.target.value = ''; // allows re-selecting same file
+    };
+    
+    const removeFile = (index) => {
+      setFiles((prev) => prev.filter((_, i) => i !== index));
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -130,10 +165,15 @@ export default function ContactSupportPage() {
             email: email.trim(),
             subject,
             message: message.trim(),
+            attachments: files.map((file) => ({
+              fileName: file.name,
+              fileType: file.type,
+            })),
           });
 
           toast.success(`Message ${result.messageId} submitted successfully!`);
           setMessage('');
+          setFiles([]);
         }catch(err) {
           toast.error(err.message || 'Failed to submit message');
         }finally {
@@ -194,14 +234,53 @@ export default function ContactSupportPage() {
                         </div>
                         
                         {/* Footer */}
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".png,.jpg,.jpeg,.pdf"
+                          multiple
+                          className="hidden"
+                          onChange={handleFileChange}
+                        />
                         <div className="flex flex-col gap-4 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="flex items-center gap-2 text-xs text-slate-500">
+                            <div>
+                              <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                className="flex items-center gap-2 text-xs text-slate-500 hover:text-blue-600"
+                              >
                                 <Paperclip size={14} />
-                                <span>Max file size: 5MB</span>
+                                <span>Attach files (max 5MB)</span>
+                              </button>
+
+                              {fileError && (
+                                <p className="mt-1 text-xs text-red-600">{fileError}</p>
+                              )}
+
+                              {files.length > 0 && (
+                                <div className="mt-2 space-y-1">
+                                  {files.map((file, index) => (
+                                    <div
+                                      key={`${file.name}-${index}`}
+                                      className="flex items-center gap-2 text-xs text-slate-600"
+                                    >
+                                      <span className="truncate">{file.name}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => removeFile(index)}
+                                        className="shrink-0 text-red-500 hover:text-red-600"
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                            <Button type="submit" className="gap-2">
-                                Send Ticket
-                                <Send size={16} />
+
+                            <Button type="submit" className="gap-2" disabled={submitting}>
+                              Send Ticket
+                              <Send size={16} />
                             </Button>
                         </div>
                 </form>

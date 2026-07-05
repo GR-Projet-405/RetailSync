@@ -8,6 +8,22 @@ const SUBJECT_OPTIONS = [
   'Other',
 ];
 
+const attachmentSchema = new mongoose.Schema(
+  {
+    fileName: {
+      type: String,
+      trim: true,
+    },
+    fileType: {
+      type: String,
+      trim: true,
+    },
+  },
+  {
+    _id: false,
+  }
+);
+
 const contactMessageSchema = new mongoose.Schema(
   {
     messageId: {
@@ -37,6 +53,7 @@ const contactMessageSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    attachments: [attachmentSchema],
     status: {
       type: String,
       enum: ['New', 'Read', 'Replied', 'Archived'],

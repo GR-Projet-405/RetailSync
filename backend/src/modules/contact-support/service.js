@@ -36,6 +36,7 @@ class ContactSupportService {
       email: payload.email,
       subject: payload.subject,
       message: payload.message,
+      attachments: payload.attachments || [],
       status: 'New',
     });
 

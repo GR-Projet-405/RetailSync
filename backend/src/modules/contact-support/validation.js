@@ -33,6 +33,15 @@ const createContactMessageSchema = Joi.object({
     'string.empty': 'Message is required',
     'any.required': 'Message is required',
   }),
+  attachments: Joi.array()
+    .items(
+      Joi.object({
+        fileName: Joi.string().trim().required(),
+        fileType: Joi.string().trim().allow(''),
+      })
+    )
+    .optional()
+    .default([]),
 });
 
 const validate = (schema) => (req, res, next) => {
