@@ -11,7 +11,7 @@ export const AuthProvider = ({ children }) => {
 
   const fetchBranches = async (userData) => {
     try {
-      const res = await api.get('/branch-management');
+      const res = await api.get('/branch-management/active');
       if (res.data && res.data.data) {
         const branchNames = res.data.data.map(b => b.name);
         setBranches(branchNames);
