@@ -20,4 +20,19 @@ const getActiveBranches = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { getDetails, getActiveBranches };
+// ─── GET /api/v1/branch-management/branches ───────────────
+const getBranches = asyncHandler(async (req, res) => {
+  const data = await service.getAllBranches();
+  
+  res.status(200).json({
+    success: true,
+    message: 'Branches retrieved successfully',
+    data
+  });
+});
+
+module.exports = {
+  getDetails,
+  getActiveBranches,
+  getBranches,
+};
