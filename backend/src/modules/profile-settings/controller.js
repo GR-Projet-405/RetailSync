@@ -42,7 +42,12 @@ const updateProfile = asyncHandler(async (req, res) => {
 const changePassword = asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
-  await service.modifyPassword(req.user, currentPassword, newPassword);
+  try {
+    await service.modifyPassword(req.user, currentPassword, newPassword);
+  } catch (err) {
+    res.status(err.statusCode || 500);
+    throw err;
+  }
 
   res.status(200).json({
     success: true,
