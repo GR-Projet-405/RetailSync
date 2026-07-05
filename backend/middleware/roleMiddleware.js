@@ -1,4 +1,21 @@
+const normalizeRole = (role) =>
+  String(role).trim().toUpperCase().replace(/-/g, '_');
+
+const isRoleAllowed = (userRole, allowedRoles) => {
+  if (allowedRoles.includes(userRole)) {
+    return true;
+  }
+
+  if (allowedRoles.includes('ADMIN') && userRole === 'SUPER_ADMIN') {
+    return true;
+  }
+
+  return false;
+};
+
 const authorize = (...roles) => {
+  const allowedRoles = roles.map(normalizeRole);
+
   return (req, res, next) => {
     if (!req.user || !req.user.roleId) {
       return res.status(403).json({
@@ -7,12 +24,12 @@ const authorize = (...roles) => {
       });
     }
 
-    const userRole = req.user.roleId.name;
+    const userRole = normalizeRole(req.user.roleId.name);
 
-    if (!roles.includes(userRole)) {
+    if (!isRoleAllowed(userRole, allowedRoles)) {
       return res.status(403).json({
         success: false,
-        message: `Role ${userRole} is not authorized to access this route`,
+        message: `Role ${req.user.roleId.name} is not authorized to access this route`,
       });
     }
 
@@ -80,6 +97,7 @@ const restrictToBranch = (req, res, next) => {
 
 module.exports = {
   authorize,
+  roleMiddleware: authorize,
   authorizePermission,
   restrictToBranch,
 };

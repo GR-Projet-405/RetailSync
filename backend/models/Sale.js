@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const saleItemSchema = new mongoose.Schema(
   {
-    productId: {
+    product: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Product',
       required: [true, 'Product reference is required'],
@@ -13,14 +13,6 @@ const saleItemSchema = new mongoose.Schema(
       trim: true,
     },
     sku: {
-      type: String,
-      trim: true,
-    },
-    barcode: {
-      type: String,
-      trim: true,
-    },
-    category: {
       type: String,
       trim: true,
     },
@@ -39,11 +31,6 @@ const saleItemSchema = new mongoose.Schema(
       default: 0,
       min: [0, 'Discount cannot be negative'],
     },
-    taxRate: {
-      type: Number,
-      default: 0,
-      min: [0, 'Tax rate cannot be negative'],
-    },
     lineTotal: {
       type: Number,
       required: [true, 'Line total is required'],
@@ -55,27 +42,26 @@ const saleItemSchema = new mongoose.Schema(
 
 const saleSchema = new mongoose.Schema(
   {
-    invoiceNumber: {
+    transactionId: {
       type: String,
-      required: [true, 'Invoice number is required'],
       unique: true,
       trim: true,
       uppercase: true,
     },
-    branchId: {
+    branch: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Branch',
       required: [true, 'Branch is required'],
     },
-    cashierId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: [true, 'Cashier is required'],
-    },
-    customerId: {
+    customer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Customer',
       default: null,
+    },
+    cashier: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'Cashier is required (BR-SALE-005)'],
     },
     items: {
       type: [saleItemSchema],
@@ -90,15 +76,15 @@ const saleSchema = new mongoose.Schema(
       required: [true, 'Subtotal is required'],
       min: [0, 'Subtotal cannot be negative'],
     },
-    cartDiscount: {
+    discountTotal: {
       type: Number,
       default: 0,
-      min: [0, 'Cart discount cannot be negative'],
+      min: [0, 'Discount total cannot be negative'],
     },
-    taxAmount: {
+    tax: {
       type: Number,
       default: 0,
-      min: [0, 'Tax amount cannot be negative'],
+      min: [0, 'Tax cannot be negative'],
     },
     totalAmount: {
       type: Number,
@@ -108,42 +94,23 @@ const saleSchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
       enum: {
-        values: ['cash', 'card', 'digital_wallet'],
+        values: ['cash', 'card', 'qr_pay', 'bank_transfer'],
         message: '{VALUE} is not a supported payment method',
       },
       required: [true, 'Payment method is required'],
     },
-    amountPaid: {
-      type: Number,
-      required: [true, 'Amount paid is required'],
-      min: [0, 'Amount paid cannot be negative'],
-    },
-    changeGiven: {
-      type: Number,
-      default: 0,
-      min: [0, 'Change given cannot be negative'],
-    },
     status: {
       type: String,
       enum: {
-        values: ['completed', 'partially_returned', 'returned', 'refunded'],
+        values: ['completed', 'pending', 'refunded', 'cancelled'],
         message: '{VALUE} is not a valid sale status',
       },
       default: 'completed',
     },
-    loyaltyPointsEarned: {
-      type: Number,
-      default: 0,
-      min: [0, 'Loyalty points cannot be negative'],
-    },
-    notes: {
+    note: {
       type: String,
       trim: true,
-      maxlength: [500, 'Notes cannot exceed 500 characters'],
-    },
-    completedAt: {
-      type: Date,
-      default: Date.now,
+      default: null,
     },
   },
   {
@@ -151,11 +118,51 @@ const saleSchema = new mongoose.Schema(
   }
 );
 
-saleSchema.index({ branchId: 1, completedAt: -1 });
-saleSchema.index({ cashierId: 1, completedAt: -1 });
-saleSchema.index({ customerId: 1, completedAt: -1 });
+saleSchema.pre('save', async function (next) {
+  if (this.isNew && !this.transactionId) {
+    const count = await this.constructor.countDocuments();
+    this.transactionId = `TXN-${String(count + 1).padStart(4, '0')}`;
+  }
+  next();
+});
+
+saleSchema.pre('save', async function (next) {
+  if (!this.isNew) {
+    const original = await this.constructor.findById(this._id).select('status');
+
+    if (original?.status === 'completed') {
+      return next(
+        new Error(
+          'Completed sales cannot be modified (BR-SALE-001). Use the return/refund workflow.'
+        )
+      );
+    }
+  }
+
+  next();
+});
+
+const blockCompletedSaleUpdates = async function (next) {
+  const doc = await this.model.findOne(this.getQuery()).select('status');
+
+  if (doc?.status === 'completed') {
+    return next(
+      new Error(
+        'Completed sales cannot be modified (BR-SALE-001). Use the return/refund workflow.'
+      )
+    );
+  }
+
+  next();
+};
+
+saleSchema.pre('findOneAndUpdate', blockCompletedSaleUpdates);
+saleSchema.pre('updateOne', blockCompletedSaleUpdates);
+
+saleSchema.index({ branch: 1, createdAt: -1 });
+saleSchema.index({ cashier: 1, createdAt: -1 });
+saleSchema.index({ customer: 1, createdAt: -1 });
 saleSchema.index({ status: 1 });
-saleSchema.index({ 'items.productId': 1 });
-saleSchema.index({ 'items.category': 1 });
+saleSchema.index({ 'items.product': 1 });
 
 module.exports = mongoose.model('Sale', saleSchema);
