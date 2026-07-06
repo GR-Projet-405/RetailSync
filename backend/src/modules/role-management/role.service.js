@@ -1,4 +1,4 @@
-const Role = require('./role.model');
+const Role = require("./role.model");
 
 const getAllRoles = async () => {
   return await Role.find({}).sort({ createdAt: 1 });
@@ -6,6 +6,12 @@ const getAllRoles = async () => {
 
 const getRoleById = async (id) => {
   return await Role.findById(id);
+};
+
+const getSeedAndSchemaRoles = async () => {
+  // Finds everything following the roleSchema collection structure
+  // (both system seeded roles and any custom user roles)
+  return await Role.find({}).sort({ name: 1 });
 };
 
 const createRole = async (roleData) => {
@@ -25,7 +31,7 @@ const updateRole = async (id, roleData) => {
   if (!role) return null;
 
   if (role.isSystemRole) {
-    throw new Error('System roles cannot be modified.');
+    throw new Error("System roles cannot be modified.");
   }
 
   const { name, description, permissions } = roleData;
@@ -43,7 +49,7 @@ const deleteRole = async (id) => {
   if (!role) return null;
 
   if (role.isSystemRole) {
-    throw new Error('System roles cannot be deleted.');
+    throw new Error("System roles cannot be deleted.");
   }
 
   return await Role.findByIdAndDelete(id);
@@ -55,4 +61,5 @@ module.exports = {
   createRole,
   updateRole,
   deleteRole,
+  getSeedAndSchemaRoles,
 };

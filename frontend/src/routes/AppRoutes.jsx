@@ -1,4 +1,3 @@
-import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ProtectedRoute } from './ProtectedRoute';
@@ -6,13 +5,17 @@ import { ROLES } from '../config/roles';
 
 // Layouts
 import MainLayout from '../layouts/MainLayout';
-import AuthLayout from '../layouts/AuthLayout';
 import POSLayout from '../layouts/POSLayout';
 
 // Page Imports
 import DashboardPage from '../pages/DashboardPage';
 import AuthPage from '../pages/AuthPage';
+import VerifyOTPPage from '../features/auth/VerifyOTPPage';
 import LoginPage from '../features/auth/LoginPage';
+import RegisterPage from '../features/auth/RegisterPage'; 
+import SelectRolePage from '../features/auth/SelectRolePage';
+import ForgotPasswordPage from '../features/auth/ForgotPasswordPage';
+import ResetPasswordPage from '../features/auth/ResetPasswordPage';
 import NotificationsPage from '../pages/NotificationsPage';
 import ProfileSettingsPage from '../pages/ProfileSettingsPage';
 import BranchPage from '../pages/BranchPage';
@@ -23,6 +26,10 @@ import UserRolePage from '../pages/UserRolePage';
 import ProductPage from '../pages/ProductPage';
 import CategoryPage from '../pages/CategoryPage';
 import InventoryPage from '../pages/InventoryPage';
+import StockLevelsPage from '../pages/StockLevelsPage';
+import StockMovementsPage from '../pages/StockMovementsPage';
+import StockAdjustmentsPage from '../pages/StockAdjustmentsPage';
+import LowStockAlertsPage from '../pages/LowStockAlertsPage';
 import WarehousePage from '../pages/WarehousePage';
 import PurchaseOrderPage from '../pages/PurchaseOrderPage';
 import GoodsReceivingPage from '../pages/GoodsReceivingPage';
@@ -32,17 +39,43 @@ import POSCheckoutPage from '../pages/POSCheckoutPage';
 import ReceiptPreviewPage from '../pages/ReceiptPreviewPage';
 import PaymentProcessingPage from '../pages/PaymentProcessingPage';
 import SalesHistoryPage from '../pages/SalesHistoryPage';
+import SalesDashboardPage from '../pages/SalesDashboardPage';
+import TransactionHistory from '../pages/sales/TransactionHistory';
+import SalesDetails from '../pages/sales/SalesDetails';
+import FiltersSearch from '../pages/sales/FiltersSearch';
+import ExportReports from '../pages/sales/ExportReports';
 import ReturnsRefundsPage from '../pages/ReturnsRefundsPage';
-import PromotionsDiscountsPage from '../pages/PromotionsDiscountsPage';
-import ReportsPage from '../pages/ReportsPage';
+import PromotionsDiscountsPage from '../pages/promotions/PromotionsDashboard';
+import DiscountRulesPage from '../pages/promotions/DiscountRules';
+import CouponManagementPage from '../pages/promotions/CouponManagement';
+import PromotionAnalyticsPage from '../pages/promotions/PromotionAnalytics';
+import ReportsPage from '../pages/reports/ReportsPage';
+import BranchManagerReportsPage from '../pages/reports/BranchManagerReportsPage';
+import ReportConfigPage from '../pages/reports/ReportConfigPage';
+import ReportViewPage from '../pages/reports/ReportViewPage';
 import BusinessAnalyticsPage from '../pages/BusinessAnalyticsPage';
 import AIForecastingPage from '../pages/AIForecastingPage';
 import AIReorderingPage from '../pages/AIReorderingPage';
 import AIAssistantPage from '../pages/AIAssistantPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
+import KnowledgeBasePage from '../pages/KnowledgeBasePage';
+import AddCustomerPage from '../pages/AddCustomerPage';
+import CustomerProfilePage from '../pages/CustomerProfilePage';
+import CustomerHistoryPage from '../pages/CustomerHistoryPage';
+import CustomerSearchPage from '../pages/CustomerSearchPage';
 
 
+
+// Renders the correct reports dashboard based on the logged-in user's role
+// user.roleId.name holds the role string (e.g. "BRANCH_MANAGER")
+function ReportsRouter() {
+  const { user } = useAuth();
+  if (user?.roleId?.name === ROLES.BRANCH_MANAGER) {
+    return <BranchManagerReportsPage />;
+  }
+  return <ReportsPage />;
+}
 
 // Convenience arrays
 const ALL_ROLES = Object.values(ROLES);
@@ -58,7 +91,6 @@ export const AppRoutes = () => {
       {/* Auth Routes */}
       <Route path="/login" element={<LoginPage />} />
 
-      {/* POS Routes - Full-screen layout */}
       <Route element={
         <ProtectedRoute allowedRoles={POS_ROLES}>
           <POSLayout />
@@ -92,6 +124,13 @@ export const AppRoutes = () => {
         <Route path="/help-support" element={
           <ProtectedRoute allowedRoles={ALL_ROLES}>
             <HelpSupportPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Knowledge Base */}
+        <Route path="/knowledge-base" element={
+          <ProtectedRoute allowedRoles={ALL_ROLES}>
+            <KnowledgeBasePage />
           </ProtectedRoute>
         } />
 
@@ -165,6 +204,34 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
+        {/* Stock Levels */}
+        <Route path="/stock-levels" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <StockLevelsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Stock Movements */}
+        <Route path="/stock-movements" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <StockMovementsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Stock Adjustments */}
+        <Route path="/stock-adjustments" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <StockAdjustmentsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Low Stock Alerts */}
+        <Route path="/low-stock-alerts" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <LowStockAlertsPage />
+          </ProtectedRoute>
+        } />
+
         {/* Supplier Management */}
         <Route path="/suppliers" element={
           <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
@@ -200,12 +267,23 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
-        {/* Sales History */}
-        <Route path="/sales-history" element={
-          <ProtectedRoute allowedRoles={SALES_ROLES}>
-            <SalesHistoryPage />
-          </ProtectedRoute>
-        } />
+        {/* Sales History Module */}
+        <Route
+          path="/sales-history"
+          element={
+            <ProtectedRoute allowedRoles={SALES_ROLES}>
+              <SalesHistoryPage />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<SalesDashboardPage />} />
+          <Route path="dashboard" element={<SalesDashboardPage />} />
+          <Route path="transactions" element={<TransactionHistory />} />
+          <Route path="details" element={<SalesDetails />} />
+          <Route path="filters" element={<FiltersSearch />} />
+          <Route path="export" element={<ExportReports />} />
+          <Route path=":id" element={<SalesDetails />} />
+        </Route>
 
         {/* Returns & Refunds */}
         <Route path="/returns-refunds" element={
@@ -216,8 +294,29 @@ export const AppRoutes = () => {
 
         {/* Promotions & Discounts */}
         <Route path="/promotions-discounts" element={
-          <ProtectedRoute allowedRoles={SALES_ROLES}>
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
             <PromotionsDiscountsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Discount Rules */}
+        <Route path="/discount-rules" element={
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+            <DiscountRulesPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Coupon Management */}
+        <Route path="/coupon-management" element={
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+            <CouponManagementPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Promotion Analytics */}
+        <Route path="/promotion-analytics" element={
+          <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+            <PromotionAnalyticsPage />
           </ProtectedRoute>
         } />
 
@@ -227,11 +326,45 @@ export const AppRoutes = () => {
             <CustomerPage />
           </ProtectedRoute>
         } />
+        <Route path="/customers/new" element={
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <AddCustomerPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/customers/search" element={
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <CustomerSearchPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/customers/:id" element={
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <CustomerProfilePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/customers/:id/history" element={
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <CustomerHistoryPage />
+          </ProtectedRoute>
+        } />
 
-        {/* Reports */}
+        {/* Reports — Admin sees ReportsPage, Branch Manager sees BranchManagerReportsPage */}
         <Route path="/reports" element={
           <ProtectedRoute allowedRoles={[...MANAGEMENT_ROLES, ROLES.AUDITOR]}>
-            <ReportsPage />
+            <ReportsRouter />
+          </ProtectedRoute>
+        } />
+
+        {/* Report Configuration */}
+        <Route path="/reports/configure/:reportType" element={
+          <ProtectedRoute allowedRoles={[...MANAGEMENT_ROLES, ROLES.AUDITOR]}>
+            <ReportConfigPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Report View */}
+        <Route path="/reports/view/:reportType" element={
+          <ProtectedRoute allowedRoles={[...MANAGEMENT_ROLES, ROLES.AUDITOR]}>
+            <ReportViewPage />
           </ProtectedRoute>
         } />
 

@@ -8,5 +8,8 @@ module.exports = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: process.env.PORT || 5000,
   MONGODB_URI: process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/retailsync_db',
-  JWT_SECRET: process.env.JWT_SECRET || 'supersecretjwtkeyforretailsyncpos2026'
+  JWT_SECRET: process.env.JWT_SECRET || 'supersecretjwtkeyforretailsyncpos2026',
+
+  EMAIL_USER: process.env.EMAIL_USER,
+  EMAIL_PASS: process.env.EMAIL_PASS,
 };
