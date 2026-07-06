@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import React from 'react';
+import { NavLink } from 'react-router-dom';
 import * as Icons from 'lucide-react';
 import { NAVIGATION_GROUPS } from '../config/navigation';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,30 +9,11 @@ import { cn } from '../utils/cn';
 export const Sidebar = () => {
   const { user, hasRole } = useAuth();
   const { isSidebarCollapsed, isSidebarOpen, toggleSidebar } = useSidebar();
-  const location = useLocation();
-
-  // Tracks which parent items (by id) currently have their submenu expanded
-  const [expandedItems, setExpandedItems] = useState({});
-
-  // Auto-expand a parent if the current route matches one of its children
-  useEffect(() => {
-    NAVIGATION_GROUPS.forEach((group) => {
-      group.items.forEach((item) => {
-        if (item.children?.some((child) => child.path === location.pathname)) {
-          setExpandedItems((prev) => ({ ...prev, [item.id]: true }));
-        }
-      });
-    });
-  }, [location.pathname]);
 
   // Helper to render Lucide Icons by name dynamically
-  const renderIcon = (iconName, className = 'w-4 h-4 shrink-0') => {
+  const renderIcon = (iconName) => {
     const IconComponent = Icons[iconName];
-    return IconComponent ? <IconComponent className={className} /> : null;
-  };
-
-  const toggleExpanded = (itemId) => {
-    setExpandedItems((prev) => ({ ...prev, [itemId]: !prev[itemId] }));
+    return IconComponent ? <IconComponent className="w-4 h-4 shrink-0" /> : null;
   };
 
   return (
@@ -94,105 +75,39 @@ export const Sidebar = () => {
                   {group.title}
                 </h2>
                 <div className="space-y-1">
-                  {visibleItems.map((item) => {
-                    const visibleChildren = (item.children || []).filter(
-                      (child) => !user || (child.allowedRoles && hasRole(...child.allowedRoles))
-                    );
-                    const hasChildren = visibleChildren.length > 0;
-                    const isExpanded = !!expandedItems[item.id];
-                    const isChildActive = visibleChildren.some((c) => c.path === location.pathname);
+                  {visibleItems.map((item) => (
+                    <NavLink
+                      key={item.id}
+                      to={item.path}
+                      title={isSidebarCollapsed ? item.name : undefined}
+                      className={({ isActive }) => cn(
+                        "flex items-center gap-2.5 px-2.5 min-h-[44px] text-[14px] font-[500] tracking-[-0.01em] leading-[1.5] rounded-lg transition-all duration-150 ease-in-out relative group",
+                        isActive
+                          ? "bg-blue-600 text-white shadow-[0_6px_18px_rgba(37,99,235,0.20)] border border-white/[0.08] font-[600]"
+                          : "text-[#E2E8F0] hover:bg-white/[0.05] hover:text-white border border-transparent",
+                        isSidebarCollapsed && "lg:justify-center lg:gap-0 lg:px-2"
+                      )}
+                    >
+                    {renderIcon(item.icon)}
+                    <span
+                      className={cn(
+                        "transition-all duration-300 whitespace-nowrap leading-none",
+                        isSidebarCollapsed ? "lg:opacity-0 lg:w-0 overflow-hidden" : "opacity-100 lg:w-auto"
+                      )}
+                    >
+                      {item.name}
+                    </span>
 
-                    return (
-                      <div key={item.id}>
-                        <div
-                          className={cn(
-                            "flex items-center gap-1",
-                            isSidebarCollapsed && "lg:justify-center"
-                          )}
-                        >
-                          <NavLink
-                            to={item.path}
-                            title={isSidebarCollapsed ? item.name : undefined}
-                            className={({ isActive }) => cn(
-                              "flex-1 flex items-center gap-2.5 px-2.5 min-h-[44px] text-[14px] font-[500] tracking-[-0.01em] leading-[1.5] rounded-lg transition-all duration-150 ease-in-out relative group",
-                              (isActive || isChildActive)
-                                ? "bg-blue-600 text-white shadow-[0_6px_18px_rgba(37,99,235,0.20)] border border-white/[0.08] font-[600]"
-                                : "text-[#E2E8F0] hover:bg-white/[0.05] hover:text-white border border-transparent",
-                              isSidebarCollapsed && "lg:justify-center lg:gap-0 lg:px-2"
-                            )}
-                          >
-                            {renderIcon(item.icon)}
-                            <span
-                              className={cn(
-                                "transition-all duration-300 whitespace-nowrap leading-none",
-                                isSidebarCollapsed ? "lg:opacity-0 lg:w-0 overflow-hidden" : "opacity-100 lg:w-auto"
-                              )}
-                            >
-                              {item.name}
-                            </span>
-
-                            {/* Premium CSS Tooltip (Desktop collapsed hover only) */}
-                            {isSidebarCollapsed && (
-                              <div className="absolute left-full ml-3 px-2 py-1 text-xs bg-slate-950 text-slate-100 rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap border border-slate-800 shadow-xl hidden lg:block z-50">
-                                {item.name}
-                              </div>
-                            )}
-                          </NavLink>
-
-                          {/* Expand/collapse chevron - only when item has children and sidebar isn't collapsed */}
-                          {hasChildren && !isSidebarCollapsed && (
-                            <button
-                              onClick={() => toggleExpanded(item.id)}
-                              className="p-2 rounded-lg text-[#94A3B8] hover:bg-white/[0.05] hover:text-white transition-colors duration-150 shrink-0"
-                              aria-label={isExpanded ? `Collapse ${item.name}` : `Expand ${item.name}`}
-                            >
-                              <Icons.ChevronDown
-                                size={14}
-                                className={cn(
-                                  "transition-transform duration-200",
-                                  isExpanded && "rotate-180"
-                                )}
-                              />
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Submenu */}
-                        {hasChildren && !isSidebarCollapsed && (
-                          <div
-                            className={cn(
-                              "grid transition-all duration-200 ease-in-out",
-                              isExpanded ? "grid-rows-[1fr] opacity-100 mt-1" : "grid-rows-[0fr] opacity-0"
-                            )}
-                          >
-                            <div className="overflow-hidden">
-                              <div className="ml-4 pl-3 border-l border-white/[0.08] space-y-1">
-                                {visibleChildren.map((child) => (
-                                  <NavLink
-                                    key={child.id}
-                                    to={child.path}
-                                    className={({ isActive }) => cn(
-                                      "flex items-center gap-2.5 px-2.5 min-h-[38px] text-[13px] font-[500] tracking-[-0.01em] leading-[1.5] rounded-lg transition-all duration-150 ease-in-out",
-                                      isActive
-                                        ? "bg-blue-600/90 text-white font-[600]"
-                                        : "text-[#94A3B8] hover:bg-white/[0.05] hover:text-white"
-                                    )}
-                                  >
-                                    {renderIcon(child.icon, 'w-3.5 h-3.5 shrink-0')}
-                                    <span className="whitespace-nowrap leading-none">
-                                      {child.name}
-                                    </span>
-                                  </NavLink>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                    {/* Premium CSS Tooltip (Desktop collapsed hover only) */}
+                    {isSidebarCollapsed && (
+                      <div className="absolute left-full ml-3 px-2 py-1 text-xs bg-slate-950 text-slate-100 rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap border border-slate-800 shadow-xl hidden lg:block z-50">
+                        {item.name}
                       </div>
-                    );
-                  })}
-                </div>
+                    )}
+                  </NavLink>
+                ))}
               </div>
+            </div>
             </React.Fragment>
           );
         })}

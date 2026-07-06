@@ -39,7 +39,6 @@ import AIReorderingPage from '../pages/AIReorderingPage';
 import AIAssistantPage from '../pages/AIAssistantPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
-import FAQPage from '../pages/FaqPage';
 
 
 
@@ -89,13 +88,6 @@ export const AppRoutes = () => {
         <Route path="/help-support" element={
           <ProtectedRoute allowedRoles={ALL_ROLES}>
             <HelpSupportPage />
-          </ProtectedRoute>
-        } />
-
-        {/* FAQ Page */}
-        <Route path="/faq" element={
-          <ProtectedRoute allowedRoles={ALL_ROLES}>
-            <FAQPage />
           </ProtectedRoute>
         } />
 
