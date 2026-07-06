@@ -1,5 +1,6 @@
 const UserAction = require('./model');
 const mongoose = require('mongoose');
+const PDFDocument = require('pdfkit');
 
 class UserActionsService {
   /**
@@ -262,6 +263,130 @@ class UserActionsService {
       totalModifications,
       totalSecurityAlerts
     };
+  }
+
+  /**
+   * Export logs for a specific user (no pagination)
+   */
+  async exportUserLogs(userId) {
+    await this.ensureDummyDataSeeded();
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new Error('Invalid user ID format');
+    }
+    const logs = await UserAction.find({ userId })
+      .sort({ createdAt: -1 })
+      .lean();
+    return logs;
+  }
+
+  /**
+   * Generate PDF export of user logs
+   */
+  async generatePdfExport(userId) {
+    const logs = await this.exportUserLogs(userId);
+    
+    if (logs.length === 0) {
+      throw new Error('No logs found for this user');
+    }
+
+    // User info from first log
+    const userInfo = logs[0];
+
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({ bufferPages: true });
+        const chunks = [];
+
+        doc.on('data', chunk => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
+
+        // Header
+        doc.fontSize(24).font('Helvetica-Bold').text('User Action Audit Report', { align: 'center' });
+        doc.moveDown(0.5);
+        doc.fontSize(10).font('Helvetica').text(`Generated: ${new Date().toLocaleString()}`, { align: 'center' });
+        doc.moveDown(1);
+
+        // User Info Section
+        doc.fontSize(12).font('Helvetica-Bold').text('User Information', { underline: true });
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`Name: ${userInfo.userName}`);
+        doc.text(`Role: ${userInfo.role}`);
+        doc.text(`Branch: ${userInfo.branch}`);
+        doc.text(`Total Actions: ${logs.length}`);
+        doc.moveDown(1);
+
+        // Activity Summary
+        const loginCount = logs.filter(l => l.actionType === 'Login' || l.module === 'Authentication').length;
+        const modCount = logs.filter(l => l.actionType === 'Modification').length;
+        const deleteCount = logs.filter(l => l.actionType === 'Deletion').length;
+        const highRiskCount = logs.filter(l => l.riskLevel === 'High').length;
+
+        doc.fontSize(12).font('Helvetica-Bold').text('Activity Summary', { underline: true });
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`Logins: ${loginCount}`);
+        doc.text(`Modifications: ${modCount}`);
+        doc.text(`Deletions: ${deleteCount}`);
+        doc.text(`High Risk Actions: ${highRiskCount}`);
+        doc.moveDown(1.5);
+
+        // Activity Log
+        doc.fontSize(12).font('Helvetica-Bold').text('Activity Log', { underline: true });
+        doc.moveDown(0.5);
+
+        // Draw activity entries
+        logs.forEach((log, index) => {
+          const yPos = doc.y;
+          
+          // Risk level color indicator
+          if (log.riskLevel === 'High') {
+            doc.rect(doc.page.margins.left - 10, yPos, 5, 50).fill('#ff4444');
+          } else if (log.riskLevel === 'Medium') {
+            doc.rect(doc.page.margins.left - 10, yPos, 5, 50).fill('#ffaa00');
+          } else {
+            doc.rect(doc.page.margins.left - 10, yPos, 5, 50).fill('#00aa44');
+          }
+
+          doc.fontSize(10).font('Helvetica-Bold').text(
+            `[${new Date(log.createdAt).toLocaleString()}] ${log.actionType}`,
+            { continued: true }
+          );
+          doc.fontSize(9).font('Helvetica').text(` - ${log.module}`);
+          
+          doc.fontSize(9).font('Helvetica').text(log.description, { width: 450 });
+          
+          if (log.ipAddress || log.device) {
+            doc.fontSize(8).fillColor('#666666');
+            if (log.ipAddress) doc.text(`IP: ${log.ipAddress}`);
+            if (log.device) doc.text(`Device: ${log.device}`);
+            doc.fillColor('#000000');
+          }
+
+          if (log.metadata && Object.keys(log.metadata).length > 0) {
+            doc.fontSize(8).fillColor('#999999');
+            doc.text(`Details: ${JSON.stringify(log.metadata)}`);
+            doc.fillColor('#000000');
+          }
+
+          doc.moveDown(0.8);
+
+          // Page break if needed
+          if (doc.y > doc.page.height - 100) {
+            doc.addPage();
+          }
+        });
+
+        // Footer
+        doc.fontSize(8).fillColor('#999999').text(
+          'This is a confidential audit report. Unauthorized distribution is prohibited.',
+          { align: 'center' }
+        );
+
+        doc.end();
+      } catch (error) {
+        reject(error);
+      }
+    });
   }
 }
 

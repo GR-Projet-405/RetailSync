@@ -6,6 +6,9 @@ const { validateCreateUserAction } = require('./validation');
 // 1. POST /api/v1/user-actions - Create a new audit log
 router.post('/', validateCreateUserAction, controller.createLog);
 
+// 5. POST /api/v1/user-actions/export - Export user logs
+router.post('/export', controller.exportLogs);
+
 // 2. GET /api/v1/user-actions - Retrieve audit logs
 router.get('/', controller.getLogs);
 

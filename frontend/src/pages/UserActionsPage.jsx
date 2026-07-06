@@ -117,6 +117,7 @@ export default function UserActionsPage() {
     totalModifications: 0,
     totalSecurityAlerts: 0
   });
+  const [currentDayIndex, setCurrentDayIndex] = useState(0);
 
   const [loadingLogs, setLoadingLogs] = useState(true);
   const [loadingStats, setLoadingStats] = useState(true);
@@ -159,7 +160,7 @@ export default function UserActionsPage() {
 
       const params = {
         page: 1,
-        limit: 50,
+        limit: 100,
         search: searchTerm || undefined,
         module: selectedModule !== 'All' ? selectedModule : undefined,
         startDate: startDate || undefined,
@@ -169,6 +170,7 @@ export default function UserActionsPage() {
       const res = await api.get('/user-actions', { params });
       if (res.data?.success) {
         setLogs(res.data.data.logs);
+        setCurrentDayIndex(0);
       }
     } catch (err) {
       setError(err.message || 'Failed to load user actions logs');
@@ -180,6 +182,20 @@ export default function UserActionsPage() {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     fetchLogs();
+  };
+
+  const handleNextDay = () => {
+    if (currentDayIndex < dayGroups.length - 1) {
+      setCurrentDayIndex(currentDayIndex + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handlePrevDay = () => {
+    if (currentDayIndex > 0) {
+      setCurrentDayIndex(currentDayIndex - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const fetchLogDetails = async (id) => {
@@ -199,19 +215,20 @@ export default function UserActionsPage() {
     try {
       const res = await api.post('/user-actions/export', {
         userId: logs[0]?.userId
+      }, {
+        responseType: 'blob'
       });
-      if (res.data?.success) {
-        const blob = new Blob([JSON.stringify(res.data.data, null, 2)], {
-          type: 'application/json'
-        });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', res.data.filename || 'user_footprint_export.json');
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-      }
+      
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const filename = res.headers['content-disposition']?.split('filename="')[1]?.split('"')[0] || 'user_footprint_export.pdf';
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       alert('Export failed: ' + err.message);
     }
@@ -349,58 +366,111 @@ export default function UserActionsPage() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-8">
-                {dayGroups.map((group) => (
-                  <div key={group.key}>
-                    <div className="flex items-center gap-3 mb-4">
-                      <span className="text-[11px] font-bold tracking-wider text-slate-400">
-                        {group.label}
-                      </span>
-                      <div className="flex-1 h-px bg-slate-100" />
-                    </div>
+              <div className="space-y-6">
+                <div className="space-y-8">
+                  {dayGroups.length > 0 && (
+                    <div key={dayGroups[currentDayIndex]?.key} className="relative">
+                      {/* Day separator */}
+                      <div className="flex items-center gap-3 mb-6">
+                        <span className="text-[11px] font-bold tracking-wider text-slate-400 uppercase">
+                          {dayGroups[currentDayIndex]?.label}
+                        </span>
+                        <div className="flex-1 h-px bg-gradient-to-r from-slate-100 to-transparent" />
+                      </div>
 
-                    <ul className="space-y-5">
-                      {group.items.map((log) => {
-                        const { Icon, bg, fg } = getEntryVisual(log);
+                      <ul className="space-y-4">
+                        {dayGroups[currentDayIndex]?.items.map((log, itemIdx) => {
+                          const { Icon, bg, fg } = getEntryVisual(log);
                         return (
-                          <li key={log._id} className="flex gap-3">
-                            <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${bg} ${fg}`}>
-                              <Icon className="w-4 h-4" />
+                          <li key={log._id} className="flex gap-4 group/item">
+                            {/* Timeline dot */}
+                            <div className="shrink-0 mt-1">
+                              <div className="relative">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${bg} ${fg} shadow-sm ring-4 ring-white group-hover/item:ring-blue-100 transition-all duration-200`}>
+                                  <Icon className="w-4 h-4" />
+                                </div>
+                                {/* Connecting line to next item */}
+                                {itemIdx < (dayGroups[currentDayIndex]?.items.length || 0) - 1 && (
+                                  <div className="absolute top-8 left-1/2 -translate-x-1/2 w-px h-4 bg-slate-200" />
+                                )}
+                              </div>
                             </div>
+
+                            {/* Activity card */}
                             <button
                               onClick={() => fetchLogDetails(log._id)}
-                              className="flex-1 text-left group"
+                              className="flex-1 text-left group/card bg-white border border-slate-100 rounded-xl p-4 hover:border-blue-200 hover:shadow-md transition-all duration-200 overflow-hidden"
                             >
-                              <div className="flex items-start justify-between gap-3">
-                                <span
-                                  className={`text-sm font-semibold ${
-                                    log.riskLevel === 'High'
-                                      ? 'text-red-600'
-                                      : 'text-slate-800 group-hover:text-blue-600'
-                                  } transition-colors`}
-                                >
-                                  {log.actionType} — {log.module}
-                                </span>
-                                <span className="text-[11px] text-slate-400 whitespace-nowrap pt-0.5">
+                              {/* Header */}
+                              <div className="flex items-start justify-between gap-3 mb-2">
+                                <div className="flex-1 min-w-0">
+                                  <span
+                                    className={`text-sm font-semibold block ${
+                                      log.riskLevel === 'High'
+                                        ? 'text-red-600'
+                                        : 'text-slate-800 group-hover/card:text-blue-600'
+                                    } transition-colors`}
+                                  >
+                                    {log.actionType} — {log.module}
+                                  </span>
+                                </div>
+                                <span className="text-[11px] text-slate-400 whitespace-nowrap">
                                   {timeOf(log.createdAt)}
                                 </span>
                               </div>
-                              <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+
+                              {/* Description */}
+                              <p className="text-xs text-slate-600 leading-relaxed mb-3">
                                 {log.description}
                               </p>
+
+                              {/* Risk badge */}
                               {log.riskLevel === 'High' && (
-                                <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-red-600 bg-red-50 border border-red-100 rounded-lg px-2.5 py-1.5 w-fit">
+                                <div className="mt-3 flex items-center gap-1.5 text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg px-2.5 py-1.5 w-fit">
                                   <AlertTriangle className="w-3 h-3" />
-                                  Flagged for review — high risk action
+                                  Flagged — High Risk
+                                </div>
+                              )}
+                              {log.riskLevel === 'Medium' && (
+                                <div className="mt-3 flex items-center gap-1.5 text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 w-fit">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  Medium Risk
                                 </div>
                               )}
                             </button>
                           </li>
                         );
-                      })}
-                    </ul>
+                        })}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Day Navigation */}
+                {dayGroups.length > 1 && (
+                  <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+                    <div className="text-xs text-slate-500 font-medium">
+                      Day <span className="font-semibold text-slate-700">{currentDayIndex + 1}</span> of{' '}
+                      <span className="font-semibold text-slate-700">{dayGroups.length}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handlePrevDay}
+                        disabled={currentDayIndex === 0}
+                        className="px-4 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        ← Previous Day
+                      </button>
+                      <button
+                        onClick={handleNextDay}
+                        disabled={currentDayIndex === dayGroups.length - 1}
+                        className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-xs font-medium transition-colors"
+                      >
+                        Next Day →
+                      </button>
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
             )}
           </div>
