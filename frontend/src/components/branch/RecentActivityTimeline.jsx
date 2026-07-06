@@ -1,9 +1,21 @@
 import React from 'react';
 import * as Icons from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { formatDistanceToNow } from 'date-fns';
-
 export const RecentActivityTimeline = ({ activities = [] }) => {
+  const formatDistanceToNow = (date) => {
+    const seconds = Math.floor((new Date() - date) / 1000);
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + " years ago";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + " months ago";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + " days ago";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + " hours ago";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + " minutes ago";
+    return Math.floor(seconds) + " seconds ago";
+  };
   if (!activities || activities.length === 0) {
     return <div className="text-sm text-slate-500 italic p-4">No recent activity found.</div>;
   }
@@ -51,7 +63,7 @@ export const RecentActivityTimeline = ({ activities = [] }) => {
                   {activity.action.replace('_', ' ')}
                 </span>
                 <span className="text-xs text-slate-400">
-                  {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
+                  {formatDistanceToNow(new Date(activity.createdAt))}
                 </span>
               </div>
               <span className="text-xs text-slate-500 mt-1">
