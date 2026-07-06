@@ -11,7 +11,7 @@ import { BranchKpiCard } from '../../components/branch/BranchKpiCard';
 import { BranchStatusBadge } from '../../components/branch/BranchStatusBadge';
 import { BranchForm } from '../../components/branch/BranchForm';
 import { AssignManagerModal } from '../../components/branch/AssignManagerModal';
-import { toast } from 'react-toastify';
+import toast from '../../utils/toast';
 
 const BranchListPage = () => {
   const navigate = useNavigate();

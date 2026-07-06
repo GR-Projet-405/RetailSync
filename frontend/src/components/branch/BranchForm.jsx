@@ -2,10 +2,10 @@ import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Icons from 'lucide-react';
-import { branchApi } from '../../../services/branchApi';
-import Modal from '../../Modal';
-import Button from '../../Button';
-import { toast } from 'react-toastify';
+import { branchApi } from '../../services/branchApi';
+import Modal from '../Modal';
+import Button from '../Button';
+import toast from '../../utils/toast';
 
 export const BranchForm = ({ isOpen, onClose, initialData = null }) => {
   const queryClient = useQueryClient();

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Icons from 'lucide-react';
-import { branchApi } from '../../../services/branchApi';
-import { getUsers } from '../../../services/userService';
-import Modal from '../../Modal';
-import Button from '../../Button';
-import Spinner from '../../Spinner';
-import { toast } from 'react-toastify';
+import { branchApi } from '../../services/branchApi';
+import { getUsers } from '../../services/userService';
+import Modal from '../Modal';
+import Button from '../Button';
+import Spinner from '../Spinner';
+import toast from '../../utils/toast';
 
 export const AssignManagerModal = ({ isOpen, onClose, branchId, currentManagerId, branchName }) => {
   const [selectedManagerId, setSelectedManagerId] = useState('');
