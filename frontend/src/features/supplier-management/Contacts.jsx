@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Plus, Phone, Mail, FileText, CheckCircle, MoreHorizontal, X
+  Plus, Phone, Mail, FileText, CheckCircle, MoreHorizontal, X, Loader2
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { CONTACTS_BY_SUPPLIER, COMMUNICATION_HISTORY, NOTES, SUPPLIERS } from './data/mockData';
+import { getContacts, addContact as apiAddContact } from '../../services/supplierService';
 
 // ─── Tag Badge ────────────────────────────────────────────────────────────────
 const TagBadge = ({ tag }) => {
@@ -85,13 +85,28 @@ const AddContactModal = ({ onClose, onAdd }) => {
 
 // ─── Contacts Page ────────────────────────────────────────────────────────────
 const Contacts = ({ supplier }) => {
-  // Use first supplier if none passed
-  const activeSupplier = supplier ?? SUPPLIERS[0];
-  const [contacts, setContacts] = useState(CONTACTS_BY_SUPPLIER[activeSupplier.id] ?? CONTACTS_BY_SUPPLIER['SUP-001']);
-  const [selected, setSelected] = useState(contacts[0] ?? null);
-  const [notes, setNotes] = useState(NOTES);
+  const supplierId = supplier?._id ?? supplier?.id;
+  const [contacts, setContacts] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [notes, setNotes] = useState([]);
   const [newNote, setNewNote] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!supplierId) return;
+    setLoading(true);
+    setError(null);
+    getContacts(supplierId)
+      .then(res => {
+        const list = res.data?.contacts ?? [];
+        setContacts(list);
+        setSelected(list[0] ?? null);
+      })
+      .catch(err => setError(err.message || 'Failed to load contacts'))
+      .finally(() => setLoading(false));
+  }, [supplierId]);
 
   const handleAddNote = () => {
     if (!newNote.trim()) return;
@@ -102,9 +117,22 @@ const Contacts = ({ supplier }) => {
     setNewNote('');
   };
 
-  const handleAddContact = (contact) => {
-    setContacts(prev => [contact, ...prev]);
-    setSelected(contact);
+  const handleAddContact = async (contactPayload) => {
+    try {
+      const res = await apiAddContact(supplierId, {
+        name: contactPayload.name,
+        role: contactPayload.role,
+        email: contactPayload.email,
+        phone: contactPayload.phone,
+        tags: contactPayload.tags,
+        isPrimary: false,
+      });
+      const newContact = res.data ?? contactPayload;
+      setContacts(prev => [newContact, ...prev]);
+      setSelected(newContact);
+    } catch (err) {
+      alert(err.message || 'Failed to add contact');
+    }
   };
 
   return (
@@ -114,7 +142,7 @@ const Contacts = ({ supplier }) => {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Contact Management</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            {activeSupplier.name} · {contacts.length} contacts
+            {supplier?.name ?? 'Supplier'} · {contacts.length} contacts
           </p>
         </div>
         <button
@@ -125,153 +153,155 @@ const Contacts = ({ supplier }) => {
         </button>
       </div>
 
-      {/* Main Split Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        {/* Contact List */}
-        <div className="md:col-span-2 space-y-2">
-          {contacts.map(c => (
-            <button
-              key={c.id}
-              onClick={() => setSelected(c)}
-              className={cn(
-                'w-full text-left p-4 rounded-2xl border transition-all duration-150',
-                selected?.id === c.id
-                  ? 'bg-blue-50 border-blue-200 shadow-sm'
-                  : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-              )}
-            >
-              <div className="flex items-start gap-3">
-                <div className={cn('w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0', c.color)}>
-                  {c.initials}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-slate-900">{c.name}</p>
-                    <span className="text-xs text-slate-400 shrink-0">{c.lastContact}</span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-0.5">{c.role}</p>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {c.tags.map(t => <TagBadge key={t} tag={t} />)}
-                  </div>
-                </div>
-              </div>
-            </button>
-          ))}
+      {loading && (
+        <div className="flex items-center justify-center py-20 text-slate-400 gap-2">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span className="text-sm">Loading contacts...</span>
         </div>
+      )}
 
-        {/* Contact Detail */}
-        {selected ? (
-          <div className="md:col-span-3 space-y-4">
-            {/* Contact Header */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.04)] p-5">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={cn('w-12 h-12 rounded-full flex items-center justify-center text-white text-base font-bold', selected.color)}>
-                    {selected.initials}
+      {error && (
+        <div className="text-center py-10">
+          <p className="text-sm text-red-500 font-medium">{error}</p>
+        </div>
+      )}
+
+      {/* Main Split Layout */}
+      {!loading && !error && (
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+          {/* Contact List */}
+          <div className="md:col-span-2 space-y-2">
+            {contacts.map(c => (
+              <button
+                key={c.id}
+                onClick={() => setSelected(c)}
+                className={cn(
+                  'w-full text-left p-4 rounded-2xl border transition-all duration-150',
+                  selected?._id === c._id || selected?.id === c.id
+                    ? 'bg-blue-50 border-blue-200 shadow-sm'
+                    : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                )}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={cn('w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0', c.color ?? 'bg-blue-500')}>
+                    {c.initials ?? c.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                   </div>
-                  <div>
-                    <h2 className="text-base font-bold text-slate-900">{selected.name}</h2>
-                    <p className="text-sm text-slate-500">{selected.role}</p>
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {selected.tags.map(t => <TagBadge key={t} tag={t} />)}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-slate-900">{c.name}</p>
+                      <span className="text-xs text-slate-400 shrink-0">{c.lastContact ?? '—'}</span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">{c.role}</p>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {c.tags?.map(t => <TagBadge key={t} tag={t} />)}
                     </div>
                   </div>
                 </div>
-                <button className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
-                  <MoreHorizontal className="w-4 h-4" />
-                </button>
-              </div>
-              {/* Quick Actions */}
-              <div className="flex items-center gap-2 mb-4">
-                <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-colors">
-                  <Phone className="w-3.5 h-3.5" /> Call
-                </button>
-                <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-colors">
-                  <Mail className="w-3.5 h-3.5" /> Email
-                </button>
-                <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-colors">
-                  <FileText className="w-3.5 h-3.5" /> Note
-                </button>
-              </div>
-              {/* Contact Info Row */}
-              <div className="flex flex-wrap items-center gap-6 text-sm">
-                <div>
-                  <p className="text-xs text-slate-400 mb-0.5">Email</p>
-                  <a href={`mailto:${selected.email}`} className="text-blue-600 hover:underline font-medium">{selected.email}</a>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400 mb-0.5">Phone</p>
-                  <p className="font-medium text-slate-800">{selected.phone}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400 mb-0.5">Last Contact</p>
-                  <p className="font-medium text-slate-800">{selected.lastContact}</p>
-                </div>
-              </div>
-            </div>
+              </button>
+            ))}
+          </div>
 
-            {/* Communication History + Notes */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Communication History */}
+          {/* Contact Detail */}
+          {selected ? (
+            <div className="md:col-span-3 space-y-4">
+              {/* Contact Header */}
               <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.04)] p-5">
-                <h3 className="text-sm font-semibold text-slate-900 mb-3">Communication History</h3>
-                <div className="space-y-3.5">
-                  {COMMUNICATION_HISTORY.map(a => {
-                    const { Icon, cls } = activityMap[a.type] ?? activityMap.system;
-                    return (
-                      <div key={a.id} className="flex items-start gap-3">
-                        <div className={cn('w-7 h-7 rounded-full flex items-center justify-center shrink-0', cls)}>
-                          <Icon className="w-3.5 h-3.5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-slate-700 leading-snug">{a.text}</p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">{a.time} · {a.user}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.04)] p-5 flex flex-col">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-slate-900">Notes</h3>
-                  <button className="text-xs text-blue-600 font-medium hover:underline">+ Add Note</button>
-                </div>
-                <div className="space-y-3 flex-1 overflow-y-auto max-h-[220px]">
-                  {notes.map(n => (
-                    <div key={n.id} className="p-3 bg-amber-50 rounded-xl border border-amber-100">
-                      <p className="text-xs text-slate-700 leading-relaxed">{n.text}</p>
-                      <p className="text-[10px] text-slate-400 mt-1.5">{n.date} · {n.author}</p>
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={cn('w-12 h-12 rounded-full flex items-center justify-center text-white text-base font-bold', selected.color ?? 'bg-blue-500')}>
+                      {selected.initials ?? selected.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                     </div>
-                  ))}
-                </div>
-                {/* Add Note Input */}
-                <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
-                  <textarea
-                    rows={2}
-                    value={newNote}
-                    onChange={e => setNewNote(e.target.value)}
-                    placeholder="Add a note..."
-                    className="w-full px-3 py-2 text-xs bg-white text-slate-900 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 outline-none resize-none placeholder:text-slate-400 transition-all"
-                  />
-                  <button
-                    onClick={handleAddNote}
-                    className="w-full py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors"
-                  >
-                    Save Note
+                    <div>
+                      <h2 className="text-base font-bold text-slate-900">{selected.name}</h2>
+                      <p className="text-sm text-slate-500">{selected.role}</p>
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {selected.tags?.map(t => <TagBadge key={t} tag={t} />)}
+                      </div>
+                    </div>
+                  </div>
+                  <button className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+                    <MoreHorizontal className="w-4 h-4" />
                   </button>
                 </div>
+                {/* Quick Actions */}
+                <div className="flex items-center gap-2 mb-4">
+                  <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-colors">
+                    <Phone className="w-3.5 h-3.5" /> Call
+                  </button>
+                  <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-colors">
+                    <Mail className="w-3.5 h-3.5" /> Email
+                  </button>
+                  <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-colors">
+                    <FileText className="w-3.5 h-3.5" /> Note
+                  </button>
+                </div>
+                {/* Contact Info Row */}
+                <div className="flex flex-wrap items-center gap-6 text-sm">
+                  <div>
+                    <p className="text-xs text-slate-400 mb-0.5">Email</p>
+                    <a href={`mailto:${selected.email}`} className="text-blue-600 hover:underline font-medium">{selected.email}</a>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400 mb-0.5">Phone</p>
+                    <p className="font-medium text-slate-800">{selected.phone ?? '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400 mb-0.5">Last Contact</p>
+                    <p className="font-medium text-slate-800">{selected.lastContact ?? '—'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Communication History + Notes */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Communication History */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.04)] p-5">
+                  <h3 className="text-sm font-semibold text-slate-900 mb-3">Communication History</h3>
+                  <div className="space-y-3.5">
+                    <p className="text-xs text-slate-400 text-center py-4">No communication history available.</p>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.04)] p-5 flex flex-col">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-slate-900">Notes</h3>
+                    <button className="text-xs text-blue-600 font-medium hover:underline">+ Add Note</button>
+                  </div>
+                  <div className="space-y-3 flex-1 overflow-y-auto max-h-[220px]">
+                    {notes.map(n => (
+                      <div key={n.id} className="p-3 bg-amber-50 rounded-xl border border-amber-100">
+                        <p className="text-xs text-slate-700 leading-relaxed">{n.text}</p>
+                        <p className="text-[10px] text-slate-400 mt-1.5">{n.date} · {n.author}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Add Note Input */}
+                  <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                    <textarea
+                      rows={2}
+                      value={newNote}
+                      onChange={e => setNewNote(e.target.value)}
+                      placeholder="Add a note..."
+                      className="w-full px-3 py-2 text-xs bg-white text-slate-900 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 outline-none resize-none placeholder:text-slate-400 transition-all"
+                    />
+                    <button
+                      onClick={handleAddNote}
+                      className="w-full py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors"
+                    >
+                      Save Note
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="md:col-span-3 flex items-center justify-center bg-white rounded-2xl border border-slate-200 p-12">
-            <p className="text-sm text-slate-400">Select a contact to view details</p>
-          </div>
-        )}
-      </div>
+          ) : (
+            <div className="md:col-span-3 flex items-center justify-center bg-white rounded-2xl border border-slate-200 p-12">
+              <p className="text-sm text-slate-400">Select a contact to view details</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Add Contact Modal */}
       {showAddModal && (

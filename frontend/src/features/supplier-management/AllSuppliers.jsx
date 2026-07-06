@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Filter, Download, Plus, Star, Building2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { SUPPLIERS } from './data/mockData';
+import { getSuppliers, getSupplierStats } from '../../services/supplierService';
 
 // ─── Stat Card ───────────────────────────────────────────────────────────────
 const StatCard = ({ icon: Icon, iconBg, value, label }) => (
@@ -50,22 +50,49 @@ const ITEMS_PER_PAGE = 6;
 const AllSuppliers = ({ onAddSupplier, onViewProfile }) => {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [suppliers, setSuppliers] = useState([]);
+  const [stats, setStats] = useState({ total: 0, active: 0, pending: 0, totalSpendYTD: 0 });
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const filtered = useMemo(() =>
-    SUPPLIERS.filter(s =>
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.category.toLowerCase().includes(search.toLowerCase()) ||
-      s.id.toLowerCase().includes(search.toLowerCase())
-    ),
-    [search]
-  );
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [listRes, statsRes] = await Promise.all([
+        getSuppliers({ search, page, limit: ITEMS_PER_PAGE }),
+        getSupplierStats(),
+      ]);
+      setSuppliers(listRes.suppliers ?? []);
+      setTotalPages(listRes.totalPages ?? 1);
+      setStats(statsRes.data ?? { total: 0, active: 0, pending: 0, totalSpendYTD: 0 });
+    } catch (err) {
+      setError(err.message || 'Failed to load suppliers');
+    } finally {
+      setLoading(false);
+    }
+  }, [search, page]);
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-  const activeCount = SUPPLIERS.filter(s => s.status === 'Active').length;
-  const pendingCount = SUPPLIERS.filter(s => s.status === 'Pending').length;
-  const totalSpend = '$12.4M';
+  const paginated = suppliers;
+  const activeCount = stats.active;
+  const pendingCount = stats.pending;
+  const totalSpend = stats.totalSpendYTD
+    ? `$${(stats.totalSpendYTD / 1_000_000).toFixed(1)}M`
+    : '$0';
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
+        <p className="text-sm font-semibold text-red-600">{error}</p>
+        <button onClick={fetchData} className="text-sm text-blue-600 hover:underline font-medium">Retry</button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 fade-up">
@@ -73,7 +100,7 @@ const AllSuppliers = ({ onAddSupplier, onViewProfile }) => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Suppliers</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{SUPPLIERS.length} suppliers registered across all categories</p>
+          <p className="text-sm text-slate-500 mt-0.5">{stats.total} suppliers registered across all categories</p>
         </div>
         <button
           onClick={onAddSupplier}
@@ -89,25 +116,25 @@ const AllSuppliers = ({ onAddSupplier, onViewProfile }) => {
         <StatCard
           icon={() => <Building2 className="w-5 h-5 text-slate-500" />}
           iconBg="bg-slate-100"
-          value={SUPPLIERS.length}
+          value={loading ? '—' : stats.total}
           label="Total Suppliers"
         />
         <StatCard
           icon={() => <svg className="w-5 h-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>}
           iconBg="bg-emerald-50"
-          value={activeCount}
+          value={loading ? '—' : activeCount}
           label="Active"
         />
         <StatCard
           icon={() => <svg className="w-5 h-5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>}
           iconBg="bg-amber-50"
-          value={pendingCount}
+          value={loading ? '—' : pendingCount}
           label="Pending Review"
         />
         <StatCard
           icon={() => <svg className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
           iconBg="bg-blue-50"
-          value={totalSpend}
+          value={loading ? '—' : totalSpend}
           label="Total Spend YTD"
         />
       </div>
@@ -145,9 +172,15 @@ const AllSuppliers = ({ onAddSupplier, onViewProfile }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
-            {paginated.length > 0 ? paginated.map(s => (
+            {loading ? (
+              <tr>
+                <td colSpan={7} className="px-6 py-14 text-center text-slate-400 text-sm animate-pulse">
+                  Loading suppliers...
+                </td>
+              </tr>
+            ) : paginated.length > 0 ? paginated.map(s => (
               <tr
-                key={s.id}
+                key={s._id}
                 onClick={() => onViewProfile(s)}
                 className="hover:bg-blue-50/40 cursor-pointer transition-colors duration-150 group"
               >
@@ -158,20 +191,26 @@ const AllSuppliers = ({ onAddSupplier, onViewProfile }) => {
                     </div>
                     <div>
                       <p className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">{s.name}</p>
-                      <p className="text-xs text-slate-400">{s.orders} orders</p>
+                      <p className="text-xs text-slate-400">{s.industryCategory}</p>
                     </div>
                   </div>
                 </td>
                 <td className="px-5 py-4">
-                  <span className="font-mono text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{s.id}</span>
+                  <span className="font-mono text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{s.supplierId}</span>
                 </td>
-                <td className="px-5 py-4 text-slate-600">{s.category}</td>
+                <td className="px-5 py-4 text-slate-600">{s.industryCategory}</td>
                 <td className="px-5 py-4">
-                  <p className="font-medium text-slate-800">{s.contact.name}</p>
-                  <p className="text-xs text-slate-400">{s.contact.email}</p>
+                  {s.contacts?.[0] ? (
+                    <>
+                      <p className="font-medium text-slate-800">{s.contacts[0].name}</p>
+                      <p className="text-xs text-slate-400">{s.contacts[0].email}</p>
+                    </>
+                  ) : (
+                    <span className="text-xs text-slate-400">—</span>
+                  )}
                 </td>
-                <td className="px-5 py-4 text-slate-600 whitespace-nowrap">{s.phone}</td>
-                <td className="px-5 py-4"><StarRating value={s.rating} /></td>
+                <td className="px-5 py-4 text-slate-600 whitespace-nowrap">{s.contacts?.[0]?.phone ?? '—'}</td>
+                <td className="px-5 py-4"><StarRating value={s.rating ?? 0} /></td>
                 <td className="px-5 py-4"><StatusBadge status={s.status} /></td>
               </tr>
             )) : (
@@ -187,7 +226,7 @@ const AllSuppliers = ({ onAddSupplier, onViewProfile }) => {
 
       {/* Pagination */}
       <div className="flex items-center justify-between text-sm text-slate-500">
-        <span>Showing {Math.min((page - 1) * ITEMS_PER_PAGE + 1, filtered.length)}–{Math.min(page * ITEMS_PER_PAGE, filtered.length)} of {filtered.length} suppliers</span>
+        <span>Showing {((page - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(page * ITEMS_PER_PAGE, stats.total)} of {stats.total} suppliers</span>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}

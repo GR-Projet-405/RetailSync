@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Download, Calendar, Star } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import {
   PERFORMANCE_TREND, MONTHLY_SPEND, SUPPLIER_RANKING, CAPABILITY_RADAR
 } from './data/mockData';
+import { getSuppliers, getSupplierStats } from '../../services/supplierService';
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
 const KpiCard = ({ icon: Icon, iconBg, value, label, change, positive }) => (
@@ -194,9 +195,61 @@ const SupplierRanking = ({ data }) => (
   </div>
 );
 
-// ─── Performance Page ─────────────────────────────────────────────────────────
+// ─── Performance Page ──────────────────────────────────────────────────────────────────────────────────────────
 const Performance = () => {
   const [quarter, setQuarter] = useState('Q2 2026');
+  const [kpis, setKpis] = useState(null);
+  const [ranking, setRanking] = useState(SUPPLIER_RANKING);
+  const [loadingKpis, setLoadingKpis] = useState(true);
+
+  useEffect(() => {
+    const loadKpis = async () => {
+      setLoadingKpis(true);
+      try {
+        const [statsRes, listRes] = await Promise.all([
+          getSupplierStats(),
+          getSuppliers({ limit: 100 }),
+        ]);
+        const suppliers = listRes.suppliers ?? [];
+        const active = suppliers.filter(s => s.performance);
+        const avg = (key) =>
+          active.length > 0
+            ? (active.reduce((sum, s) => sum + (s.performance?.[key] ?? 0), 0) / active.length).toFixed(1)
+            : '0.0';
+        setKpis({
+          onTimeDelivery: avg('onTimeDelivery'),
+          qualityScore: avg('qualityScore'),
+          defectRate: avg('defectRate'),
+          totalSpendYTD: statsRes.data?.totalSpendYTD ?? 0,
+        });
+        // Build live ranking from API data
+        const sorted = [...suppliers]
+          .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
+          .slice(0, 5)
+          .map((s, i) => ({
+            rank: i + 1,
+            name: s.name,
+            rating: s.rating ?? 0,
+            score: Math.round(
+              ((s.performance?.onTimeDelivery ?? 0) * 0.4 +
+               (s.performance?.qualityScore ?? 0) * 0.4 +
+               (100 - (s.performance?.defectRate ?? 0) * 10) * 0.2)
+            ),
+          }));
+        if (sorted.length > 0) setRanking(sorted);
+      } catch {
+        // silently fall back to mock data if API fails
+      } finally {
+        setLoadingKpis(false);
+      }
+    };
+    loadKpis();
+  }, []);
+
+  const fmt = (v) => v ?? '—';
+  const spendLabel = kpis?.totalSpendYTD
+    ? `$${(kpis.totalSpendYTD / 1_000_000).toFixed(1)}M`
+    : '—';
 
   return (
     <div className="space-y-5 fade-up">
@@ -223,33 +276,33 @@ const Performance = () => {
         <KpiCard
           icon={() => <svg className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8l4-4m0 0l-4 0m4 0v4"/></svg>}
           iconBg="bg-blue-50"
-          value="96.4%"
+          value={loadingKpis ? '—' : `${fmt(kpis?.onTimeDelivery)}%`}
           label="Avg. On-Time Delivery"
-          change="+2.1%"
+          change="live"
           positive
         />
         <KpiCard
           icon={() => <svg className="w-5 h-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}
           iconBg="bg-emerald-50"
-          value="93.7%"
+          value={loadingKpis ? '—' : `${fmt(kpis?.qualityScore)}%`}
           label="Avg. Quality Score"
-          change="+1.4%"
+          change="live"
           positive
         />
         <KpiCard
           icon={() => <svg className="w-5 h-5 text-violet-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
           iconBg="bg-violet-50"
-          value="$12.4M"
+          value={loadingKpis ? '—' : spendLabel}
           label="Total Spend YTD"
-          change="+8.3%"
+          change="live"
           positive
         />
         <KpiCard
           icon={() => <svg className="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>}
           iconBg="bg-red-50"
-          value="0.9%"
-          label="Defect Rate"
-          change="-0.3%"
+          value={loadingKpis ? '—' : `${fmt(kpis?.defectRate)}%`}
+          label="Avg. Defect Rate"
+          change="live"
           positive
         />
       </div>
@@ -267,7 +320,7 @@ const Performance = () => {
         <div className="lg:col-span-2">
           <SpendChart data={MONTHLY_SPEND} />
         </div>
-        <SupplierRanking data={SUPPLIER_RANKING} />
+        <SupplierRanking data={ranking} />
       </div>
     </div>
   );

@@ -5,7 +5,6 @@ import {
   Edit, Building2, Clock, AlertCircle, Package
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { CONTACTS_BY_SUPPLIER, COMMUNICATION_HISTORY, RECENT_ORDERS } from './data/mockData';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
@@ -72,9 +71,12 @@ const activityIconMap = {
   system: { Icon: CheckCircle, cls: 'bg-slate-100 text-slate-400' },
 };
 
-// ─── Supplier Profile Page ────────────────────────────────────────────────────
+// ─── Supplier Profile Page ───────────────────────────────────────────────────────────────────
 const SupplierProfile = ({ supplier, onBack, onGoToContacts, onGoToPerformance }) => {
-  const contacts = CONTACTS_BY_SUPPLIER[supplier.id] ?? [];
+  // Use contacts embedded in supplier document from the API
+  const contacts = supplier?.contacts ?? [];
+  const primaryContact = contacts.find(c => c.isPrimary) ?? contacts[0];
+  const recentDocs = supplier?.documents ?? [];
 
   return (
     <div className="space-y-5 fade-up">
@@ -96,7 +98,7 @@ const SupplierProfile = ({ supplier, onBack, onGoToContacts, onGoToPerformance }
               <StatusBadge status={supplier.status} />
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              {supplier.id} · <span className="text-amber-500 font-semibold">★ {supplier.rating.toFixed(1)}</span> · <span className="text-slate-500">New Member</span>
+              {supplier.supplierId} · <span className="text-amber-500 font-semibold">★ {(supplier.rating ?? 0).toFixed(1)}</span> · <span className="text-slate-500">New Member</span>
             </p>
           </div>
         </div>
@@ -133,21 +135,21 @@ const SupplierProfile = ({ supplier, onBack, onGoToContacts, onGoToPerformance }
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">Primary Contact</p>
-                  <p className="text-sm font-semibold text-slate-800">{supplier.contact.name}</p>
-                  <p className="text-xs text-slate-500">Account Manager</p>
+                  <p className="text-sm font-semibold text-slate-800">{primaryContact?.name ?? '—'}</p>
+                  <p className="text-xs text-slate-500">{primaryContact?.role ?? 'Contact'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
                   <Mail className="w-3.5 h-3.5 text-slate-400" />
                 </div>
-                <a href={`mailto:${supplier.contact.email}`} className="text-sm text-blue-600 hover:underline">{supplier.contact.email}</a>
+                <a href={`mailto:${primaryContact?.email}`} className="text-sm text-blue-600 hover:underline">{primaryContact?.email ?? '—'}</a>
               </div>
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
                   <Phone className="w-3.5 h-3.5 text-slate-400" />
                 </div>
-                <span className="text-sm text-slate-700">{supplier.phone}</span>
+                <span className="text-sm text-slate-700">{primaryContact?.phone ?? '—'}</span>
               </div>
               {supplier.website && (
                 <div className="flex items-center gap-2.5">
@@ -167,10 +169,10 @@ const SupplierProfile = ({ supplier, onBack, onGoToContacts, onGoToPerformance }
               <div className="flex items-start gap-2">
                 <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
                 <div className="space-y-0.5">
-                  <p>{supplier.address.street}</p>
-                  <p>{supplier.address.city}, {supplier.address.state} {supplier.address.zip}</p>
-                  <p className="text-slate-500">{supplier.address.country}</p>
-                  <p className="text-xs text-slate-400 pt-1 font-mono">Tax ID: {supplier.address.taxId}</p>
+                  <p>{supplier.address?.street ?? '—'}</p>
+                  <p>{supplier.address?.city ?? ''}{supplier.address?.city && supplier.address?.state ? ', ' : ''}{supplier.address?.state ?? ''} {supplier.address?.zip ?? ''}</p>
+                  <p className="text-slate-500">{supplier.address?.country ?? '—'}</p>
+                  <p className="text-xs text-slate-400 pt-1 font-mono">Tax ID: {supplier.address?.taxId ?? supplier.compliance?.taxId ?? '—'}</p>
                 </div>
               </div>
             </div>
@@ -180,30 +182,30 @@ const SupplierProfile = ({ supplier, onBack, onGoToContacts, onGoToPerformance }
           <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.04)] p-5">
             <h3 className="text-sm font-semibold text-slate-900 mb-3">Payment Information</h3>
             <div>
-              <InfoRow label="Payment Terms" value={supplier.payment.terms} />
-              <InfoRow label="Currency" value={supplier.payment.currency} />
-              <InfoRow label="Bank" value={supplier.payment.bank} />
-              <InfoRow label="Account" value={supplier.payment.account} />
-              <InfoRow label="YTD Spend" value={supplier.payment.ytdSpend} />
+              <InfoRow label="Payment Terms" value={supplier.payment?.terms ?? '—'} />
+              <InfoRow label="Currency" value={supplier.payment?.currency ?? '—'} />
+              <InfoRow label="Bank" value={supplier.payment?.bankName ?? '—'} />
+              <InfoRow label="Account Holder" value={supplier.payment?.accountHolder ?? '—'} />
+              <InfoRow label="YTD Spend" value={supplier.performance?.ytdSpend != null ? `$${supplier.performance.ytdSpend.toLocaleString()}` : '—'} />
             </div>
           </div>
 
           {/* Documents */}
-          {supplier.documents.length > 0 && (
+          {recentDocs.length > 0 && (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.04)] p-5">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-slate-900">Documents</h3>
                 <button className="text-xs text-blue-600 font-medium hover:underline">Upload</button>
               </div>
               <div className="space-y-2">
-                {supplier.documents.map((doc, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors">
+                {recentDocs.map((doc, i) => (
+                  <div key={doc._id ?? i} className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors">
                     <div className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
                       <FileText className="w-3.5 h-3.5 text-red-400" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-slate-800 truncate">{doc.name}</p>
-                      <p className="text-xs text-slate-400">{doc.date}</p>
+                      <p className="text-xs text-slate-400">{doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</p>
                     </div>
                   </div>
                 ))}
@@ -211,24 +213,11 @@ const SupplierProfile = ({ supplier, onBack, onGoToContacts, onGoToPerformance }
             </div>
           )}
 
-          {/* Activity */}
+          {/* Activity — no dedicated backend endpoint yet; shows placeholder */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.04)] p-5">
             <h3 className="text-sm font-semibold text-slate-900 mb-3">Activity</h3>
             <div className="space-y-3">
-              {COMMUNICATION_HISTORY.slice(0, 4).map(a => {
-                const { Icon, cls } = activityIconMap[a.type] ?? activityIconMap.system;
-                return (
-                  <div key={a.id} className="flex items-start gap-2.5">
-                    <div className={cn('w-6 h-6 rounded-full flex items-center justify-center shrink-0', cls)}>
-                      <Icon className="w-3 h-3" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-slate-700 leading-snug">{a.text}</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">{a.time} · {a.user}</p>
-                    </div>
-                  </div>
-                );
-              })}
+              <p className="text-xs text-slate-400 text-center py-4">No recent activity recorded.</p>
             </div>
           </div>
         </div>
@@ -248,10 +237,10 @@ const SupplierProfile = ({ supplier, onBack, onGoToContacts, onGoToPerformance }
             </div>
             {/* Metric Cards */}
             <div className="grid grid-cols-4 gap-3 mb-5">
-              <MetricCard label="On-Time Delivery" value={`${supplier.performance.onTimeDelivery}%`} />
-              <MetricCard label="Quality Score" value={`${supplier.performance.qualityScore}%`} />
-              <MetricCard label="Response Time" value={`${supplier.performance.responseTime}`} suffix="hrs" />
-              <MetricCard label="Defect Rate" value={`${supplier.performance.defectRate}%`} />
+              <MetricCard label="On-Time Delivery" value={`${supplier.performance?.onTimeDelivery ?? 0}%`} />
+              <MetricCard label="Quality Score" value={`${supplier.performance?.qualityScore ?? 0}%`} />
+              <MetricCard label="Response Time" value={`${supplier.performance?.responseTime ?? 0}`} suffix="hrs" />
+              <MetricCard label="Defect Rate" value={`${supplier.performance?.defectRate ?? 0}%`} />
             </div>
             {/* Mini chart */}
             <div className="bg-slate-50 rounded-xl p-4">
@@ -276,15 +265,9 @@ const SupplierProfile = ({ supplier, onBack, onGoToContacts, onGoToPerformance }
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {RECENT_ORDERS.map(o => (
-                  <tr key={o.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-3 font-semibold text-blue-600">{o.id}</td>
-                    <td className="py-3 text-slate-600">{o.date}</td>
-                    <td className="py-3 text-slate-600">{o.items} items</td>
-                    <td className="py-3 font-semibold text-slate-800">{o.amount}</td>
-                    <td className="py-3"><OrderStatusBadge status={o.status} /></td>
-                  </tr>
-                ))}
+                <tr>
+                  <td colSpan={5} className="py-6 text-center text-xs text-slate-400">No orders linked yet.</td>
+                </tr>
               </tbody>
             </table>
           </div>

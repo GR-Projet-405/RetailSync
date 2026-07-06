@@ -6,6 +6,7 @@ import ContactDetails from './steps/ContactDetails';
 import BankingInfo from './steps/BankingInfo';
 import TaxCompliance from './steps/TaxCompliance';
 import Documents from './steps/Documents';
+import { createSupplier } from '../../services/supplierService';
 
 // ─── Step Configuration ───────────────────────────────────────────────────────
 const STEPS = [
@@ -76,6 +77,8 @@ const AddSupplier = ({ onCancel, onComplete }) => {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState(INITIAL_FORM);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   const updateForm = (updates) => setFormData(prev => ({ ...prev, ...updates }));
 
@@ -87,8 +90,74 @@ const AddSupplier = ({ onCancel, onComplete }) => {
     if (step > 1) setStep(s => s - 1);
   };
 
-  const handleSubmit = () => {
-    setSubmitted(true);
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      // Map multi-step form data to MongoDB schema
+      const payload = {
+        name: formData.companyName,
+        businessType: formData.businessType,
+        industryCategory: formData.industryCategory,
+        registrationNumber: formData.registrationNumber,
+        country: formData.country,
+        yearEstablished: formData.yearEstablished ? parseInt(formData.yearEstablished, 10) : undefined,
+        employees: formData.employees,
+        revenue: formData.revenue,
+        description: formData.description,
+        website: formData.website,
+        linkedin: formData.linkedin,
+        preferredComm: formData.preferredComm,
+        // Primary contact embedded in contacts[]
+        contacts: [
+          {
+            name: formData.primaryName,
+            role: formData.primaryTitle,
+            email: formData.primaryEmail,
+            phone: formData.primaryPhone,
+            isPrimary: true,
+            tags: ['Primary'],
+          },
+          ...(formData.secondaryName ? [{
+            name: formData.secondaryName,
+            email: formData.secondaryEmail,
+            phone: formData.secondaryPhone,
+            isPrimary: false,
+            tags: [],
+          }] : []),
+        ].filter(c => c.name && c.email),
+        payment: {
+          bankName: formData.bankName,
+          accountHolder: formData.accountHolder,
+          accountNumber: formData.accountNumber,
+          routingNumber: formData.routingNumber,
+          terms: formData.paymentTerms,
+          currency: formData.currency,
+          billingAddress: {
+            street: formData.billingStreet,
+            city: formData.billingCity,
+            state: formData.billingState,
+            zip: formData.billingZip,
+          },
+        },
+        compliance: {
+          taxId: formData.taxId,
+          businessReg: formData.businessReg,
+          complianceStatus: formData.complianceStatus,
+          certifications: formData.certifications,
+          insuranceProvider: formData.insuranceProvider,
+          policyNumber: formData.policyNumber,
+          policyExpiry: formData.policyExpiry || undefined,
+          coverageAmount: formData.coverageAmount,
+        },
+      };
+      await createSupplier(payload);
+      setSubmitted(true);
+    } catch (err) {
+      setSubmitError(err.message || 'Failed to register supplier. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const renderStep = () => {
@@ -158,23 +227,36 @@ const AddSupplier = ({ onCancel, onComplete }) => {
         >
           {step === 1 ? 'Cancel' : '← Back'}
         </button>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">Step {step} of {STEPS.length}</span>
-          {step < STEPS.length ? (
-            <button
-              onClick={handleNext}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors"
-            >
-              Next <ChevronRight className="w-4 h-4" />
-            </button>
-          ) : (
-            <button
-              onClick={handleSubmit}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-colors"
-            >
-              <CheckCircle className="w-4 h-4" /> Register Supplier
-            </button>
+        <div className="flex flex-col items-end gap-2">
+          {submitError && (
+            <p className="text-xs text-red-500 font-medium">{submitError}</p>
           )}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400">Step {step} of {STEPS.length}</span>
+            {step < STEPS.length ? (
+              <button
+                onClick={handleNext}
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors"
+              >
+                Next <ChevronRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 rounded-xl shadow-sm transition-colors"
+              >
+                {submitting ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/></svg>
+                    Registering...
+                  </>
+                ) : (
+                  <><CheckCircle className="w-4 h-4" /> Register Supplier</>
+                )}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
