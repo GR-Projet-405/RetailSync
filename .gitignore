@@ -37,6 +37,4 @@ eslint-cache
 .DS_Store
 Thumbs.db
 
-# Mock inventory demo files
-backend/src/modules/product-management/inventory.mock.js
-frontend/src/services/inventoryService.js
+
