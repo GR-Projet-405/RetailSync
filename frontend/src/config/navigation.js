@@ -19,10 +19,17 @@ export const NAVIGATION_GROUPS = [
         allowedRoles: Object.values(ROLES)
       },
       {
-        id: 'audit-logs',
-        name: 'Audit Logs',
-        path: '/audit-logs',
-        icon: 'FileCode2',
+        id: 'audit-dashboard',
+        name: 'Audit Dashboard',
+        path: '/audit-dashboard',
+        icon: 'BarChart3',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]
+      },
+      {
+        id: 'activity-logs',
+        name: 'Activity Logs',
+        path: '/activity-logs',
+        icon: 'FileText',
         allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]
       },
       {

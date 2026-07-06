@@ -38,6 +38,8 @@ import AIForecastingPage from '../pages/AIForecastingPage';
 import AIReorderingPage from '../pages/AIReorderingPage';
 import AIAssistantPage from '../pages/AIAssistantPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
+import AuditDashboardPage from '../pages/AuditDashboardPage';
+import ActivityLogsPage from '../pages/ActivityLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
 
 
@@ -109,6 +111,20 @@ export const AppRoutes = () => {
         <Route path="/audit-logs" element={
           <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
             <AuditLogsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Audit Dashboard */}
+        <Route path="/audit-dashboard" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
+            <AuditDashboardPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Activity Logs */}
+        <Route path="/activity-logs" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
+            <ActivityLogsPage />
           </ProtectedRoute>
         } />
 
