@@ -1,5 +1,4 @@
-import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Icons from 'lucide-react';
 import { branchApi } from '../../services/branchApi';
@@ -11,37 +10,37 @@ export const BranchForm = ({ isOpen, onClose, initialData = null }) => {
   const queryClient = useQueryClient();
   const isEditMode = !!initialData;
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({
-    defaultValues: {
-      branchName: '',
-      branchCode: '',
-      address: {
-        line1: '',
-        city: '',
-        district: '',
-        postalCode: '',
-      },
-      phone: '',
-      email: '',
-      openingDate: '',
-      status: 'ACTIVE'
-    }
+  const [formData, setFormData] = useState({
+    branchName: '',
+    branchCode: '',
+    address: {
+      line1: '',
+      city: '',
+      district: '',
+      postalCode: '',
+    },
+    phone: '',
+    email: '',
+    openingDate: '',
+    status: 'ACTIVE'
   });
+
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (isOpen) {
+      setErrors({});
       if (initialData) {
-        // Format date for input[type="date"]
         let formattedDate = '';
         if (initialData.openingDate) {
           formattedDate = new Date(initialData.openingDate).toISOString().split('T')[0];
         }
-        reset({
+        setFormData({
           ...initialData,
           openingDate: formattedDate
         });
       } else {
-        reset({
+        setFormData({
           branchName: '',
           branchCode: '',
           address: { line1: '', city: '', district: '', postalCode: '' },
@@ -52,7 +51,7 @@ export const BranchForm = ({ isOpen, onClose, initialData = null }) => {
         });
       }
     }
-  }, [isOpen, initialData, reset]);
+  }, [isOpen, initialData]);
 
   const mutation = useMutation({
     mutationFn: (data) => isEditMode ? branchApi.updateBranch(initialData._id, data) : branchApi.createBranch(data),
@@ -69,8 +68,42 @@ export const BranchForm = ({ isOpen, onClose, initialData = null }) => {
     }
   });
 
-  const onSubmit = (data) => {
-    mutation.mutate(data);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    // basic validation
+    const newErrors = {};
+    if (!formData.branchName) newErrors.branchName = 'Branch name is required';
+    if (!formData.branchCode) newErrors.branchCode = 'Branch code is required';
+    if (!formData.openingDate) newErrors.openingDate = 'Opening date is required';
+    if (!formData.phone) newErrors.phone = 'Phone number is required';
+    if (!formData.address.line1) newErrors['address.line1'] = 'Street address is required';
+    if (!formData.address.city) newErrors['address.city'] = 'City is required';
+    if (!formData.address.district) newErrors['address.district'] = 'Province is required';
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    
+    mutation.mutate(formData);
+  };
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    
+    if (name.startsWith('address.')) {
+      const field = name.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        address: { ...prev.address, [field]: value }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? (checked ? 'ACTIVE' : 'INACTIVE') : value
+      }));
+    }
   };
 
   return (
@@ -95,52 +128,62 @@ export const BranchForm = ({ isOpen, onClose, initialData = null }) => {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Branch Name *</label>
                 <input 
                   type="text" 
+                  name="branchName"
                   className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500" 
                   placeholder="e.g. Colombo Central"
-                  {...register('branchName', { required: 'Branch name is required' })}
+                  value={formData.branchName || ''}
+                  onChange={handleChange}
                 />
-                {errors.branchName && <p className="text-red-500 text-xs mt-1">{errors.branchName.message}</p>}
+                {errors.branchName && <p className="text-red-500 text-xs mt-1">{errors.branchName}</p>}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Branch Code *</label>
                 <input 
                   type="text" 
+                  name="branchCode"
                   className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 uppercase" 
                   placeholder="e.g. BR001"
-                  {...register('branchCode', { required: 'Branch code is required' })}
+                  value={formData.branchCode || ''}
+                  onChange={handleChange}
                 />
-                {errors.branchCode && <p className="text-red-500 text-xs mt-1">{errors.branchCode.message}</p>}
+                {errors.branchCode && <p className="text-red-500 text-xs mt-1">{errors.branchCode}</p>}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Opening Date *</label>
                 <input 
                   type="date" 
+                  name="openingDate"
                   className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500" 
-                  {...register('openingDate', { required: 'Opening date is required' })}
+                  value={formData.openingDate || ''}
+                  onChange={handleChange}
                 />
-                {errors.openingDate && <p className="text-red-500 text-xs mt-1">{errors.openingDate.message}</p>}
+                {errors.openingDate && <p className="text-red-500 text-xs mt-1">{errors.openingDate}</p>}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number *</label>
                 <input 
                   type="text" 
+                  name="phone"
                   className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500" 
                   placeholder="+94 77 XXX XXXX"
-                  {...register('phone', { required: 'Phone number is required' })}
+                  value={formData.phone || ''}
+                  onChange={handleChange}
                 />
-                {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
+                {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
                 <input 
                   type="email" 
+                  name="email"
                   className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500" 
                   placeholder="manager@retailsync.lk"
-                  {...register('email')}
+                  value={formData.email || ''}
+                  onChange={handleChange}
                 />
               </div>
             </div>
@@ -158,11 +201,13 @@ export const BranchForm = ({ isOpen, onClose, initialData = null }) => {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Street Address *</label>
                 <input 
                   type="text" 
+                  name="address.line1"
                   className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500" 
                   placeholder="No. 42, Galle Road"
-                  {...register('address.line1', { required: 'Street address is required' })}
+                  value={formData.address.line1 || ''}
+                  onChange={handleChange}
                 />
-                {errors.address?.line1 && <p className="text-red-500 text-xs mt-1">{errors.address.line1.message}</p>}
+                {errors['address.line1'] && <p className="text-red-500 text-xs mt-1">{errors['address.line1']}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -170,21 +215,25 @@ export const BranchForm = ({ isOpen, onClose, initialData = null }) => {
                   <label className="block text-sm font-medium text-slate-700 mb-1">City *</label>
                   <input 
                     type="text" 
+                    name="address.city"
                     className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500" 
                     placeholder="Colombo"
-                    {...register('address.city', { required: 'City is required' })}
+                    value={formData.address.city || ''}
+                    onChange={handleChange}
                   />
-                  {errors.address?.city && <p className="text-red-500 text-xs mt-1">{errors.address.city.message}</p>}
+                  {errors['address.city'] && <p className="text-red-500 text-xs mt-1">{errors['address.city']}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Province *</label>
                   <input 
                     type="text" 
+                    name="address.district"
                     className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500" 
                     placeholder="Western"
-                    {...register('address.district', { required: 'Province is required' })}
+                    value={formData.address.district || ''}
+                    onChange={handleChange}
                   />
-                  {errors.address?.district && <p className="text-red-500 text-xs mt-1">{errors.address.district.message}</p>}
+                  {errors['address.district'] && <p className="text-red-500 text-xs mt-1">{errors['address.district']}</p>}
                 </div>
               </div>
 
@@ -193,9 +242,11 @@ export const BranchForm = ({ isOpen, onClose, initialData = null }) => {
                   <label className="block text-sm font-medium text-slate-700 mb-1">Postal Code</label>
                   <input 
                     type="text" 
+                    name="address.postalCode"
                     className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500" 
                     placeholder="e.g. 00300"
-                    {...register('address.postalCode')}
+                    value={formData.address.postalCode || ''}
+                    onChange={handleChange}
                   />
                 </div>
               </div>
@@ -207,7 +258,13 @@ export const BranchForm = ({ isOpen, onClose, initialData = null }) => {
                     <p className="text-xs text-slate-500">Mark this branch as operational and visible</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" {...register('status')} />
+                    <input 
+                      type="checkbox" 
+                      name="status"
+                      className="sr-only peer" 
+                      checked={formData.status === 'ACTIVE'}
+                      onChange={handleChange} 
+                    />
                     <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                   </label>
                 </div>
