@@ -13,6 +13,7 @@ import Button from '../../components/Button';
 import Badge from '../../components/Badge';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import api from '../../services/api';
 
 // Base mock promotions data
 const INITIAL_PROMOTIONS = [
@@ -44,9 +45,56 @@ export default function PromotionsDiscountsPage() {
   const isAdmin = hasRole('ADMIN') || hasRole('SUPER_ADMIN');
   const navigate = useNavigate();
 
-  const [promotions, setPromotions] = useState(INITIAL_PROMOTIONS);
+  const [promotions, setPromotions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
   const [selectedBranch, setSelectedBranch] = useState('All Branches');
   const [dateRange, setDateRange] = useState({ label: '01 Jun 2026 - 14 Jun 2026', value: 'custom_june' });
+
+  const fetchPromotions = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get('/promotions-discounts', {
+        timeout: 45000 // 45s custom timeout to accommodate cold starts / latency of remote Atlas connection
+      });
+      const fetchedData = response.data?.data?.promotions || [];
+      const mappedData = fetchedData.map(promo => {
+        const startD = promo.startDate ? new Date(promo.startDate) : null;
+        const endD = promo.endDate ? new Date(promo.endDate) : null;
+        
+        const formatTime = (d) => {
+          if (!d) return '08:00';
+          const h = String(d.getHours()).padStart(2, '0');
+          const m = String(d.getMinutes()).padStart(2, '0');
+          return `${h}:${m}`;
+        };
+
+        return {
+          ...promo,
+          id: promo._id,
+          branch: promo.branchId ? promo.branchId.name : 'All Branches',
+          orders: promo.ordersCount || 0,
+          usage: promo.usagesCount || 0,
+          startDate: startD ? startD.toISOString().split('T')[0] : '',
+          startTime: formatTime(startD),
+          endDate: endD ? endD.toISOString().split('T')[0] : '',
+          endTime: formatTime(endD),
+        };
+      });
+      setPromotions(mappedData);
+    } catch (err) {
+      console.error('Failed to fetch promotions:', err);
+      setError(err.message || 'Failed to fetch promotions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchPromotions();
+  }, []);
 
   React.useEffect(() => {
     if (isBranchManager) {
@@ -60,6 +108,8 @@ export default function PromotionsDiscountsPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isAIInsightsModalOpen, setIsAIInsightsModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [successMode, setSuccessMode] = useState('create'); // 'create' or 'update'
+  const [submitError, setSubmitError] = useState(null);
   
   const [currentPromo, setCurrentPromo] = useState(null);
   const [editMode, setEditMode] = useState(false);
@@ -86,9 +136,9 @@ export default function PromotionsDiscountsPage() {
     status: 'Draft',
     branch: 'All Branches',
     startDate: '',
-    startTime: '08:00 AM',
+    startTime: '08:00',
     endDate: '',
-    endTime: '11:00 PM',
+    endTime: '23:00',
     minOrderValue: '',
     maxUses: '',
     description: '',
@@ -98,9 +148,53 @@ export default function PromotionsDiscountsPage() {
   const branchesList = ['All Branches', 'Downtown Flagship', 'North Branch', 'South Branch'];
 
   // Handle branch stats override
-  const stats = useMemo(() => {
-    return BRANCH_STATS[selectedBranch] || BRANCH_STATS['All Branches'];
-  }, [selectedBranch]);
+  const [stats, setStats] = useState({
+    active: 0,
+    coupons: 0,
+    revenue: 0,
+    orders: 0
+  });
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsError, setStatsError] = useState(null);
+
+  const fetchStats = async (branchId) => {
+    setStatsLoading(true);
+    setStatsError(null);
+    try {
+      const response = await api.get('/promotions-discounts/stats', {
+        params: { branchId },
+        timeout: 45000 // 45s custom timeout to accommodate cold starts / latency of remote Atlas connection
+      });
+      const data = response.data?.data || {};
+      setStats({
+        active: data.activePromotions || 0,
+        coupons: data.totalCouponUsed || 0,
+        revenue: data.revenueGenerated || 0,
+        orders: data.ordersInfluenced || 0
+      });
+    } catch (err) {
+      console.error('Failed to fetch statistics:', err);
+      setStatsError(err.message || 'Failed to fetch statistics');
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    // Dynamic mapping of branch name strings to database ObjectIds
+    const map = {};
+    if (user?.branchId) {
+      map[user.branchId.name] = user.branchId._id;
+    }
+    promotions.forEach(p => {
+      if (p.branchId) {
+        map[p.branchId.name] = p.branchId._id;
+      }
+    });
+
+    const targetBranchId = selectedBranch === 'All Branches' ? undefined : map[selectedBranch];
+    fetchStats(targetBranchId);
+  }, [selectedBranch, promotions, user]);
 
   // Filter promotions by branch selection
   const filteredPromotions = useMemo(() => {
@@ -120,6 +214,8 @@ export default function PromotionsDiscountsPage() {
 
   // Open form view for creating promotion
   const handleCreateOpen = () => {
+    setSubmitError(null);
+    setSuccessMode('create');
     setEditMode(false);
     setFormData({
       name: '',
@@ -131,10 +227,10 @@ export default function PromotionsDiscountsPage() {
       roi: '2.5x',
       status: 'Draft',
       branch: selectedBranch === 'All Branches' ? 'All Branches' : selectedBranch,
-      startDate: '01 Jun 2026',
-      startTime: '08:00 AM',
-      endDate: '20 Jun 2026',
-      endTime: '11:00 PM',
+      startDate: '2026-06-01',
+      startTime: '08:00',
+      endDate: '2026-06-20',
+      endTime: '23:00',
       minOrderValue: 'Rs. 500',
       maxUses: '1000',
       description: '',
@@ -145,14 +241,16 @@ export default function PromotionsDiscountsPage() {
 
   // Open form view for editing promotion
   const handleEditOpen = (promo) => {
+    setSubmitError(null);
+    setSuccessMode('update');
     setEditMode(true);
     setCurrentPromo(promo);
     setFormData({ 
       ...promo,
-      minOrderValue: promo.minOrderValue || 'Rs. 500',
-      maxUses: promo.maxUses || '1000',
-      startTime: promo.startTime || '08:00 AM',
-      endTime: promo.endTime || '11:00 PM',
+      minOrderValue: promo.minOrderValue !== undefined && promo.minOrderValue !== null ? `Rs. ${promo.minOrderValue}` : 'Rs. 500',
+      maxUses: promo.maxUses !== null && promo.maxUses !== undefined ? promo.maxUses.toString() : '',
+      startTime: promo.startTime || '08:00',
+      endTime: promo.endTime || '23:00',
       categories: promo.categories || ['All categories', 'Beverages']
     });
     setIsFormOpen(true);
@@ -165,9 +263,19 @@ export default function PromotionsDiscountsPage() {
   };
 
   // Handle Delete Promotion
-  const handleDeletePromo = (id) => {
+  const handleDeletePromo = async (id) => {
     if (window.confirm("Are you sure you want to delete this promotion?")) {
-      setPromotions(promotions.filter(p => p.id !== id));
+      try {
+        setLoading(true);
+        await api.delete(`/promotions-discounts/${id}`);
+        alert("Promotion deleted successfully");
+        await fetchPromotions();
+      } catch (err) {
+        console.error('Failed to delete promotion:', err);
+        alert(err.message || 'Failed to delete promotion');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -193,49 +301,187 @@ export default function PromotionsDiscountsPage() {
     setFormData({ ...formData, categories: updatedCats });
   };
 
+  const validateForm = () => {
+    const errors = {};
+    
+    // Name validation
+    if (!formData.name.trim()) {
+      errors.name = 'Promotion name is required';
+    } else if (formData.name.trim().length < 3) {
+      errors.name = 'Promotion name must be at least 3 characters';
+    }
+
+    // Discount value validation
+    const discountVal = parseFloat(formData.discount.toString().replace(/[^0-9.]/g, ''));
+    if (!formData.discount) {
+      errors.discount = 'Discount value is required';
+    } else if (isNaN(discountVal) || discountVal <= 0) {
+      errors.discount = 'Discount value must be a positive number';
+    } else if (formData.type === 'Percentage' && discountVal > 100) {
+      errors.discount = 'Percentage discount cannot exceed 100%';
+    }
+
+    // Date range validation
+    if (!formData.startDate) {
+      errors.startDate = 'Start date is required';
+    } else if (!editMode) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const start = new Date(formData.startDate);
+      if (start < today) {
+        errors.startDate = 'Start date cannot be in the past';
+      }
+    }
+    if (!formData.endDate) {
+      errors.endDate = 'End date is required';
+    }
+
+    if (formData.startDate && formData.endDate) {
+      const start = new Date(`${formData.startDate}T${formData.startTime || '00:00'}`);
+      const end = new Date(`${formData.endDate}T${formData.endTime || '00:00'}`);
+      if (end <= start) {
+        errors.endDate = 'End date/time must be after the start date/time';
+      }
+    }
+
+    // Min Order Value validation
+    if (formData.minOrderValue) {
+      const cleanMin = parseFloat(formData.minOrderValue.toString().replace(/[^0-9.]/g, ''));
+      if (isNaN(cleanMin) || cleanMin < 0) {
+        errors.minOrderValue = 'Minimum order value must be a non-negative number';
+      }
+    }
+
+    // Max Uses validation
+    if (formData.maxUses) {
+      const cleanMax = parseInt(formData.maxUses.toString().replace(/[^0-9]/g, ''), 10);
+      if (isNaN(cleanMax) || cleanMax <= 0) {
+        errors.maxUses = 'Maximum uses must be a positive integer';
+      }
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   // Handle Form Submission
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.discount) {
-      alert("Please fill in the required fields");
+    if (!validateForm()) {
       return;
     }
 
-    let finalPromo = null;
+    // Build branch name string to ObjectId lookup map
+    const map = {};
+    if (user?.branchId) {
+      map[user.branchId.name] = user.branchId._id;
+    }
+    promotions.forEach(p => {
+      if (p.branchId) {
+        map[p.branchId.name] = p.branchId._id;
+      }
+    });
 
-    if (editMode) {
-      finalPromo = { ...formData, id: currentPromo.id };
-      setPromotions(promotions.map(p => p.id === currentPromo.id ? finalPromo : p));
-      setIsFormOpen(false);
-    } else {
-      // Create mode
-      finalPromo = {
-        ...formData,
-        id: promotions.length > 0 ? Math.max(...promotions.map(p => p.id)) + 1 : 1,
-        revenue: Math.floor(Math.random() * 120000) + 15000,
-        orders: Math.floor(Math.random() * 320) + 40,
-        usage: Math.floor(Math.random() * 200) + 10,
-        roi: `${(Math.random() * 1.5 + 1.8).toFixed(1)}x`,
-      };
-      setPromotions([finalPromo, ...promotions]);
+    const targetBranchId = formData.branch === 'All Branches' ? null : map[formData.branch];
 
-      // Generate coupon code algorithm: e.g. "Summer Sale" -> "SUMMER20"
-      const discountNumeric = formData.discount.replace(/[^0-9]/g, '') || '20';
-      const cleanName = formData.name.toUpperCase().replace(/[^A-Z0-9]/g, '');
-      const codePrefix = cleanName.substring(0, Math.min(cleanName.length, 6)) || 'PROMO';
-      const generatedCoupon = `${codePrefix}${discountNumeric}`;
+    // Clean and validate numeric types
+    const cleanMinOrderValue = Number(formData.minOrderValue.toString().replace(/[^0-9]/g, '')) || 0;
+    const cleanMaxUses = formData.maxUses ? Number(formData.maxUses.toString().replace(/[^0-9]/g, '')) : null;
 
-      setSuccessDetails({
-        name: formData.name,
-        couponCode: generatedCoupon,
-        discount: formData.discount,
-        validity: `${formData.startDate} - ${formData.endDate}`,
-        branch: formData.branch,
-        rawPromo: finalPromo
-      });
-      
-      setIsFormOpen(false);
-      setIsSuccessModalOpen(true); // Open the requested success screen dialog!
+    // Combine dates and times into Mongoose Dates
+    let startDateTime = new Date(formData.startDate);
+    if (formData.startTime) {
+      startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
+    }
+    let endDateTime = new Date(formData.endDate);
+    if (formData.endTime) {
+      endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
+    }
+
+    // Format standard backend payload (omit categories strings to bypass CastError validations)
+    const payload = {
+      ...formData,
+      branchId: targetBranchId,
+      minOrderValue: cleanMinOrderValue,
+      maxUses: cleanMaxUses,
+      startDate: startDateTime,
+      endDate: endDateTime,
+      categories: [],
+    };
+
+    try {
+      setLoading(true);
+      setSubmitError(null);
+      if (editMode) {
+        // Update mode
+        const response = await api.put(`/promotions-discounts/${currentPromo.id}`, payload);
+        const updatedPromo = { ...response.data.data, id: response.data.data._id };
+        const mappedUpdated = {
+          ...updatedPromo,
+          branch: updatedPromo.branchId ? updatedPromo.branchId.name : 'All Branches',
+          orders: updatedPromo.ordersCount || 0,
+          usage: updatedPromo.usagesCount || 0
+        };
+        setPromotions(promotions.map(p => p.id === currentPromo.id ? mappedUpdated : p));
+        
+        // Setup success details for update
+        setSuccessDetails({
+          name: formData.name,
+          couponCode: currentPromo.couponCode || 'N/A',
+          discount: formData.discount,
+          validity: `${formData.startDate} - ${formData.endDate}`,
+          branch: formData.branch,
+          rawPromo: mappedUpdated
+        });
+        setSuccessMode('update');
+        setIsFormOpen(false);
+        setIsSuccessModalOpen(true);
+      } else {
+        // Create mode
+        const createPayload = {
+          ...payload,
+          revenue: Math.floor(Math.random() * 120000) + 15000,
+          ordersCount: Math.floor(Math.random() * 320) + 40,
+          usagesCount: Math.floor(Math.random() * 200) + 10,
+          roi: `${(Math.random() * 1.5 + 1.8).toFixed(1)}x`,
+        };
+        const response = await api.post('/promotions-discounts', createPayload);
+        const createdPromo = { ...response.data.data, id: response.data.data._id };
+        const mappedCreated = {
+          ...createdPromo,
+          branch: createdPromo.branchId ? createdPromo.branchId.name : 'All Branches',
+          orders: createdPromo.ordersCount || 0,
+          usage: createdPromo.usagesCount || 0
+        };
+        setPromotions([mappedCreated, ...promotions]);
+
+        // Generate coupon code algorithm: e.g. "Summer Sale" -> "SUMMER20"
+        const discountNumeric = formData.discount.replace(/[^0-9]/g, '') || '20';
+        const cleanName = formData.name.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const codePrefix = cleanName.substring(0, Math.min(cleanName.length, 6)) || 'PROMO';
+        const generatedCoupon = `${codePrefix}${discountNumeric}`;
+
+        setSuccessDetails({
+          name: formData.name,
+          couponCode: generatedCoupon,
+          discount: formData.discount,
+          validity: `${formData.startDate} - ${formData.endDate}`,
+          branch: formData.branch,
+          rawPromo: mappedCreated
+        });
+        
+        setSuccessMode('create');
+        setIsFormOpen(false);
+        setIsSuccessModalOpen(true);
+      }
+
+      // Automatically refresh latest promotions from backend
+      fetchPromotions();
+    } catch (err) {
+      console.error('Failed to save promotion:', err);
+      setSubmitError(err.message || 'Failed to save promotion');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -290,6 +536,15 @@ export default function PromotionsDiscountsPage() {
           </div>
 
           <form onSubmit={handleFormSubmit} className="space-y-6">
+            {submitError && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-xs font-bold leading-relaxed flex items-center justify-between shadow-sm select-none">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-red-100 text-red-700 flex items-center justify-center font-bold text-[10px]">!</span>
+                  <span>{submitError}</span>
+                </div>
+                <button type="button" onClick={() => setSubmitError(null)} className="text-red-500 hover:text-red-800 font-extrabold text-[13px] px-2 py-1 hover:bg-red-100/50 rounded-lg transition-colors">✕</button>
+              </div>
+            )}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
               {/* Left Column (w-2/3) - Details */}
@@ -312,28 +567,23 @@ export default function PromotionsDiscountsPage() {
                         required
                         placeholder="Enter promotion name"
                         value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-slate-50/75 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none font-semibold text-slate-800 placeholder-slate-400 focus:ring-1 focus:ring-blue-500 transition-all"
+                        onChange={(e) => {
+                          setFormData({ ...formData, name: e.target.value });
+                          if (formErrors.name) setFormErrors({ ...formErrors, name: null });
+                        }}
+                        className={`w-full px-4 py-2.5 bg-slate-50/75 border rounded-xl outline-none font-semibold text-slate-800 placeholder-slate-400 focus:ring-1 transition-all ${
+                          formErrors.name 
+                            ? 'border-red-505 border-red-500 focus:border-red-500 focus:ring-red-500' 
+                            : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500'
+                        }`}
                       />
-                      <span className="text-[10px] text-slate-400 block font-medium select-none">Choose a name that describe your promotion</span>
+                      {formErrors.name ? (
+                        <span className="text-[10px] text-red-500 font-bold block mt-1">{formErrors.name}</span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 block font-medium select-none">Choose a name that describe your promotion</span>
+                      )}
                     </div>
 
-                    {/* Type */}
-                    <div className="space-y-1">
-                      <label className="block text-slate-600 font-semibold select-none">Promotion Type</label>
-                      <div className="relative">
-                        <select
-                          value={formData.type}
-                          onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                          className="w-full px-4 py-2.5 bg-slate-50/75 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none font-semibold text-slate-800 appearance-none focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer cursor-pointer"
-                        >
-                          <option value="Percentage">Percentage Discount (%)</option>
-                          <option value="Fixed Amount">Fixed Amount Discount (Rs.)</option>
-                        </select>
-                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                      </div>
-                      <span className="text-[10px] text-slate-400 block font-medium select-none">Choose the type of promotion you want to create</span>
-                    </div>
 
                     {/* Value & Discount Type */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -344,14 +594,25 @@ export default function PromotionsDiscountsPage() {
                             type="text"
                             required
                             value={formData.discount}
-                            onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
-                            className="w-full px-4 py-2.5 bg-slate-50/75 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 focus:ring-blue-500 transition-all"
+                            onChange={(e) => {
+                              setFormData({ ...formData, discount: e.target.value });
+                              if (formErrors.discount) setFormErrors({ ...formErrors, discount: null });
+                            }}
+                            className={`w-full px-4 py-2.5 bg-slate-50/75 border rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 transition-all ${
+                              formErrors.discount 
+                                ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                                : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500'
+                            }`}
                           />
                           <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 font-sans">
                             {formData.type === 'Percentage' ? '%' : 'Rs.'}
                           </span>
                         </div>
-                        <span className="text-[10px] text-slate-400 block font-medium select-none">Set a discount value for this promotion</span>
+                        {formErrors.discount ? (
+                          <span className="text-[10px] text-red-500 font-bold block mt-1">{formErrors.discount}</span>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 block font-medium select-none">Set a discount value for this promotion</span>
+                        )}
                       </div>
 
                       <div className="space-y-1">
@@ -390,9 +651,19 @@ export default function PromotionsDiscountsPage() {
                           type="text"
                           placeholder="Rs. 500"
                           value={formData.minOrderValue}
-                          onChange={(e) => setFormData({ ...formData, minOrderValue: e.target.value })}
-                          className="w-full px-4 py-2.5 bg-slate-50/75 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 focus:ring-blue-500 transition-all"
+                          onChange={(e) => {
+                            setFormData({ ...formData, minOrderValue: e.target.value });
+                            if (formErrors.minOrderValue) setFormErrors({ ...formErrors, minOrderValue: null });
+                          }}
+                          className={`w-full px-4 py-2.5 bg-slate-50/75 border rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 transition-all ${
+                            formErrors.minOrderValue 
+                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                              : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500'
+                          }`}
                         />
+                        {formErrors.minOrderValue && (
+                          <span className="text-[10px] text-red-500 font-bold block mt-1">{formErrors.minOrderValue}</span>
+                        )}
                       </div>
 
                       <div className="space-y-1">
@@ -401,9 +672,19 @@ export default function PromotionsDiscountsPage() {
                           type="text"
                           placeholder="1000"
                           value={formData.maxUses}
-                          onChange={(e) => setFormData({ ...formData, maxUses: e.target.value })}
-                          className="w-full px-4 py-2.5 bg-slate-50/75 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 focus:ring-blue-500 transition-all"
+                          onChange={(e) => {
+                            setFormData({ ...formData, maxUses: e.target.value });
+                            if (formErrors.maxUses) setFormErrors({ ...formErrors, maxUses: null });
+                          }}
+                          className={`w-full px-4 py-2.5 bg-slate-50/75 border rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 transition-all ${
+                            formErrors.maxUses 
+                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                              : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500'
+                          }`}
                         />
+                        {formErrors.maxUses && (
+                          <span className="text-[10px] text-red-500 font-bold block mt-1">{formErrors.maxUses}</span>
+                        )}
                       </div>
                     </div>
 
@@ -462,25 +743,34 @@ export default function PromotionsDiscountsPage() {
                       <label className="block text-slate-500 select-none">Start Date</label>
                       <div className="relative">
                         <input
-                          type="text"
+                          type="date"
+                          min={editMode ? undefined : new Date().toISOString().split('T')[0]}
                           value={formData.startDate}
-                          onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                          className="w-full pl-10 pr-4 py-2.5 bg-slate-50/75 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 focus:ring-blue-500 transition-all"
-                          placeholder="01 Jun 2026"
+                          onChange={(e) => {
+                            setFormData({ ...formData, startDate: e.target.value });
+                            if (formErrors.startDate) setFormErrors({ ...formErrors, startDate: null });
+                          }}
+                          className={`w-full pl-10 pr-4 py-2.5 bg-slate-50/75 border rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 transition-all cursor-pointer ${
+                            formErrors.startDate 
+                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                              : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500'
+                          }`}
                         />
                         <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500" />
                       </div>
+                      {formErrors.startDate && (
+                        <span className="text-[10px] text-red-500 font-bold block mt-1">{formErrors.startDate}</span>
+                      )}
                     </div>
 
                     <div className="space-y-1">
                       <label className="block text-slate-500 select-none">Start Time</label>
                       <div className="relative">
                         <input
-                          type="text"
+                          type="time"
                           value={formData.startTime}
                           onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                          className="w-full pl-10 pr-4 py-2.5 bg-slate-50/75 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 focus:ring-blue-500 transition-all"
-                          placeholder="8.00 AM"
+                          className="w-full pl-10 pr-4 py-2.5 bg-slate-50/75 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer"
                         />
                         <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500" />
                       </div>
@@ -490,25 +780,33 @@ export default function PromotionsDiscountsPage() {
                       <label className="block text-slate-500 select-none">End Date</label>
                       <div className="relative">
                         <input
-                          type="text"
+                          type="date"
                           value={formData.endDate}
-                          onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                          className="w-full pl-10 pr-4 py-2.5 bg-slate-50/75 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 focus:ring-blue-500 transition-all"
-                          placeholder="20 Jun 2026"
+                          onChange={(e) => {
+                            setFormData({ ...formData, endDate: e.target.value });
+                            if (formErrors.endDate) setFormErrors({ ...formErrors, endDate: null });
+                          }}
+                          className={`w-full pl-10 pr-4 py-2.5 bg-slate-50/75 border rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 transition-all cursor-pointer ${
+                            formErrors.endDate 
+                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                              : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500'
+                          }`}
                         />
                         <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500" />
                       </div>
+                      {formErrors.endDate && (
+                        <span className="text-[10px] text-red-500 font-bold block mt-1">{formErrors.endDate}</span>
+                      )}
                     </div>
 
                     <div className="space-y-1">
                       <label className="block text-slate-500 select-none">End Time</label>
                       <div className="relative">
                         <input
-                          type="text"
+                          type="time"
                           value={formData.endTime}
                           onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                          className="w-full pl-10 pr-4 py-2.5 bg-slate-50/75 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 focus:ring-blue-500 transition-all"
-                          placeholder="11.00 PM"
+                          className="w-full pl-10 pr-4 py-2.5 bg-slate-50/75 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer"
                         />
                         <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500" />
                       </div>
@@ -647,32 +945,38 @@ export default function PromotionsDiscountsPage() {
           />
 
           {/* KPI Stat Cards */}
+          {statsError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-semibold select-none mb-4">
+              Error loading statistics: {statsError}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 select-none">
             <StatCard
               icon={Tag}
               label="Active promotions"
-              value={stats.active}
+              value={statsLoading ? '...' : stats.active}
               trend="↑ 20% vs last 7 days"
               colorVariant="blue"
             />
             <StatCard
               icon={Ticket}
               label="Total Coupon used"
-              value={stats.coupons.toLocaleString()}
+              value={statsLoading ? '...' : stats.coupons.toLocaleString()}
               trend="↑ 56% vs last 7 days"
               colorVariant="amber"
             />
             <StatCard
               icon={TrendingUp}
               label="Revenue Generated"
-              value={`Rs. ${stats.revenue.toLocaleString()}`}
+              value={statsLoading ? '...' : `Rs. ${stats.revenue.toLocaleString()}`}
               trend="↑ 22% vs last 7 days"
               colorVariant="indigo"
             />
             <StatCard
               icon={ShoppingCart}
               label="Orders Influenced"
-              value={stats.orders.toLocaleString()}
+              value={statsLoading ? '...' : stats.orders.toLocaleString()}
               trend="↑ 16% vs last 7 days"
               colorVariant="emerald"
             />
@@ -812,12 +1116,24 @@ export default function PromotionsDiscountsPage() {
               <span className="text-xs text-blue-600 hover:underline cursor-pointer font-semibold">View all promotions &gt;</span>
             </div>
 
-            <PromotionTable
-              promotions={filteredPromotions}
-              onView={handleViewOpen}
-              onEdit={handleEditOpen}
-              onDelete={handleDeletePromo}
-            />
+            {error && (
+              <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-semibold leading-relaxed">
+                {error}
+              </div>
+            )}
+
+            {loading ? (
+              <div className="text-center py-8 text-xs font-bold text-slate-400">
+                Loading promotions...
+              </div>
+            ) : (
+              <PromotionTable
+                promotions={filteredPromotions}
+                onView={handleViewOpen}
+                onEdit={handleEditOpen}
+                onDelete={handleDeletePromo}
+              />
+            )}
           </div>
         </div>
       )}
@@ -836,7 +1152,7 @@ export default function PromotionsDiscountsPage() {
           </div>
 
           <h3 className="text-lg font-black text-slate-900 mb-6">
-            Promotion Created Successfully!
+            {successMode === 'create' ? 'Promotion Created Successfully!' : 'Promotion Updated Successfully!'}
           </h3>
 
           {/* Info Details Panel */}
@@ -869,7 +1185,9 @@ export default function PromotionsDiscountsPage() {
               <Info className="w-3 h-3 stroke-[3]" />
             </div>
             <p className="flex-1">
-              This promotion will be applied automatically during checkout when the conditions are met
+              {successMode === 'create' 
+                ? 'This promotion will be applied automatically during checkout when the conditions are met' 
+                : 'The updated changes have been saved and applied to active campaigns target.'}
             </p>
           </div>
 

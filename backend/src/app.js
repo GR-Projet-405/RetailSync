@@ -27,6 +27,10 @@ app.get('/health', (req, res) => {
 require('./modules/branch-management/branch.model');
 require('./modules/role-management/role.model');
 require('./modules/user-management/user.model');
+require('./modules/promotions-discounts/promotion.model');
+require('./modules/promotions-discounts/coupon.model');
+require('./modules/promotions-discounts/discountRule.model');
+require('./modules/category-management/model');
 
 // Dynamically register routes for all 28 modular folders
 const modulesPath = path.join(__dirname, 'modules');
@@ -44,3 +48,5 @@ if (fs.existsSync(modulesPath)) {
 app.use(errorHandler);
 
 module.exports = app;
+// Trigger hot-reload for database connection state refreshing
+

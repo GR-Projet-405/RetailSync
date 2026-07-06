@@ -215,7 +215,7 @@ export default function PromotionTable({
                         {activeMenuId === promo.id && (
                           <>
                             <div className="fixed inset-0 z-10" onClick={() => setActiveMenuId(null)} />
-                            <div className="absolute right-0 mt-1 w-28 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 overflow-hidden text-xs text-left">
+                            <div className="absolute right-0 bottom-full mb-1.5 w-28 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 overflow-hidden text-xs text-left">
                               <button
                                 onClick={() => {
                                   onDelete(promo.id);
