@@ -30,7 +30,16 @@ export const NAVIGATION_GROUPS = [
         name: 'Help & Support',
         path: '/help-support',
         icon: 'HelpCircle',
-        allowedRoles: Object.values(ROLES)
+        allowedRoles: Object.values(ROLES),
+        children: [
+          {
+            id: 'faq',
+            name: 'FAQ',
+            path: '/faq',
+            icon: 'CircleHelp',
+            allowedRoles: Object.values(ROLES)
+          }
+        ]
       }
     ]
   },
