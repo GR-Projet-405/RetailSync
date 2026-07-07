@@ -16,7 +16,7 @@ import {
   Loader2,
 } from "lucide-react";
 
-/* ───────────────────────── API base ───────────────────────── */
+/* API base */
 const API_BASE = "/api/v1/purchase-orders";
 
 const TAX_RATE = 0.085;
@@ -30,8 +30,6 @@ const STEPS = [
 
 const currency = (n) =>
   `Rs. ${Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-/* ───────────────────────── Step indicator ───────────────────────── */
 
 function StepIndicator({ currentStep }) {
   return (
@@ -75,19 +73,38 @@ function StepIndicator({ currentStep }) {
   );
 }
 
-/* ───────────────────────── Step 1: Supplier Selection ───────────────────────── */
+/* Reusable thumbnail */
+function ProductThumbnail({ src, alt, size = "w-14 h-14", textSize = "text-[10px]" }) {
+  return (
+    <div
+      className={`${size} flex-shrink-0 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center`}
+    >
+      {src ? (
+        <img
+          src={src}
+          alt={alt}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.target.style.display = "none";
+          }}
+        />
+      ) : (
+        <span className={`${textSize} text-gray-400`}>No image</span>
+      )}
+    </div>
+  );
+}
 
+/* Step 1: Supplier Selection */
 function SupplierStep({ data, setData, onNext, onCancel }) {
   const [query, setQuery] = useState(data.supplier?.name || "");
   const [showDropdown, setShowDropdown] = useState(false);
   const [suppliers, setSuppliers] = useState([]);
 
-  // Keep the search box in sync if the supplier was pre-filled (edit mode)
   useEffect(() => {
     if (data.supplier?.name) setQuery(data.supplier.name);
   }, [data.supplier?.name]);
 
-  // Fetch suppliers from backend whenever the search query changes
   useEffect(() => {
     const timer = setTimeout(() => {
       fetch(`${API_BASE}/suppliers?search=${encodeURIComponent(query)}`)
@@ -141,7 +158,6 @@ function SupplierStep({ data, setData, onNext, onCancel }) {
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Left column */}
         <div className="flex flex-col gap-6">
           <div className="relative">
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
@@ -209,7 +225,6 @@ function SupplierStep({ data, setData, onNext, onCancel }) {
           </div>
         </div>
 
-        {/* Right column */}
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
           <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4">
             Supplier Information
@@ -283,14 +298,12 @@ function SupplierStep({ data, setData, onNext, onCancel }) {
   );
 }
 
-/* ───────────────────────── Step 2: Add Items ───────────────────────── */
-
+/* Step 2: Add Items */
 function AddItemsStep({ data, setData, onNext, onBack }) {
   const [search, setSearch] = useState("");
   const [catalog, setCatalog] = useState([]);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
 
-  // Fetch live catalog + stock from backend whenever search changes
   useEffect(() => {
     if (!data.supplier?._id) {
       setCatalog([]);
@@ -344,6 +357,7 @@ function AddItemsStep({ data, setData, onNext, onBack }) {
             sku: product.sku,
             name: product.name,
             price: product.unitPrice,
+            imageUrl: product.imageUrl || null,
             qty,
           },
         ],
@@ -361,7 +375,6 @@ function AddItemsStep({ data, setData, onNext, onBack }) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6">
-      {/* Catalog */}
       <div className="border border-gray-200 rounded-xl bg-white p-5">
         <h3 className="text-lg font-bold text-gray-900 mb-4">Product Catalog</h3>
         <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2.5 bg-gray-50/50 mb-4 focus-within:border-blue-400 transition-colors">
@@ -391,13 +404,15 @@ function AddItemsStep({ data, setData, onNext, onBack }) {
             return (
               <div
                 key={product.sku}
-                className={`border border-gray-200 rounded-lg p-4 flex items-center justify-between gap-3 ${
+                className={`border border-gray-200 rounded-lg p-4 flex items-center gap-3 ${
                   outOfStock ? "opacity-60" : ""
                 }`}
               >
-                <div>
+                <ProductThumbnail src={product.imageUrl} alt={product.name} />
+
+                <div className="flex-1 min-w-0">
                   <div className="text-xs text-gray-400">SKU: {product.sku}</div>
-                  <div className="text-sm font-semibold text-gray-800">{product.name}</div>
+                  <div className="text-sm font-semibold text-gray-800 truncate">{product.name}</div>
                   <div className="text-sm font-bold text-blue-600 mt-1">
                     {currency(product.unitPrice)}
                   </div>
@@ -405,6 +420,7 @@ function AddItemsStep({ data, setData, onNext, onBack }) {
                     {product.stockLabel}
                   </div>
                 </div>
+
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button
                     disabled={outOfStock || qty === 0}
@@ -442,7 +458,6 @@ function AddItemsStep({ data, setData, onNext, onBack }) {
         </button>
       </div>
 
-      {/* Order summary */}
       <div className="border border-gray-200 rounded-xl bg-white p-5 flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-gray-900">Order Summary</h3>
@@ -466,8 +481,18 @@ function AddItemsStep({ data, setData, onNext, onBack }) {
               {data.items.map((item) => (
                 <tr key={item.sku} className="border-b border-gray-100 last:border-0">
                   <td className="py-3 px-3">
-                    <div className="text-sm font-medium text-gray-800">{item.name}</div>
-                    <div className="text-xs text-gray-400">SKU: {item.sku}</div>
+                    <div className="flex items-center gap-2">
+                      <ProductThumbnail
+                        src={item.imageUrl}
+                        alt={item.name}
+                        size="w-9 h-9"
+                        textSize="text-[7px]"
+                      />
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-gray-800 truncate">{item.name}</div>
+                        <div className="text-xs text-gray-400">SKU: {item.sku}</div>
+                      </div>
+                    </div>
                   </td>
                   <td className="py-3 px-3 text-center text-sm text-gray-700">{item.qty}</td>
                   <td className="py-3 px-3 text-right text-sm text-gray-700">{currency(item.price)}</td>
@@ -531,8 +556,7 @@ function AddItemsStep({ data, setData, onNext, onBack }) {
   );
 }
 
-/* ───────────────────────── Step 3: Review & Submit ───────────────────────── */
-
+/* Step 3: Review & Submit */
 function ReviewStep({ data, setData, onBack, onSubmit, onDiscard, submitting }) {
   const subtotal = data.items.reduce((sum, i) => sum + i.price * i.qty, 0);
   const tax = subtotal * TAX_RATE;
@@ -542,7 +566,6 @@ function ReviewStep({ data, setData, onBack, onSubmit, onDiscard, submitting }) 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6">
       <div className="flex flex-col gap-6">
-        {/* Supplier info */}
         <div className="border border-gray-200 rounded-xl bg-white p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-gray-900">Supplier Information</h3>
@@ -602,7 +625,6 @@ function ReviewStep({ data, setData, onBack, onSubmit, onDiscard, submitting }) 
           </div>
         </div>
 
-        {/* Itemized list */}
         <div className="border border-gray-200 rounded-xl bg-white p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-gray-900">Itemized List</h3>
@@ -625,7 +647,17 @@ function ReviewStep({ data, setData, onBack, onSubmit, onDiscard, submitting }) 
               <tbody>
                 {data.items.map((item) => (
                   <tr key={item.sku} className="border-b border-gray-100 last:border-0">
-                    <td className="py-3 px-3 text-sm font-medium text-gray-800">{item.name}</td>
+                    <td className="py-3 px-3">
+                      <div className="flex items-center gap-2">
+                        <ProductThumbnail
+                          src={item.imageUrl}
+                          alt={item.name}
+                          size="w-8 h-8"
+                          textSize="text-[7px]"
+                        />
+                        <span className="text-sm font-medium text-gray-800">{item.name}</span>
+                      </div>
+                    </td>
                     <td className="py-3 px-3 text-sm text-gray-500">{item.sku}</td>
                     <td className="py-3 px-3 text-center text-sm text-gray-700">{item.qty}</td>
                     <td className="py-3 px-3 text-right text-sm text-gray-700">{currency(item.price)}</td>
@@ -648,7 +680,6 @@ function ReviewStep({ data, setData, onBack, onSubmit, onDiscard, submitting }) 
         </div>
       </div>
 
-      {/* Order summary + actions */}
       <div className="border border-gray-200 rounded-xl bg-white p-6 h-fit">
         <h3 className="text-lg font-bold text-gray-900 mb-4">Order Summary</h3>
 
@@ -709,8 +740,7 @@ function ReviewStep({ data, setData, onBack, onSubmit, onDiscard, submitting }) 
   );
 }
 
-/* ───────────────────────── Main page ───────────────────────── */
-
+/* Main page */
 const EMPTY_ORDER = {
   supplier: null,
   contactPerson: "",
@@ -725,7 +755,7 @@ const EMPTY_ORDER = {
 
 export default function CreatePurchaseOrderPage() {
   const navigate = useNavigate();
-  const { id: orderId } = useParams(); // present only on /purchase-orders/:id/edit
+  const { id: orderId } = useParams();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [loadingOrder, setLoadingOrder] = useState(!!orderId);
@@ -734,7 +764,6 @@ export default function CreatePurchaseOrderPage() {
 
   const goBackToList = () => navigate("/purchase-orders");
 
-  // Editing an existing order — load it and drop straight into Review & Submit.
   useEffect(() => {
     if (!orderId) return;
 
@@ -749,8 +778,6 @@ export default function CreatePurchaseOrderPage() {
         if (!json.success) throw new Error(json.message || "Failed to load purchase order");
         const order = json.data;
 
-        // Only DRAFT orders are editable via the wizard. Anything further
-        // along should be viewed (and withdrawn, if needed) from the detail page.
         if (order.status !== "DRAFT") {
           navigate(`/purchase-orders/${orderId}`, { replace: true });
           return;
@@ -777,12 +804,19 @@ export default function CreatePurchaseOrderPage() {
             sku: i.sku,
             name: i.name,
             price: i.unitPrice,
+            // The populated product doc (via .populate('items.product')) carries
+            // the images array — pick the primary one, falling back to the first,
+            // same convention used by the catalog endpoint.
+            imageUrl:
+              i.product && Array.isArray(i.product.images)
+                ? (i.product.images.find((img) => img.isPrimary) || i.product.images[0])?.url || null
+                : null,
             qty: i.quantity,
           })),
           notes: order.internalNotes || "",
           isEdit: true,
         });
-        setStep(3); // draft edits open on Review & Submit
+        setStep(3);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -813,9 +847,6 @@ export default function CreatePurchaseOrderPage() {
     asDraft,
   });
 
-  // Single submit action now: the order is saved as DRAFT (awaiting approval)
-  // and the person is handed off to the Approval Workflow page, where the
-  // approver reviews it and clicks "Send to Supplier" to actually send it.
   const handleSubmit = async () => {
     setSubmitting(true);
     try {

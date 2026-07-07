@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const LineItemSchema = new mongoose.Schema({
   product: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'ProductPage',
+    ref: 'Product', // fixed: matches mongoose.model('Product', ProductSchema)
     required: true,
   },
   name:      { type: String, required: true },

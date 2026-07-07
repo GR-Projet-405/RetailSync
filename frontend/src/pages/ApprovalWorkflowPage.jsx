@@ -15,6 +15,7 @@ import {
   Send,
   ExternalLink,
   ShieldCheck,
+  Package,
 } from "lucide-react";
 
 /* ───────────────────────── Config ───────────────────────── */
@@ -60,6 +61,39 @@ const formatDate = (value, opts = { dateStyle: "medium" }) => {
   if (isNaN(d)) return "—";
   return d.toLocaleString("en-US", opts);
 };
+
+/* Product thumbnail — shows the real product image when available,
+   falling back to a generic package icon (e.g. product deleted/unpopulated,
+   or no image uploaded for that product). Relies on `item.product` being
+   populated server-side via `.populate('items.product')` in
+   service.fetchById. */
+function ProductThumbnail({ src, alt, size = "w-10 h-10" }) {
+  return (
+    <div
+      className={`${size} flex-shrink-0 rounded-lg border border-gray-200 bg-blue-50 overflow-hidden flex items-center justify-center`}
+    >
+      {src ? (
+        <img
+          src={src}
+          alt={alt}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.target.style.display = "none";
+          }}
+        />
+      ) : (
+        <Package className="w-4 h-4 text-blue-500" />
+      )}
+    </div>
+  );
+}
+
+// Pull the primary image URL off a populated line-item product doc.
+function getProductImage(product) {
+  if (!product || typeof product !== "object" || !Array.isArray(product.images)) return null;
+  const primary = product.images.find((img) => img.isPrimary) || product.images[0];
+  return primary?.url || null;
+}
 
 /* ───────────────────────── Confirm modal ───────────────────────── */
 
@@ -321,7 +355,10 @@ export default function ApprovalWorkflowPage() {
                   {items.map((item) => (
                     <tr key={item._id || item.sku} className="border-b border-gray-100 last:border-0">
                       <td className="py-4 px-6">
-                        <div className="text-sm font-bold text-gray-900">{item.name}</div>
+                        <div className="flex items-center gap-3">
+                          <ProductThumbnail src={getProductImage(item.product)} alt={item.name} />
+                          <div className="text-sm font-bold text-gray-900">{item.name}</div>
+                        </div>
                       </td>
                       <td className="py-4 px-3 text-sm text-gray-600">{item.sku}</td>
                       <td className="py-4 px-3 text-center text-sm text-gray-700">{item.quantity}</td>

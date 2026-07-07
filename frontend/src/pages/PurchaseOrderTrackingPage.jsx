@@ -71,12 +71,38 @@ function StepIcon({ state }) {
   );
 }
 
-function ItemIcon() {
+/* Product thumbnail — shows the real product image when available,
+   falling back to a generic package icon (e.g. product deleted/unpopulated,
+   or no image uploaded for that product). */
+function ProductThumbnail({ src, alt, size = "w-9 h-9" }) {
   return (
-    <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-50 text-blue-500">
-      <Package className="w-4 h-4" />
+    <div
+      className={`${size} flex-shrink-0 rounded-lg border border-gray-200 bg-blue-50 overflow-hidden flex items-center justify-center`}
+    >
+      {src ? (
+        <img
+          src={src}
+          alt={alt}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.target.style.display = "none";
+          }}
+        />
+      ) : (
+        <Package className="w-4 h-4 text-blue-500" />
+      )}
     </div>
   );
+}
+
+// Pull the primary image URL off a populated line-item product doc.
+// `item.product` is populated server-side via `.populate('items.product')`
+// in service.fetchById — falls back to the first image, or null if the
+// product has none uploaded or wasn't populated (e.g. was deleted).
+function getProductImage(product) {
+  if (!product || typeof product !== "object" || !Array.isArray(product.images)) return null;
+  const primary = product.images.find((img) => img.isPrimary) || product.images[0];
+  return primary?.url || null;
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -324,7 +350,7 @@ export default function PurchaseOrderTrackingPage() {
                     <tr key={item._id || item.sku} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/60 transition-colors">
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
-                          <ItemIcon />
+                          <ProductThumbnail src={getProductImage(item.product)} alt={item.name} />
                           <div>
                             <p className="text-sm font-semibold text-gray-800">{item.name}</p>
                             <p className="text-xs text-gray-400 mt-0.5">SKU: {item.sku}</p>

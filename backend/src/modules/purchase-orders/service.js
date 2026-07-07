@@ -110,7 +110,8 @@ class PurchaseOrderPageService {
 
     if (search) {
       filter.$or = [
-        { productName: { $regex: search, $options: 'i' } },
+        // FIXED: schema field is `name`, not `productName`
+        { name: { $regex: search, $options: 'i' } },
         { sku: { $regex: search, $options: 'i' } },
         { category: { $regex: search, $options: 'i' } },
       ];
@@ -119,14 +120,30 @@ class PurchaseOrderPageService {
     const products = await ProductPage.find(filter).limit(50);
 
     return products.map((p) => {
-      const stock = p.initialQuantity ?? p.availableStock ?? p.stock ?? p.quantity ?? 0;
+      // FIXED: real schema stores price at pricing.sellingPrice (nested),
+      // not as a top-level sellingPrice/unitPrice/price field.
+      const unitPrice = p.pricing?.sellingPrice ?? 0;
+
+      // FIXED: real schema has no top-level stock field — total stock is
+      // the sum of quantity across all variants (mirrors the totalStock
+      // virtual on the Product model).
+      const stock = Array.isArray(p.variants)
+        ? p.variants.reduce((sum, v) => sum + (v.quantity || 0), 0)
+        : 0;
+
+      // Pick the image flagged isPrimary; fall back to the first image
+      // if none is flagged, or null if there are no images at all.
+      const images = Array.isArray(p.images) ? p.images : [];
+      const primaryImage = images.find((img) => img.isPrimary) || images[0] || null;
+
       return {
         productId: p._id,
         sku: p.sku,
-        name: p.productName ?? p.name,
-        unitPrice: p.sellingPrice ?? p.unitPrice ?? p.price ?? 0,
+        name: p.name,
+        unitPrice,
         availableStock: stock,
         stockLabel: stock > 0 ? `${stock} in stock` : 'Out of stock',
+        imageUrl: primaryImage?.url || null,
       };
     });
   }
@@ -213,15 +230,17 @@ class PurchaseOrderPageService {
         throw err;
       }
       if (product.supplier && String(product.supplier) !== String(supplier._id)) {
-        const err = new Error(`Product "${product.productName}" does not belong to the selected supplier`);
+        const err = new Error(`Product "${product.name}" does not belong to the selected supplier`);
         err.statusCode = 400;
         throw err;
       }
       const quantity = Number(i.quantity) || 0;
-      const unitPrice = i.unitPrice ?? product.sellingPrice ?? product.unitPrice ?? product.price ?? 0;
+      // FIXED: fall back to the real nested pricing.sellingPrice field
+      // instead of the non-existent top-level sellingPrice/unitPrice/price.
+      const unitPrice = i.unitPrice ?? product.pricing?.sellingPrice ?? 0;
       return {
         product: product._id,
-        name: product.productName ?? product.name,
+        name: product.name,
         sku: product.sku,
         quantity,
         unitPrice,

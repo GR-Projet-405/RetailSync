@@ -53,6 +53,40 @@ function StatusBadge({ status }) {
   );
 }
 
+/* Product thumbnail — shows the real product image when available,
+   falling back to a generic package icon (e.g. product deleted/unpopulated,
+   or no image uploaded for that product). */
+function ProductThumbnail({ src, alt, size = "w-10 h-10" }) {
+  return (
+    <div
+      className={`${size} flex-shrink-0 flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50 overflow-hidden`}
+    >
+      {src ? (
+        <img
+          src={src}
+          alt={alt}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.target.style.display = "none";
+          }}
+        />
+      ) : (
+        <Package className="h-5 w-5 text-blue-600" />
+      )}
+    </div>
+  );
+}
+
+// Pull the primary image URL off a populated line-item product doc.
+// `item.product` is populated server-side via `.populate('items.product')`
+// in service.fetchById — falls back to the first image, or null if the
+// product has none uploaded or wasn't populated (e.g. was deleted).
+function getProductImage(product) {
+  if (!product || typeof product !== "object" || !Array.isArray(product.images)) return null;
+  const primary = product.images.find((img) => img.isPrimary) || product.images[0];
+  return primary?.url || null;
+}
+
 /* ───────────────────────── Main page ─────────────────────────
    Read-only historical record for a PO that has been sent to the supplier
    (or has progressed further: SENT -> PARTIALLY_RECEIVED -> FULLY_RECEIVED,
@@ -345,9 +379,7 @@ export default function SupplierOrderDetailsPage() {
                   <tr key={item._id || item.sku} className="border-t border-slate-100">
                     <td className="px-6 py-4">
                       <div className="flex items-start gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
-                          <Package className="h-5 w-5 text-blue-600" />
-                        </div>
+                        <ProductThumbnail src={getProductImage(item.product)} alt={item.name} />
                         <p className="font-semibold text-slate-900">{item.name}</p>
                       </div>
                     </td>
