@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Brain, DollarSign, Package, AlertTriangle, ShieldCheck, RefreshCw, Plus, X, ArrowUpRight, CheckCircle2 } from 'lucide-react';
+import { Brain, DollarSign, Package, AlertTriangle, ShieldCheck, RefreshCw, Plus, X, ArrowUpRight, CheckCircle2, ChevronRight, Truck, Info, Settings } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
 import Button from '../components/Button';
 import Spinner from '../components/Spinner';
@@ -7,11 +7,11 @@ import { toast } from '../utils/toast';
 
 // Mock Reordering Suggestions Data
 const MOCK_REORDER_SUGGESTIONS = [
-  { id: 1, name: 'Whole Wheat Bread', sku: 'BAK-WWB-002', currentStock: 12, minLevel: 30, suggestedQty: 50, supplier: 'BakeCraft Distributors', estCost: 150.00, urgency: 'High' },
-  { id: 2, name: 'Chocolate Chip Cookie', sku: 'BAK-CCC-005', currentStock: 8, minLevel: 25, suggestedQty: 100, supplier: 'BakeCraft Distributors', estCost: 200.00, urgency: 'High' },
-  { id: 3, name: 'Organic Bananas (kg)', sku: 'FRU-BAN-003', currentStock: 120, minLevel: 150, suggestedQty: 200, supplier: 'GreenGrow Farms', estCost: 400.00, urgency: 'Medium' },
-  { id: 4, name: 'Greek Yogurt (500g)', sku: 'DY-GRY-004', currentStock: 64, minLevel: 50, suggestedQty: 40, supplier: 'DairyLand Co.', estCost: 120.00, urgency: 'Low' },
-  { id: 5, name: 'Espresso Blend Coffee', sku: 'COF-ESP-001', currentStock: 45, minLevel: 40, suggestedQty: 80, supplier: 'BeanDrop Imports', estCost: 640.00, urgency: 'Low' }
+  { id: 1, name: 'Whole Wheat Bread', sku: 'BAK-WWB-002', currentStock: 12, minLevel: 30, suggestedQty: 50, supplier: 'BakeCraft Distributors', unitCost: 3.00, estCost: 150.00, urgency: 'High', leadTime: 3 },
+  { id: 2, name: 'Chocolate Chip Cookie', sku: 'BAK-CCC-005', currentStock: 8, minLevel: 25, suggestedQty: 100, supplier: 'BakeCraft Distributors', unitCost: 2.00, estCost: 200.00, urgency: 'High', leadTime: 3 },
+  { id: 3, name: 'Organic Bananas (kg)', sku: 'FRU-BAN-003', currentStock: 120, minLevel: 150, suggestedQty: 200, supplier: 'GreenGrow Farms', unitCost: 2.00, estCost: 400.00, urgency: 'Medium', leadTime: 5 },
+  { id: 4, name: 'Greek Yogurt (500g)', sku: 'DY-GRY-004', currentStock: 64, minLevel: 50, suggestedQty: 40, supplier: 'DairyLand Co.', unitCost: 3.00, estCost: 120.00, urgency: 'Low', leadTime: 4 },
+  { id: 5, name: 'Espresso Blend Coffee', sku: 'COF-ESP-001', currentStock: 45, minLevel: 40, suggestedQty: 80, supplier: 'BeanDrop Imports', unitCost: 8.00, estCost: 640.00, urgency: 'Low', leadTime: 7 }
 ];
 
 const MOCK_REORDER_HISTORY = [
@@ -25,6 +25,11 @@ export default function AIReorderingPage() {
   const [urgencyFilter, setUrgencyFilter] = useState('All');
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // Modal Configuration States
+  const [activeModalItem, setActiveModalItem] = useState(null);
+  const [modalQty, setModalQty] = useState('');
+  const [modalLeadDays, setModalLeadDays] = useState(3);
+
   useEffect(() => {
     setLoading(true);
     const timer = setTimeout(() => {
@@ -37,9 +42,27 @@ export default function AIReorderingPage() {
     setRefreshKey(prev => prev + 1);
   };
 
-  const handleGeneratePO = (id, productName) => {
+  const openConfigureModal = (item) => {
+    setActiveModalItem(item);
+    setModalQty(String(item.suggestedQty));
+    setModalLeadDays(item.leadTime);
+  };
+
+  const handleConfirmOrder = () => {
+    if (!activeModalItem) return;
+    const qty = parseInt(modalQty, 10);
+    if (isNaN(qty) || qty <= 0) {
+      toast.error('Please enter a valid positive quantity.');
+      return;
+    }
+    setSuggestions(prev => prev.filter(item => item.id !== activeModalItem.id));
+    toast.success(`Generated Purchase Order for ${qty}x ${activeModalItem.name}!`);
+    setActiveModalItem(null);
+  };
+
+  const handleDismiss = (id, productName) => {
     setSuggestions(prev => prev.filter(item => item.id !== id));
-    toast.success(`Purchase Order request generated successfully for ${productName}!`);
+    toast.info(`Suggestion for ${productName} dismissed.`);
   };
 
   const handleGenerateAllPO = () => {
@@ -50,11 +73,6 @@ export default function AIReorderingPage() {
     }
     setSuggestions(prev => prev.filter(item => !filteredSuggestions.some(f => f.id === item.id)));
     toast.success(`Generated PO requests for ${counts} items successfully!`);
-  };
-
-  const handleDismiss = (id, productName) => {
-    setSuggestions(prev => prev.filter(item => item.id !== id));
-    toast.info(`Suggestion for ${productName} dismissed.`);
   };
 
   const filteredSuggestions = suggestions.filter(item => {
@@ -73,9 +91,17 @@ export default function AIReorderingPage() {
     }
   };
 
+  // Calculating Supplier Expense Distribution percentages
+  const supplierCosts = suggestions.reduce((acc, curr) => {
+    acc[curr.supplier] = (acc[curr.supplier] || 0) + curr.estCost;
+    return acc;
+  }, {});
+
+  const totalSuggestionsCost = Object.values(supplierCosts).reduce((a, b) => a + b, 0);
+
   return (
     <div className="space-y-6 fade-in">
-      {/* Premium Title Card */}
+      {/* Title Card */}
       <Card className="overflow-hidden rounded-[20px] border-slate-200 bg-white p-0 shadow-sm">
         <div className="flex flex-col gap-5 bg-gradient-to-br from-white via-slate-50 to-blue-50/50 p-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
@@ -111,7 +137,7 @@ export default function AIReorderingPage() {
         </div>
       ) : (
         <>
-          {/* Summary Row */}
+          {/* Summary KPI Cards */}
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <Card className="p-5 border-slate-200 card-hover bg-white rounded-2xl">
               <div className="flex justify-between items-start">
@@ -161,9 +187,39 @@ export default function AIReorderingPage() {
             </Card>
           </div>
 
+          {/* Supplier Expense Distribution Tracker */}
+          <Card className="border-slate-200 bg-white rounded-2xl p-6">
+            <CardHeader className="p-0 pb-4">
+              <CardTitle className="text-lg font-bold text-slate-800">Supplier Allocation Profile</CardTitle>
+              <p className="text-xs text-slate-500">Distribution of projected reorder expenditures across active vendors</p>
+            </CardHeader>
+            <CardContent className="p-0 grid grid-cols-1 md:grid-cols-3 gap-6">
+              {Object.entries(supplierCosts).map(([supplier, cost]) => {
+                const percentage = totalSuggestionsCost > 0 ? Math.round((cost / totalSuggestionsCost) * 100) : 0;
+                return (
+                  <div key={supplier} className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                        <Truck className="w-3.5 h-3.5 text-slate-400" />
+                        {supplier}
+                      </span>
+                      <span className="font-extrabold text-slate-900">${cost.toLocaleString()} ({percentage}%)</span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[#2563EB] rounded-full"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+
           {/* Suggestions List & History Section */}
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-            {/* suggestions table */}
+            {/* recommendations table */}
             <Card className="xl:col-span-2 border-slate-200 bg-white rounded-2xl p-6">
               <CardHeader className="p-0 pb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
@@ -233,16 +289,14 @@ export default function AIReorderingPage() {
                             <td className="py-3.5 px-4 text-center">
                               <div className="flex items-center justify-center gap-1.5">
                                 <button
-                                  onClick={() => handleGeneratePO(item.id, item.name)}
-                                  className="px-2 py-1 text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg transition"
-                                  title="Approve reorder and generate PO request"
+                                  onClick={() => openConfigureModal(item)}
+                                  className="px-2.5 py-1 text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg transition border border-blue-100"
                                 >
-                                  Reorder
+                                  Configure
                                 </button>
                                 <button
                                   onClick={() => handleDismiss(item.id, item.name)}
                                   className="p-1 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-lg transition"
-                                  title="Dismiss recommendation"
                                 >
                                   <X className="w-3.5 h-3.5" />
                                 </button>
@@ -286,6 +340,105 @@ export default function AIReorderingPage() {
             </Card>
           </div>
         </>
+      )}
+
+      {/* Interactive PO Configuration Modal */}
+      {activeModalItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md mx-4 overflow-hidden fade-in">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Configure Purchase Order</h3>
+                <p className="text-xs text-slate-400 font-mono mt-0.5">{activeModalItem.sku}</p>
+              </div>
+              <button
+                onClick={() => setActiveModalItem(null)}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3.5 flex items-start gap-2.5">
+                <Info className="w-4.5 h-4.5 text-blue-500 shrink-0 mt-0.5" />
+                <div className="text-xs font-medium text-blue-700 leading-relaxed">
+                  Adjust replenishment parameters. Estimates are calculated based on forecasted supplier delivery schedules.
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Product Details</label>
+                <p className="text-sm font-extrabold text-slate-800">{activeModalItem.name}</p>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">{activeModalItem.supplier}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Current Stock</label>
+                  <p className="text-sm font-bold text-slate-700">{activeModalItem.currentStock} units</p>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Min Threshold</label>
+                  <p className="text-sm font-bold text-slate-700">{activeModalItem.minLevel} units</p>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 my-4" />
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-600 block mb-1.5">Order Quantity *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={modalQty}
+                    onChange={(e) => setModalQty(e.target.value)}
+                    className="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 font-semibold"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-xs font-bold">
+                  <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                    <span className="text-slate-400 block mb-0.5">Unit Cost</span>
+                    <span className="text-slate-800 text-sm font-extrabold">${activeModalItem.unitCost.toFixed(2)}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                    <span className="text-slate-400 block mb-0.5">Estimated Total</span>
+                    <span className="text-[#2563EB] text-sm font-extrabold">
+                      ${((parseInt(modalQty, 10) || 0) * activeModalItem.unitCost).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Delivery calculator */}
+              <div className="text-[11px] font-bold text-slate-500 uppercase bg-slate-50 rounded-xl px-4 py-2.5 border border-slate-100 flex items-center justify-between">
+                <span>Standard Delivery Lead</span>
+                <span className="text-slate-800">{modalLeadDays} Days ({new Date(Date.now() + modalLeadDays * 24 * 60 * 60 * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' })})</span>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setActiveModalItem(null)}
+                className="flex-1 border-slate-200 text-slate-600 font-bold bg-white"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmOrder}
+                className="flex-1 bg-[#2563EB] hover:bg-blue-700 text-white font-bold"
+              >
+                Confirm Order
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

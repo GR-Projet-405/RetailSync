@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BellRing, ShieldAlert, AlertTriangle, Target, Activity, RefreshCw, X, Check, Eye, Trash2, ArrowUpRight, DollarSign, Package } from 'lucide-react';
+import { BellRing, ShieldAlert, AlertTriangle, Target, Activity, RefreshCw, X, Check, Eye, Trash2, ArrowUpRight, DollarSign, Package, ChevronDown, ChevronUp, Terminal, ShieldCheck } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
 import Button from '../components/Button';
 import Spinner from '../components/Spinner';
@@ -16,7 +16,15 @@ const MOCK_ALERTS = [
     severity: 'critical',
     source: 'AI Inventory Forecaster',
     date: 'Today, 10:15 AM',
-    metadata: { product: 'Whole Wheat Bread', currentStock: 12, daysRemaining: 2, reorderQty: 50 },
+    timeGroup: 'Today',
+    metadata: {
+      product: 'Whole Wheat Bread',
+      sku: 'BAK-WWB-002',
+      currentStock: 12,
+      daysRemaining: 2,
+      velocity: '24 units/day (Avg: 16 units/day)',
+      recommendedReorder: 50
+    },
     acknowledged: false
   },
   {
@@ -28,7 +36,15 @@ const MOCK_ALERTS = [
     severity: 'warning',
     source: 'AI Inventory Forecaster',
     date: 'Today, 09:30 AM',
-    metadata: { product: 'Chocolate Chip Cookie', currentStock: 8, daysRemaining: 3, reorderQty: 100 },
+    timeGroup: 'Today',
+    metadata: {
+      product: 'Chocolate Chip Cookie',
+      sku: 'BAK-CCC-005',
+      currentStock: 8,
+      daysRemaining: 3,
+      velocity: '12 units/day (Avg: 8 units/day)',
+      recommendedReorder: 100
+    },
     acknowledged: false
   },
   // Sales Targets Off-Track
@@ -40,8 +56,17 @@ const MOCK_ALERTS = [
     impact: 'Projected monthly shortfall: $8,800.00',
     severity: 'warning',
     source: 'Target Analyzer',
-    date: 'Yesterday',
-    metadata: { branch: 'Suburban Mall', currentSales: 16200, targetSales: 45000, completionPct: 36, daysRemaining: 15 },
+    date: 'Yesterday, 06:00 PM',
+    timeGroup: 'Yesterday',
+    metadata: {
+      branch: 'Suburban Mall',
+      currentSales: 16200,
+      targetSales: 45000,
+      completionPct: 36,
+      daysRemaining: 15,
+      requiredRunRate: '$1,920/day',
+      actualRunRate: '$1,080/day'
+    },
     acknowledged: false
   },
   // Anomalies
@@ -54,7 +79,15 @@ const MOCK_ALERTS = [
     severity: 'critical',
     source: 'AI Anomaly & Fraud Guard',
     date: 'Today, 11:42 AM',
-    metadata: { transactionId: 'TXN-10492', cashier: 'John Doe', discount: '75%', standardMax: '20%' },
+    timeGroup: 'Today',
+    metadata: {
+      transactionId: 'TXN-10492',
+      cashier: 'John Doe (ID: EMP-8822)',
+      discount: '75% (Std Limit: 20%)',
+      standardMax: '20%',
+      itemsOrdered: '3x Premium Espresso Maker',
+      terminal: 'POS-Terminal-04'
+    },
     acknowledged: false
   },
   {
@@ -66,7 +99,13 @@ const MOCK_ALERTS = [
     severity: 'critical',
     source: 'AI Anomaly & Fraud Guard',
     date: 'Today, 03:15 AM',
-    metadata: { operation: 'No-Sale Drawer Open', timestamp: '03:15:22 AM', terminal: 'POS-Terminal-02' },
+    timeGroup: 'Today',
+    metadata: {
+      operation: 'No-Sale Drawer Open & Refund',
+      timestamp: '03:15:22 AM',
+      terminalID: 'POS-Terminal-02',
+      securityCheck: 'Flagged: Motion Sensor Activated'
+    },
     acknowledged: false
   }
 ];
@@ -75,6 +114,8 @@ export default function AIAlertsPage() {
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState(MOCK_ALERTS);
   const [filter, setFilter] = useState('all');
+  const [severityFilter, setSeverityFilter] = useState('all');
+  const [expandedId, setExpandedId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -98,10 +139,22 @@ export default function AIAlertsPage() {
     setAlerts(prev => prev.filter(a => a.id !== id));
   };
 
+  const toggleExpand = (id) => {
+    setExpandedId(prev => prev === id ? null : id);
+  };
+
   const filteredAlerts = alerts.filter(a => {
-    if (filter === 'all') return !a.acknowledged;
-    if (filter === 'resolved') return a.acknowledged;
-    return a.category === filter && !a.acknowledged;
+    const matchesCategory = filter === 'all' 
+      ? !a.acknowledged 
+      : filter === 'resolved' 
+        ? a.acknowledged 
+        : a.category === filter && !a.acknowledged;
+        
+    const matchesSeverity = severityFilter === 'all' 
+      ? true 
+      : a.severity === severityFilter;
+
+    return matchesCategory && matchesSeverity;
   });
 
   const getSeverityStyles = (severity) => {
@@ -125,10 +178,107 @@ export default function AIAlertsPage() {
   const getCategoryLabel = (category) => {
     switch (category) {
       case 'low_stock': return 'Inventory Projection';
-      case 'sales_target': return 'Sales Target Target';
+      case 'sales_target': return 'Sales Target';
       case 'anomaly': return 'Anomaly & Fraud';
       default: return 'General Alert';
     }
+  };
+
+  // Grouping active filtered alerts chronologically
+  const todayAlerts = filteredAlerts.filter(a => a.timeGroup === 'Today');
+  const historyAlerts = filteredAlerts.filter(a => a.timeGroup !== 'Today');
+
+  const renderAlertCard = (alert) => {
+    const isExpanded = expandedId === alert.id;
+    return (
+      <Card key={alert.id} className="border-slate-200 bg-white rounded-2xl p-5 hover:shadow-md transition">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          {/* Info details */}
+          <div className="flex items-start gap-4 flex-1 min-w-0">
+            <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl shrink-0 mt-0.5 shadow-sm">
+              {getCategoryIcon(alert.category)}
+            </div>
+            <div className="space-y-1 flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-100 px-2 py-0.5 rounded-lg">
+                  {getCategoryLabel(alert.category)}
+                </span>
+                <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase ${getSeverityStyles(alert.severity)}`}>
+                  {alert.severity}
+                </span>
+                <span className="text-xs text-slate-400 font-bold">{alert.date}</span>
+              </div>
+              <h3 className="text-base font-bold text-slate-800 leading-tight flex items-center gap-2">
+                {alert.title}
+              </h3>
+              <p className="text-sm font-medium text-slate-600 leading-relaxed max-w-3xl">{alert.description}</p>
+              
+              {alert.impact && (
+                <div className="flex items-center gap-1.5 mt-2 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 w-fit">
+                  <span className="text-red-500 font-bold">Estimated Impact:</span> {alert.impact}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Actions Column */}
+          <div className="flex items-center gap-2 self-end md:self-start shrink-0">
+            <button
+              onClick={() => toggleExpand(alert.id)}
+              className="p-2 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition flex items-center gap-1 text-xs font-bold"
+              title="Inspect Metadata logs"
+            >
+              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              Inspect
+            </button>
+            {!alert.acknowledged ? (
+              <>
+                <button
+                  onClick={() => handleAcknowledge(alert.id, alert.title)}
+                  className="px-3 py-2 text-xs font-bold bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl flex items-center gap-1 transition shadow-sm"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  Resolve
+                </button>
+                <button
+                  onClick={() => handleClear(alert.id)}
+                  className="p-2 hover:bg-slate-50 text-slate-400 hover:text-slate-600 border border-slate-200 rounded-xl transition"
+                  title="Dismiss"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => handleClear(alert.id)}
+                className="px-3 py-1.5 text-xs font-bold border border-red-200 text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-1 transition"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete Record
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Collapsible Metadata Panel */}
+        {isExpanded && (
+          <div className="mt-4 p-4 border border-slate-200 bg-slate-50/50 rounded-xl fade-in space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+              <Terminal className="w-4 h-4 text-[#2563EB]" />
+              AI System Inspection Details
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              {Object.entries(alert.metadata).map(([key, val]) => (
+                <div key={key} className="flex justify-between p-2.5 bg-white border border-slate-100 rounded-lg">
+                  <span className="font-semibold text-slate-400 capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
+                  <span className="font-extrabold text-slate-700">{val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
+    );
   };
 
   return (
@@ -221,27 +371,42 @@ export default function AIAlertsPage() {
 
       {/* Main Alert Feed Grid */}
       <div className="space-y-4">
-        {/* Navigation Category Filter Tabs */}
-        <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
-          {[
-            { id: 'all', label: 'All Active' },
-            { id: 'low_stock', label: 'Stock Projections' },
-            { id: 'sales_target', label: 'Sales Targets' },
-            { id: 'anomaly', label: 'System Anomalies' },
-            { id: 'resolved', label: 'Resolved Archive' }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setFilter(tab.id)}
-              className={`px-4 py-2 text-xs font-bold rounded-xl transition ${
-                filter === tab.id
-                  ? 'bg-[#2563EB] text-white shadow-sm'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
+        {/* Navigation Category Filter Tabs & Severity selectors */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 pb-3">
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: 'all', label: 'All Active' },
+              { id: 'low_stock', label: 'Stock Projections' },
+              { id: 'sales_target', label: 'Sales Targets' },
+              { id: 'anomaly', label: 'System Anomalies' },
+              { id: 'resolved', label: 'Resolved Archive' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setFilter(tab.id)}
+                className={`px-4 py-2 text-xs font-bold rounded-xl transition ${
+                  filter === tab.id
+                    ? 'bg-[#2563EB] text-white shadow-sm'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Severity:</span>
+            <select
+              value={severityFilter}
+              onChange={(e) => setSeverityFilter(e.target.value)}
+              className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-xl bg-white text-slate-600 focus:outline-none"
             >
-              {tab.label}
-            </button>
-          ))}
+              <option value="all">All Severities</option>
+              <option value="critical">Critical Only</option>
+              <option value="warning">Warnings</option>
+            </select>
+          </div>
         </div>
 
         {loading ? (
@@ -250,72 +415,31 @@ export default function AIAlertsPage() {
           </div>
         ) : filteredAlerts.length === 0 ? (
           <div className="p-12 bg-white border border-slate-200 rounded-2xl text-center shadow-sm">
-            <ShieldAlert className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <ShieldCheck className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
             <h3 className="text-sm font-bold text-slate-800">Clear Feed!</h3>
             <p className="text-xs text-slate-500 mt-1">There are no matching anomalies or pending alerts needing action.</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {filteredAlerts.map(alert => (
-              <Card key={alert.id} className="border-slate-200 bg-white rounded-2xl p-5 hover:shadow-md transition">
-                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                  {/* Info details */}
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl shrink-0 mt-0.5 shadow-sm">
-                      {getCategoryIcon(alert.category)}
-                    </div>
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-100 px-2 py-0.5 rounded-lg">
-                          {getCategoryLabel(alert.category)}
-                        </span>
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase ${getSeverityStyles(alert.severity)}`}>
-                          {alert.severity}
-                        </span>
-                        <span className="text-xs text-slate-400 font-bold">{alert.date}</span>
-                      </div>
-                      <h3 className="text-base font-bold text-slate-800 leading-tight">{alert.title}</h3>
-                      <p className="text-sm font-medium text-slate-600 leading-relaxed max-w-3xl">{alert.description}</p>
-                      {alert.impact && (
-                        <div className="flex items-center gap-1.5 mt-2 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 w-fit">
-                          <span className="text-red-500 font-bold">Estimated Impact:</span> {alert.impact}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions Column */}
-                  <div className="flex items-center gap-2 self-end md:self-start shrink-0">
-                    {!alert.acknowledged ? (
-                      <>
-                        <button
-                          onClick={() => handleAcknowledge(alert.id, alert.title)}
-                          className="px-3 py-1.5 text-xs font-bold bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl flex items-center gap-1 transition shadow-sm"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                          Resolve
-                        </button>
-                        <button
-                          onClick={() => handleClear(alert.id)}
-                          className="p-2 hover:bg-slate-50 text-slate-400 hover:text-slate-600 border border-slate-200 rounded-xl transition"
-                          title="Dismiss"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => handleClear(alert.id)}
-                        className="px-3 py-1.5 text-xs font-bold border border-red-200 text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-1 transition"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Delete Record
-                      </button>
-                    )}
-                  </div>
+          <div className="space-y-6">
+            {/* Today Group */}
+            {todayAlerts.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest pl-1">Today</h4>
+                <div className="space-y-4">
+                  {todayAlerts.map(renderAlertCard)}
                 </div>
-              </Card>
-            ))}
+              </div>
+            )}
+
+            {/* History Group */}
+            {historyAlerts.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest pl-1">Historical Logs</h4>
+                <div className="space-y-4">
+                  {historyAlerts.map(renderAlertCard)}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

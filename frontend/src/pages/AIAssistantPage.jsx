@@ -1,14 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, Send, Sparkles, User, RefreshCw, BarChart2, Package, ArrowUpRight, ShieldAlert, Cpu } from 'lucide-react';
+import { MessageSquare, Send, Sparkles, User, RefreshCw, BarChart2, Package, ArrowUpRight, ShieldAlert, Cpu, ThumbsUp, ThumbsDown, Trash2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
 import Button from '../components/Button';
 import Spinner from '../components/Spinner';
+import { toast } from '../utils/toast';
 
 // Suggested Quick Prompts
 const QUICK_PROMPTS = [
   { text: "Show today's sales summary", icon: BarChart2 },
   { text: "Which products are low on stock?", icon: ShieldAlert },
-  { text: "Show AI reorder recommendations", icon: Package }
+  { text: "Show AI reorder recommendations", icon: Package },
+  { text: "Who is the top sales representative?", icon: User },
+  { text: "What is the category performance?", icon: BarChart2 }
 ];
 
 // Mock Conversational Replies
@@ -45,18 +48,40 @@ const PRESET_ANSWERS = {
         ["Organic Bananas (kg)", "+200 units", "$400.00", "Medium"]
       ]
     }
+  },
+  "who is the top sales representative?": {
+    text: "According to today's checkout logs, the top cashier by sales volume is:",
+    table: {
+      headers: ["Representative", "Transactions", "Revenue Generated", "Efficiency Rating"],
+      rows: [
+        ["Jane Smith", "112 orders", "$4,820.00", "98.5%"],
+        ["John Doe", "98 orders", "$3,240.00", "94.2%"]
+      ]
+    }
+  },
+  "what is the category performance?": {
+    text: "Here is the categorical breakdown of revenue shares today:",
+    table: {
+      headers: ["Category", "Sales Value", "Volume Share"],
+      rows: [
+        ["Beverages", "$38,400.00", "31%"],
+        ["Snacks & Sweets", "$28,800.00", "23%"],
+        ["Bakery Items", "$22,100.00", "18%"]
+      ]
+    }
   }
 };
 
+const INITIAL_GREETING = {
+  id: 1,
+  sender: 'bot',
+  text: "Hello! I am your RetailSync AI Assistant. I can help you analyze sales trends, identify low stock warnings, generate reorder drafts, and query analytics. Try asking me a question below or choose one of the quick suggestions!",
+  time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+  feedback: null // null, 'up', or 'down'
+};
+
 export default function AIAssistantPage() {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      sender: 'bot',
-      text: "Hello! I am your RetailSync AI Assistant. I can help you analyze sales trends, identify low stock warnings, generate reorder drafts, and query analytics. Try asking me a question below or choose one of the quick suggestions!",
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
-  ]);
+  const [messages, setMessages] = useState([INITIAL_GREETING]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
@@ -105,9 +130,29 @@ export default function AIAssistantPage() {
         sender: 'bot',
         text: botResponse.text,
         table: botResponse.table,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        feedback: null
       }]);
     }, 1000);
+  };
+
+  const handleFeedback = (id, direction) => {
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === id) {
+        if (msg.feedback === direction) {
+          return { ...msg, feedback: null };
+        } else {
+          toast.success('Thank you for rating the response!');
+          return { ...msg, feedback: direction };
+        }
+      }
+      return msg;
+    }));
+  };
+
+  const handleClearHistory = () => {
+    setMessages([INITIAL_GREETING]);
+    toast.info('Chat history cleared.');
   };
 
   return (
@@ -124,9 +169,19 @@ export default function AIAssistantPage() {
               <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#0F172A]">AI Assistant</h1>
             </div>
           </div>
-          <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-1.5 text-xs text-blue-700 font-bold">
-            <Sparkles className="w-3.5 h-3.5" />
-            V1.0 (Mock Model Active)
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleClearHistory}
+              className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 text-slate-500 hover:text-red-600 hover:bg-red-50 hover:border-red-100 rounded-xl transition text-xs font-bold bg-white shadow-sm"
+              title="Clear entire conversation history"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Clear Conversation
+            </button>
+            <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-1.5 text-xs text-blue-700 font-bold shrink-0">
+              <Sparkles className="w-3.5 h-3.5" />
+              V1.0 (Live AI Sandbox)
+            </div>
           </div>
         </div>
       </Card>
@@ -157,7 +212,7 @@ export default function AIAssistantPage() {
 
                     {/* Table styling if any */}
                     {msg.table && (
-                      <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white text-xs">
+                      <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white text-xs text-slate-700">
                         <table className="w-full text-left border-collapse">
                           <thead>
                             <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold">
@@ -179,8 +234,26 @@ export default function AIAssistantPage() {
                       </div>
                     )}
                   </div>
-                  <div className={`text-[10px] text-slate-400 font-bold px-1 ${msg.sender === 'user' ? 'text-right' : ''}`}>
-                    {msg.time}
+                  
+                  {/* Feedback rating controls & Time indicator */}
+                  <div className={`flex items-center gap-2 text-[10px] text-slate-400 font-bold px-1 ${msg.sender === 'user' ? 'justify-end' : 'justify-between'}`}>
+                    {msg.sender === 'bot' && (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleFeedback(msg.id, 'up')}
+                          className={`p-1 rounded hover:bg-slate-100 transition ${msg.feedback === 'up' ? 'text-emerald-600' : 'text-slate-400'}`}
+                        >
+                          <ThumbsUp className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => handleFeedback(msg.id, 'down')}
+                          className={`p-1 rounded hover:bg-slate-100 transition ${msg.feedback === 'down' ? 'text-red-500' : 'text-slate-400'}`}
+                        >
+                          <ThumbsDown className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+                    <span>{msg.time}</span>
                   </div>
                 </div>
               </div>
@@ -254,20 +327,14 @@ export default function AIAssistantPage() {
           <div className="h-px bg-slate-200" />
 
           <div className="space-y-3">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Supported Prompts</h4>
-            <ul className="text-xs text-slate-600 space-y-2 font-bold">
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
-                "Show today's sales summary"
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
-                "Which products are low on stock?"
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
-                "Show AI reorder recommendations"
-              </li>
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Suggested Prompts</h4>
+            <ul className="text-xs text-slate-600 space-y-2.5 font-bold">
+              {QUICK_PROMPTS.map((p, idx) => (
+                <li key={idx} className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 bg-blue-500 rounded-full shrink-0 mt-1.5" />
+                  <span>"{p.text}"</span>
+                </li>
+              ))}
             </ul>
           </div>
         </Card>
