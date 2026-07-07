@@ -110,19 +110,32 @@ function padEventId(index) {
 }
 
 function generateDummyEvents() {
-  const events = [...BASE_EVENTS];
-  const baseTime = new Date('2023-10-24T12:59:00.000Z').getTime();
+  const baseTime = new Date().getTime();
+  const events = [];
 
-  for (let i = 7; i <= 2442; i += 1) {
+  BASE_EVENTS.forEach((evt, idx) => {
+    // Offset each event by 5 minutes to spread them out
+    const offset = idx * 5 * 60 * 1000;
+    events.push({
+      ...evt,
+      timestamp: new Date(baseTime - offset).toISOString(),
+    });
+  });
+
+  const remainingCount = 30 - BASE_EVENTS.length;
+  for (let i = 1; i <= remainingCount; i += 1) {
     const severity = SEVERITIES[i % SEVERITIES.length];
     const eventType = EVENT_TYPES[i % EVENT_TYPES.length];
     const source = SOURCES[i % SOURCES.length];
     const action = ACTIONS[i % ACTIONS.length];
     const message = MESSAGES[i % MESSAGES.length];
-    const timestamp = new Date(baseTime - i * 45000).toISOString();
+    
+    // Spread generated events by 10 minutes, starting after base events
+    const offset = (BASE_EVENTS.length + i) * 10 * 60 * 1000;
+    const timestamp = new Date(baseTime - offset).toISOString();
 
     events.push({
-      eventId: padEventId(1000 + i),
+      eventId: padEventId(2000 + i),
       timestamp,
       severity,
       eventType,
@@ -139,19 +152,60 @@ function generateDummyEvents() {
   );
 }
 
-const ALL_EVENTS = generateDummyEvents();
-
 class SystemEventsService {
   getStats() {
+    const ALL_EVENTS = generateDummyEvents();
+
+    // 1. Active Services: Unique sources present in events vs total sources defined
+    const activeSources = new Set(ALL_EVENTS.map((event) => event.source));
+    const active = activeSources.size;
+    const total = SOURCES.length;
+
+    // 2. Log Volume (1H): Number of events in the last hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const lastHourCount = ALL_EVENTS.filter((e) => new Date(e.timestamp) >= oneHourAgo).length;
+    
+    // Trend compared to previous hour (1H to 2H ago)
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const prevHourCount = ALL_EVENTS.filter((e) => {
+      const t = new Date(e.timestamp);
+      return t >= twoHoursAgo && t < oneHourAgo;
+    }).length;
+    
+    const diff = lastHourCount - prevHourCount;
+    const trend = prevHourCount === 0 ? (lastHourCount > 0 ? 100 : 0) : Math.round((diff / prevHourCount) * 100);
+    const trendDirection = trend >= 0 ? 'up' : 'down';
+
+    // 3. Unresolved Errors: Count of unresolved events
+    const unresolvedErrors = ALL_EVENTS.filter((e) => !e.resolved).length;
+
+    // 4. DB Latency: Pseudo-latency based on DB unresolved events
+    const dbEvents = ALL_EVENTS.filter((e) => e.eventType === 'Database');
+    const unresolvedDbEvents = dbEvents.filter((e) => !e.resolved);
+    let dbLatencyValue = '14ms';
+    let dbLatencyStatus = 'Optimized';
+
+    if (unresolvedDbEvents.some((e) => e.severity === 'CRITICAL')) {
+      dbLatencyValue = '245ms';
+      dbLatencyStatus = 'Degraded';
+    } else if (unresolvedDbEvents.some((e) => e.severity === 'ERROR')) {
+      dbLatencyValue = '120ms';
+      dbLatencyStatus = 'Warning';
+    } else if (unresolvedDbEvents.some((e) => e.severity === 'WARNING')) {
+      dbLatencyValue = '65ms';
+      dbLatencyStatus = 'Warning';
+    }
+
     return {
-      activeServices: { active: 24, total: 24 },
-      logVolume: { count: '12.4k', trend: 4, trendDirection: 'up' },
-      unresolvedErrors: 3,
-      dbLatency: { value: '14ms', status: 'Optimized' },
+      activeServices: { active, total },
+      logVolume: { count: String(lastHourCount), trend: Math.abs(trend), trendDirection },
+      unresolvedErrors,
+      dbLatency: { value: dbLatencyValue, status: dbLatencyStatus },
     };
   }
 
-  getEvents({ severity, eventType, page = 1, limit = 50 } = {}) {
+  getEvents({ severity, eventType, page = 1, limit = 15 } = {}) {
+    const ALL_EVENTS = generateDummyEvents();
     let filtered = [...ALL_EVENTS];
 
     if (severity && severity !== 'ALL') {

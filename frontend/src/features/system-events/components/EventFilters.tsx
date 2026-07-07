@@ -13,6 +13,8 @@ interface EventFiltersProps {
   onEventTypeChange: (value: string) => void;
   onRefresh: () => void;
   isRefreshing: boolean;
+  onExport: () => void;
+  isExportDisabled?: boolean;
 }
 
 function formatFilterLabel(value: string) {
@@ -34,6 +36,8 @@ export default function EventFilters({
   onEventTypeChange,
   onRefresh,
   isRefreshing,
+  onExport,
+  isExportDisabled,
 }: EventFiltersProps) {
   return (
     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -74,7 +78,12 @@ export default function EventFilters({
       </div>
 
       <div className="flex items-center gap-2">
-        <button type="button" className={cn(outlineButtonClass, 'gap-2')}>
+        <button
+          type="button"
+          className={cn(outlineButtonClass, 'gap-2')}
+          onClick={onExport}
+          disabled={isExportDisabled}
+        >
           <Download size={14} />
           Export Logs
         </button>

@@ -6,6 +6,7 @@ import SummaryStats from './components/SummaryStats';
 import EventFilters from './components/EventFilters';
 import EventsTable from './components/EventsTable';
 import Pagination from './components/Pagination';
+import { exportSystemEventsToPDF } from './utils/pdfGenerator';
 
 const DEFAULT_SEVERITIES = ['ALL', 'CRITICAL', 'ERROR', 'WARNING', 'INFO'];
 const DEFAULT_EVENT_TYPES = [
@@ -31,7 +32,7 @@ export default function SystemEventsPage() {
     severity,
     eventType,
     page,
-    limit: 50,
+    limit: 15,
   });
 
   const events = eventsQuery.data?.events ?? [];
@@ -52,6 +53,10 @@ export default function SystemEventsPage() {
   const handleRefresh = () => {
     statsQuery.refetch();
     eventsQuery.refetch();
+  };
+
+  const handleExport = () => {
+    exportSystemEventsToPDF(events, severity, eventType);
   };
 
   return (
@@ -81,6 +86,8 @@ export default function SystemEventsPage() {
           onEventTypeChange={handleEventTypeChange}
           onRefresh={handleRefresh}
           isRefreshing={statsQuery.isFetching || eventsQuery.isFetching}
+          onExport={handleExport}
+          isExportDisabled={eventsQuery.isLoading || events.length === 0}
         />
 
         <EventsTable events={events} isLoading={eventsQuery.isLoading} />
