@@ -49,6 +49,9 @@ const productSchema = new mongoose.Schema(
 );
 
 productSchema.index({ sku: 1 });
-productSchema.index({ category: 1 });
+productSchema.index({ categoryId: 1 });
+productSchema.index({ supplierId: 1 });
+productSchema.index({ status: 1 });
+productSchema.index({ name: 'text', sku: 'text' }); // full-text search
 
 module.exports = mongoose.model('Product', productSchema);
