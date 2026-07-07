@@ -1,11 +1,16 @@
+import { useState } from 'react';
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/Card';
 import Button from '../components/Button';
-import { ArrowLeft, RefreshCcw, Download, User, MapPin, Tag } from 'lucide-react';
+import Modal from '../components/Modal';
+import { RefreshCcw, Download, User, Tag, Star, Phone, Mail, Award } from 'lucide-react';
 
 export default function TransactionDetailsPage() {
     const location = useLocation();
     const navigate = useNavigate();
+
+    // Modal State for Customer Profile
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
     // Get data passed from the success page
     const { transaction, customer } = location.state || {};
@@ -24,8 +29,8 @@ export default function TransactionDetailsPage() {
 
     const shortTxnId = `#TXN-${transaction._id.substring(18).toUpperCase()}`;
 
-    // Mock Data for Items (In a real app, this comes from the database transaction.items)
-    const purchasedItems = [
+    // Mock Data for Items (In a real app, this comes from the database: transaction.items)
+    const purchasedItems = transaction.items?.length > 0 ? transaction.items : [
         { id: 1, name: 'Logitech MX Master 3S', category: 'Electronics / Peripherals', sku: 'SKU-1002', qty: 1, originalPrice: 12000, price: 11000, total: 11000 },
         { id: 2, name: 'Anker USB-C Braided Cable', category: 'Accessories', sku: 'SKU-5004', qty: 2, originalPrice: 1150, price: 1150, total: 2300 },
         { id: 3, name: 'Fantech K211 Keyboard', category: 'Electronics / Peripherals', sku: 'SKU-8002', qty: 1, originalPrice: 1900, price: 1900, total: 1900 },
@@ -80,8 +85,8 @@ export default function TransactionDetailsPage() {
 
                             {/* Items List */}
                             <div className="divide-y divide-slate-100">
-                                {purchasedItems.map((item) => (
-                                    <div key={item.id} className="grid items-center grid-cols-12 gap-4 py-4">
+                                {purchasedItems.map((item, index) => (
+                                    <div key={item.id || index} className="grid items-center grid-cols-12 gap-4 py-4">
                                         <div className="col-span-5">
                                             <p className="font-bold text-slate-800">{item.name}</p>
                                             <p className="text-xs text-slate-500">{item.category}</p>
@@ -89,10 +94,10 @@ export default function TransactionDetailsPage() {
                                         <div className="col-span-2 text-sm text-slate-500">{item.sku}</div>
                                         <div className="col-span-1 font-bold text-center text-slate-800">{item.qty}</div>
                                         <div className="col-span-2 text-right">
-                                            {item.originalPrice !== item.price && (
+                                            {item.originalPrice && item.originalPrice !== item.price && (
                                                 <p className="text-xs line-through text-slate-400">Rs. {formatCurrency(item.originalPrice)}</p>
                                             )}
-                                            <p className={`text-sm font-bold ${item.originalPrice !== item.price ? 'text-red-500' : 'text-slate-800'}`}>
+                                            <p className={`text-sm font-bold ${(item.originalPrice && item.originalPrice !== item.price) ? 'text-red-500' : 'text-slate-800'}`}>
                                                 Rs. {formatCurrency(item.price)}
                                             </p>
                                         </div>
@@ -150,6 +155,21 @@ export default function TransactionDetailsPage() {
                                     <p className="font-bold text-emerald-600">- Rs. {formatCurrency(transaction.memberDiscount)}</p>
                                 </div>
 
+                                {/* Dynamic Points Details from Database */}
+                                {transaction.pointsRedeemed > 0 && (
+                                    <div>
+                                        <p className="text-slate-500 mb-0.5">Points Redeemed</p>
+                                        <p className="font-bold text-amber-600">-{transaction.pointsRedeemed} Pts</p>
+                                    </div>
+                                )}
+
+                                {transaction.pointsEarned > 0 && (
+                                    <div>
+                                        <p className="text-slate-500 mb-0.5">Points Earned</p>
+                                        <p className="font-bold text-orange-500">+{transaction.pointsEarned} Pts</p>
+                                    </div>
+                                )}
+
                                 <div>
                                     <p className="text-slate-500 mb-0.5">VAT(15%)</p>
                                     <p className="font-bold text-red-500">+ Rs. {formatCurrency(transaction.taxAmount)}</p>
@@ -172,7 +192,12 @@ export default function TransactionDetailsPage() {
                                             </div>
                                             <p className="text-sm font-semibold text-slate-800">{customer.name}</p>
                                         </div>
-                                        <button className="text-xs font-bold text-blue-600 hover:underline">View Profile</button>
+                                        <button
+                                            onClick={() => setIsProfileModalOpen(true)}
+                                            className="text-xs font-bold text-blue-600 hover:underline"
+                                        >
+                                            View Profile
+                                        </button>
                                     </div>
                                 ) : (
                                     <div className="p-3 text-sm font-medium border rounded-lg border-slate-200 bg-slate-50 text-slate-500">
@@ -185,6 +210,7 @@ export default function TransactionDetailsPage() {
                                 <p className="mb-2 text-xs font-bold tracking-wider uppercase text-slate-400">Processed By (Cashier)</p>
                                 <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
                                     <User size={16} className="text-blue-500" />
+                                    {/* In a real app, this maps to transaction.cashierId.name */}
                                     Nimal Perera <span className="font-normal text-slate-400">(Downtown Flagship)</span>
                                 </div>
                             </div>
@@ -194,6 +220,50 @@ export default function TransactionDetailsPage() {
 
                 </div>
             </div>
+
+            {/* --- CUSTOMER PROFILE MODAL --- */}
+            {customer && (
+                <Modal
+                    isOpen={isProfileModalOpen}
+                    onClose={() => setIsProfileModalOpen(false)}
+                    title="Customer Details"
+                    size="sm"
+                >
+                    <div className="flex flex-col items-center pt-2 pb-4 space-y-4">
+                        <div className="flex items-center justify-center w-20 h-20 text-2xl font-extrabold text-blue-700 uppercase bg-blue-100 rounded-full ring-4 ring-blue-50">
+                            {customer.name.substring(0, 2)}
+                        </div>
+                        <div className="text-center">
+                            <h3 className="text-xl font-bold text-slate-800">{customer.name}</h3>
+                            <p className="text-sm text-slate-500">Loyalty Member</p>
+                        </div>
+
+                        <div className="w-full pt-4 space-y-3 border-t border-slate-100">
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
+                                <Phone size={18} className="text-slate-400" />
+                                <span className="text-sm font-bold text-slate-700">{customer.phone}</span>
+                            </div>
+                            {customer.email && (
+                                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
+                                    <Mail size={18} className="text-slate-400" />
+                                    <span className="text-sm font-bold text-slate-700">{customer.email}</span>
+                                </div>
+                            )}
+                            <div className="flex items-center justify-between p-3 border rounded-lg bg-amber-50 border-amber-200">
+                                <div className="flex items-center gap-3">
+                                    <Award size={18} className="text-amber-500" />
+                                    <span className="text-sm font-bold text-amber-800">Total Points</span>
+                                </div>
+                                <span className="font-extrabold text-amber-700">{customer.loyaltyPoints} Pts</span>
+                            </div>
+                        </div>
+
+                        <Button onClick={() => setIsProfileModalOpen(false)} variant="outline" className="w-full mt-2">
+                            Close
+                        </Button>
+                    </div>
+                </Modal>
+            )}
         </div>
     );
 }
