@@ -5,7 +5,6 @@ import { ROLES } from '../config/roles';
 
 // Layouts
 import MainLayout from '../layouts/MainLayout';
-import POSLayout from '../layouts/POSLayout';
 
 // Page Imports
 import DashboardPage from '../pages/DashboardPage';
@@ -93,7 +92,7 @@ export const AppRoutes = () => {
 
       <Route element={
         <ProtectedRoute allowedRoles={POS_ROLES}>
-          <POSLayout />
+          <MainLayout />
         </ProtectedRoute>
       }>
         <Route path="/pos-billing" element={<POSBillingPage />} />

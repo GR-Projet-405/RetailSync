@@ -29,6 +29,7 @@ export default function ReceiptPreviewPage() {
   const [showDigitalInvoice, setShowDigitalInvoice] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showConfirmNewSale, setShowConfirmNewSale] = useState(false);
 
   const state = location.state || {};
   const {
@@ -318,9 +319,12 @@ export default function ReceiptPreviewPage() {
   };
 
   const handleNewSale = () => {
-    if (window.confirm('Start a new sale? The current receipt will be saved.')) {
-      navigate('/pos-billing', { state: { cart: [] } });
-    }
+    setShowConfirmNewSale(true);
+  };
+
+  const confirmNewSale = () => {
+    setShowConfirmNewSale(false);
+    navigate('/pos-billing', { state: { cart: [] } });
   };
 
   const PaymentIcon = {
@@ -454,6 +458,38 @@ export default function ReceiptPreviewPage() {
               <Check className="w-3 h-3" /> Copied to clipboard!
             </p>
           )}
+        </div>
+      </div>
+    </Modal>
+  );
+
+  // Professional New Sale Confirm Modal
+  const ConfirmNewSaleModal = () => (
+    <Modal isOpen={showConfirmNewSale} onClose={() => setShowConfirmNewSale(false)} title="Confirm New Sale" size="sm">
+      <div className="space-y-4">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+          <Receipt className="h-6 w-6" />
+        </div>
+        <div className="space-y-2 text-center">
+          <h4 className="font-bold text-slate-800 text-lg">Start a New Sale?</h4>
+          <p className="text-sm text-slate-500">
+            The current receipt details will be cleared. Please verify you have completed any print or sharing steps.
+          </p>
+        </div>
+        <div className="flex gap-3 pt-2">
+          <Button
+            variant="outline"
+            className="flex-1 rounded-xl h-11 border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold"
+            onClick={() => setShowConfirmNewSale(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            className="flex-1 rounded-xl h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+            onClick={confirmNewSale}
+          >
+            Start Sale
+          </Button>
         </div>
       </div>
     </Modal>
@@ -770,6 +806,7 @@ export default function ReceiptPreviewPage() {
       {/* Modals */}
       <DigitalInvoiceModal />
       <ShareModal />
+      <ConfirmNewSaleModal />
 
       {/* Print Styles */}
       <style dangerouslySetInnerHTML={{__html: `
@@ -777,6 +814,43 @@ export default function ReceiptPreviewPage() {
           body {
             background: white !important;
             font-family: 'Courier New', monospace !important;
+          }
+          
+          /* Reset parent layout containers during printing */
+          html,
+          body,
+          #root,
+          .h-screen,
+          .h-screen > div,
+          main,
+          .workspace-container {
+            height: auto !important;
+            min-height: auto !important;
+            overflow: visible !important;
+            position: static !important;
+            display: block !important;
+            box-shadow: none !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: auto !important;
+            max-width: none !important;
+          }
+          
+          html,
+          #root,
+          .h-screen,
+          .h-screen > div,
+          main,
+          .workspace-container {
+            background: transparent !important;
+          }
+          
+          .min-h-screen {
+            min-height: auto !important;
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
           }
           
           .print\\:hidden {
@@ -820,10 +894,6 @@ export default function ReceiptPreviewPage() {
           @page {
             margin: 8mm;
             size: 80mm auto;
-          }
-          
-          .min-h-screen {
-            min-height: auto !important;
           }
           
           .space-y-6 > * + * {

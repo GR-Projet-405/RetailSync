@@ -12,6 +12,7 @@ import Card, { CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import Button from '../components/Button';
 import SearchInput from '../components/SearchInput';
 import Modal from '../components/Modal';
+import { useCustomers } from '../features/customer-management/hooks/useCustomers';
 
 const currency = new Intl.NumberFormat('en-LK', {
   style: 'currency',
@@ -19,14 +20,6 @@ const currency = new Intl.NumberFormat('en-LK', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 0,
 });
-
-// Mock customer data for demo
-const mockCustomers = [
-  { id: 1, name: 'John Doe', phone: '+94 77 123 4567', email: 'john@email.com', points: 1250, tier: 'Gold' },
-  { id: 2, name: 'Sarah Perera', phone: '+94 71 234 5678', email: 'sarah@email.com', points: 2450, tier: 'Platinum' },
-  { id: 3, name: 'Mike Fernando', phone: '+94 76 345 6789', email: 'mike@email.com', points: 750, tier: 'Silver' },
-  { id: 4, name: 'Lisa Rajapaksa', phone: '+94 77 456 7890', email: 'lisa@email.com', points: 3200, tier: 'Diamond' },
-];
 
 const getTierColor = (tier) => {
   const colors = {
@@ -82,11 +75,20 @@ export default function POSCheckoutPage() {
   // FIXED: Exact amount check - only true when received amount equals rounded total
   const isExact = numReceived > 0 && numReceived === roundedTotal;
 
-  // Filter customers based on search
-  const filteredCustomers = mockCustomers.filter(customer =>
-    customer.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
-    customer.phone.includes(customerSearch)
-  );
+  const { customers = [], loading: customersLoading } = useCustomers({
+    search: customerSearch,
+    limit: 20
+  });
+
+  // Map database customers to UI expected customer schema
+  const filteredCustomers = customers.map(customer => ({
+    id: customer._id,
+    name: customer.name || `${customer.firstName || ''} ${customer.lastName || ''}`.trim(),
+    phone: customer.phone,
+    email: customer.email,
+    points: customer.loyaltyPoints ?? 0,
+    tier: customer.customerType ?? 'Regular',
+  }));
 
   const handleCompletePayment = async () => {
     if (paymentMethod === 'cash' && numReceived < roundedTotal) return;
@@ -651,34 +653,45 @@ export default function POSCheckoutPage() {
                 </Button>
               </div>
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {filteredCustomers.map(customer => (
-                  <button
-                    key={customer.id}
-                    onClick={() => {
-                      setSelectedCustomer(customer);
-                      setIsWalkIn(false);
-                      setShowCustomerSearch(false);
-                    }}
-                    className="w-full p-4 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all text-left flex items-center justify-between group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-bold text-sm">
-                        {customer.name.charAt(0)}
+                {customersLoading ? (
+                  <div className="py-8 text-center text-slate-500 text-sm">
+                    <span className="inline-block w-5 h-5 border-2 border-slate-300 border-t-blue-600 rounded-full animate-spin mr-2 align-middle" />
+                    Loading customers...
+                  </div>
+                ) : filteredCustomers.length === 0 ? (
+                  <div className="py-8 text-center text-slate-500 text-sm">
+                    No customers found matching search.
+                  </div>
+                ) : (
+                  filteredCustomers.map(customer => (
+                    <button
+                      key={customer.id}
+                      onClick={() => {
+                        setSelectedCustomer(customer);
+                        setIsWalkIn(false);
+                        setShowCustomerSearch(false);
+                      }}
+                      className="w-full p-4 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all text-left flex items-center justify-between group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-bold text-sm">
+                          {customer.name?.charAt(0) || 'U'}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-slate-800">{customer.name}</div>
+                          <div className="text-sm text-slate-500">{customer.phone}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-semibold text-slate-800">{customer.name}</div>
-                        <div className="text-sm text-slate-500">{customer.phone}</div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <div className="text-xs text-slate-500">Points</div>
+                          <div className="font-bold text-blue-600">{customer.points.toLocaleString()}</div>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 transition-colors" />
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <div className="text-xs text-slate-500">Points</div>
-                        <div className="font-bold text-blue-600">{customer.points.toLocaleString()}</div>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 transition-colors" />
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  ))
+                )}
               </div>
             </div>
           </div>
