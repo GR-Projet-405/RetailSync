@@ -209,38 +209,38 @@ export const AppRoutes = () => {
 
         {/* Returns & Refunds */}
         <Route path="/returns-refunds" element={
-          <ProtectedRoute allowedRoles={SALES_ROLES}>
+          
             <ReturnsRefundsPage />
-          </ProtectedRoute>
+          
 
         } />
 
         {/* Return Approval (Manager Only) */}
         <Route path="/returns/approval/:transactionId" element={
-          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+        
             <ReviewReturnRequestPage />
-          </ProtectedRoute>
+        
         } />
 
         {/* Track Return Status */}
         <Route path="/returns/status/:returnId" element={
-          <ProtectedRoute allowedRoles={SALES_ROLES}>
+          
             <ReturnStatusPage />
-          </ProtectedRoute>
+          
         } />
 
         {/* Process Refund */}
         <Route path="/returns/process-refund/:returnId" element={
-          <ProtectedRoute allowedRoles={SALES_ROLES}>
+          
             <ProcessRefundPage />
-          </ProtectedRoute>
+      
         } />
 
         {/* Return History */}
         <Route path="/returns/history" element={
-          <ProtectedRoute allowedRoles={SALES_ROLES}>
+          
             <ReturnHistoryPage />
-          </ProtectedRoute>
+          
         } />
 
         {/* Promotions & Discounts */}

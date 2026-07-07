@@ -4,18 +4,13 @@ import PageHeader from '../components/PageHeader';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/Card';
 import Button from '../components/Button';
 import { Search, Package, AlertCircle, Send, Barcode, HelpCircle, UploadCloud, Check, Save, Trash2, Edit2 } from 'lucide-react';
-
-
-const RECEIPT_ITEMS = [
-  { sku: '1002', name: 'Logitech MX Master 3S', unitPrice: 11000.00, originalQty: 1 },
-  { sku: '5044', name: 'Anker USB-C Braided Cable', unitPrice: 4200.00, originalQty: 2 },
-  { sku: '2045', name: 'Keychron K2 Wireless Keyboard', unitPrice: 18500.00, originalQty: 1 },
-  { sku: '3092', name: 'Ugreen 6-in-1 USB-C Hub', unitPrice: 7200.00, originalQty: 2 },
-];
+import api from '../services/api';
+import Swal from 'sweetalert2';
 
 export default function ReturnsRefundsPage() {
   const [receiptId, setReceiptId] = useState('');
   const [uiState, setUiState] = useState('IDLE'); 
+  const [receiptItems, setReceiptItems] = useState([]); 
   
   const [selectedSkus, setSelectedSkus] = useState([]);
   const [returnQuantities, setReturnQuantities] = useState({});
@@ -30,25 +25,43 @@ export default function ReturnsRefundsPage() {
     }
   }, [activeDetailSku, formStates]);
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const cleanId = receiptId.trim().toUpperCase();
-    if (cleanId === 'TXN-88498B') {
-      setUiState('ERROR');
-      setActiveDetailSku(null);
-    } else if (cleanId === 'TXN-88492A') {
-      setUiState('VALID');
-      setSelectedSkus([]); 
-      setReturnQuantities({});
-      setActiveDetailSku(null);
-      setFormStates({});
-    } else {
-      setUiState('IDLE');
+    if (!cleanId) return;
+
+    try {
+      const response = await api.get(`/returns-refunds/verify/${cleanId}`);
+      
+      if (response.data.success) {
+        const returnData = response.data.data;
+        setReceiptItems(returnData.items || []);
+        setUiState('VALID');
+        setSelectedSkus([]); 
+        setReturnQuantities({});
+        setActiveDetailSku(null);
+        setFormStates({});
+      }
+    } catch (error) {
+      console.error("API Error:", error);
+      if (error.response?.data?.isExpired) {
+        setUiState('ERROR');
+        setActiveDetailSku(null);
+      } else {
+        setUiState('IDLE');
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: error.response?.data?.message || 'Receipt ID not found or server error.',
+          confirmButtonColor: '#2563eb'
+        });
+      }
     }
   };
 
   const handleTryAnother = () => {
     setUiState('IDLE');
     setReceiptId('');
+    setReceiptItems([]);
     setSelectedSkus([]);
     setReturnQuantities({});
     setActiveDetailSku(null);
@@ -92,14 +105,14 @@ export default function ReturnsRefundsPage() {
   };
 
   const calculateRefundTotal = () => {
-    return RECEIPT_ITEMS.filter(item => selectedSkus.includes(item.sku))
+    return receiptItems.filter(item => selectedSkus.includes(item.sku))
       .reduce((sum, item) => {
         const qty = returnQuantities[item.sku] || 1;
         return sum + (item.unitPrice * qty);
       }, 0);
   };
 
-  const activeItemInfo = RECEIPT_ITEMS.find(item => item.sku === activeDetailSku);
+  const activeItemInfo = receiptItems.find(item => item.sku === activeDetailSku);
   const activeFormInfo = formStates[activeDetailSku] || { reason: 'Defective/Damaged Product', condition: 'Opened', comments: '', isSaved: false };
 
   if (uiState === 'TRACKING') {
@@ -226,7 +239,7 @@ export default function ReturnsRefundsPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-slate-700 text-xs">
-                        {RECEIPT_ITEMS.map((item) => {
+                        {receiptItems.map((item) => {
                           const isChecked = selectedSkus.includes(item.sku);
                           const itemForm = formStates[item.sku] || { isSaved: false };
                           const isActiveRow = activeDetailSku === item.sku;
@@ -296,7 +309,7 @@ export default function ReturnsRefundsPage() {
                     <div className="flex justify-between items-center px-5 py-4 bg-slate-50/50 border-t border-slate-100 text-xs mt-auto">
                       <div>
                         <span className="text-slate-400 font-bold uppercase text-[10px] tracking-wider block">Items Selected</span>
-                        <span className="font-bold text-slate-800">{selectedSkus.length} of 4 items</span>
+                        <span className="font-bold text-slate-800">{selectedSkus.length} of {receiptItems.length} items</span>
                       </div>
                       <div className="text-right">
                         <span className="text-slate-400 font-bold uppercase text-[10px] tracking-wider block">Estimated Refund Total</span>
@@ -308,7 +321,7 @@ export default function ReturnsRefundsPage() {
                   </div>
                 )}
 
-               
+                
               <div className="p-5 space-y-3">
                 {uiState === 'VALID' && (
                   <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-3 flex gap-2.5 items-center text-slate-600 text-xs font-medium mb-1">
@@ -348,7 +361,7 @@ export default function ReturnsRefundsPage() {
 
         
         <div className="lg:col-span-1 flex flex-col">
-          {uiState === 'VALID' && activeDetailSku ? (
+          {uiState === 'VALID' && activeDetailSku && activeItemInfo ? (
             <Card className="flex-1 flex flex-col justify-between p-6 min-h-[460px] border-slate-200/80 bg-white font-sans fade-up">
               <div className="space-y-6">
                 <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3 flex gap-2.5 text-slate-700">
