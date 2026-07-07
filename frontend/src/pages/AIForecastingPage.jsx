@@ -106,6 +106,7 @@ export default function AIForecastingPage() {
   const chartData = useMemo(() => generateForecastData(metric, period), [metric, period]);
   const summaryMetrics = useMemo(() => getSummaryMetrics(metric, period), [metric, period]);
   
+  const multiplier = period === '7d' ? 1 : period === '14d' ? 2 : 4.2;
   const unitPrefix = metric === 'revenue' ? '$' : '';
 
   return (
