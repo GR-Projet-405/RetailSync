@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { TrendingUp, DollarSign, ShoppingBag, Users, Percent, ArrowUpRight, ArrowDownRight, Calendar, Filter, RefreshCw, BarChart2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { TrendingUp, DollarSign, ShoppingBag, Users, Percent, ArrowUpRight, ArrowDownRight, Calendar, Filter, RefreshCw, BarChart2, Award } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
-import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
 import Spinner from '../components/Spinner';
 import {
@@ -11,42 +10,93 @@ import {
 
 const COLORS = ['#2563EB', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
 
-// Mock Analytics Data
-const ANALYTICS_DATA = {
-  summary: {
-    revenue: { value: '$124,580.00', change: '+12.3%', trend: 'up' },
-    orders: { value: '3,842', change: '+8.1%', trend: 'up' },
-    avgOrderValue: { value: '$32.42', change: '+4.2%', trend: 'up' },
-    conversionRate: { value: '2.8%', change: '-0.5%', trend: 'down' }
-  },
-  revenueTrend: [
-    { name: 'Jan', revenue: 45000, orders: 1200 },
-    { name: 'Feb', revenue: 52000, orders: 1400 },
-    { name: 'Mar', revenue: 49000, orders: 1350 },
-    { name: 'Apr', revenue: 63000, orders: 1800 },
-    { name: 'May', revenue: 58000, orders: 1650 },
-    { name: 'Jun', revenue: 71000, orders: 2100 },
-    { name: 'Jul', revenue: 84000, orders: 2500 }
-  ],
-  categorySales: [
-    { name: 'Beverages', value: 38400 },
-    { name: 'Snacks & Sweets', value: 28800 },
-    { name: 'Bakery Items', value: 22100 },
-    { name: 'Fresh Produce', value: 18500 },
-    { name: 'Dairy & Eggs', value: 16780 }
-  ],
-  topProducts: [
-    { id: 1, name: 'Espresso Blend Coffee', category: 'Beverages', sales: 1250, revenue: '$6,250.00', stock: 45 },
-    { id: 2, name: 'Whole Wheat Bread', category: 'Bakery Items', sales: 980, revenue: '$3,430.00', stock: 12 },
-    { id: 3, name: 'Organic Bananas (kg)', category: 'Fresh Produce', sales: 850, revenue: '$2,550.00', stock: 120 },
-    { id: 4, name: 'Greek Yogurt (500g)', category: 'Dairy & Eggs', sales: 740, revenue: '$2,960.00', stock: 64 },
-    { id: 5, name: 'Chocolate Chip Cookie', category: 'Bakery Items', sales: 690, revenue: '$1,380.00', stock: 8 }
-  ],
-  branchPerformance: [
-    { name: 'Downtown Branch', revenue: 52400, target: 50000, color: '#2563EB' },
-    { name: 'Suburban Mall', revenue: 41200, target: 45000, color: '#10B981' },
-    { name: 'Metro Terminal', revenue: 30980, target: 28000, color: '#F59E0B' }
-  ]
+// Generator for dynamic data based on selected filter
+const getAnalyticsData = (dateRange) => {
+  const is7d = dateRange === '7d';
+  const is30d = dateRange === '30d';
+
+  // Summary Metrics calculations
+  const summary = {
+    revenue: {
+      value: is7d ? '$28,420.00' : is30d ? '$124,580.00' : '$784,500.00',
+      change: is7d ? '+5.2%' : is30d ? '+12.3%' : '+18.7%',
+      trend: 'up'
+    },
+    orders: {
+      value: is7d ? '840' : is30d ? '3,842' : '24,192',
+      change: is7d ? '+2.1%' : is30d ? '+8.1%' : '+14.2%',
+      trend: 'up'
+    },
+    avgOrderValue: {
+      value: is7d ? '$33.83' : is30d ? '$32.42' : '$32.42',
+      change: is7d ? '+1.5%' : is30d ? '+4.2%' : '+3.9%',
+      trend: 'up'
+    },
+    conversionRate: {
+      value: is7d ? '2.9%' : is30d ? '2.8%' : '3.1%',
+      change: is7d ? '+0.1%' : is30d ? '-0.5%' : '+0.4%',
+      trend: is7d ? 'up' : is30d ? 'down' : 'up'
+    }
+  };
+
+  // Trend Chart generation
+  let revenueTrend = [];
+  if (is7d) {
+    revenueTrend = [
+      { name: 'Mon', revenue: 3800, orders: 110 },
+      { name: 'Tue', revenue: 4100, orders: 120 },
+      { name: 'Wed', revenue: 3900, orders: 115 },
+      { name: 'Thu', revenue: 4500, orders: 130 },
+      { name: 'Fri', revenue: 52000 / 10, orders: 140 }, // scale appropriately
+      { name: 'Sat', revenue: 6200, orders: 180 },
+      { name: 'Sun', revenue: 5800, orders: 165 }
+    ];
+  } else if (is30d) {
+    revenueTrend = [
+      { name: 'Week 1', revenue: 27000, orders: 820 },
+      { name: 'Week 2', revenue: 31000, orders: 940 },
+      { name: 'Week 3', revenue: 29000, orders: 890 },
+      { name: 'Week 4', revenue: 37580, orders: 1192 }
+    ];
+  } else {
+    revenueTrend = [
+      { name: 'Jan', revenue: 85000, orders: 2600 },
+      { name: 'Feb', revenue: 92000, orders: 2800 },
+      { name: 'Mar', revenue: 89000, orders: 2750 },
+      { name: 'Apr', revenue: 105000, orders: 3200 },
+      { name: 'May', revenue: 112000, orders: 3400 },
+      { name: 'Jun', revenue: 130000, orders: 4000 },
+      { name: 'Jul', revenue: 171500, orders: 5442 }
+    ];
+  }
+
+  // Category sales share calculations
+  const totalRev = is7d ? 28420 : is30d ? 124580 : 784500;
+  const categorySales = [
+    { name: 'Beverages', value: Math.round(totalRev * 0.31), count: is7d ? 320 : is30d ? 1420 : 9210 },
+    { name: 'Snacks & Sweets', value: Math.round(totalRev * 0.23), count: is7d ? 210 : is30d ? 980 : 6400 },
+    { name: 'Bakery Items', value: Math.round(totalRev * 0.18), count: is7d ? 150 : is30d ? 640 : 4210 },
+    { name: 'Fresh Produce', value: Math.round(totalRev * 0.15), count: is7d ? 110 : is30d ? 520 : 3120 },
+    { name: 'Dairy & Eggs', value: Math.round(totalRev * 0.13), count: is7d ? 50 : is30d ? 282 : 1252 }
+  ];
+
+  // Top products list
+  const topProducts = [
+    { id: 1, name: 'Espresso Blend Coffee', category: 'Beverages', sales: is7d ? 280 : is30d ? 1250 : 8120, revenue: is7d ? '$1,400.00' : is30d ? '$6,250.00' : '$40,600.00', stock: 45, variance: '+5.4%' },
+    { id: 2, name: 'Whole Wheat Bread', category: 'Bakery Items', sales: is7d ? 210 : is30d ? 980 : 6110, revenue: is7d ? '$735.00' : is30d ? '$3,430.00' : '$21,385.00', stock: 12, variance: '+12.2%' },
+    { id: 3, name: 'Organic Bananas (kg)', category: 'Fresh Produce', sales: is7d ? 190 : is30d ? 850 : 5400, revenue: is7d ? '$570.00' : is30d ? '$2,550.00' : '$16,200.00', stock: 120, variance: '-2.1%' },
+    { id: 4, name: 'Greek Yogurt (500g)', category: 'Dairy & Eggs', sales: is7d ? 160 : is30d ? 740 : 4910, revenue: is7d ? '$640.00' : is30d ? '$2,960.00' : '$19,640.00', stock: 64, variance: '+1.5%' },
+    { id: 5, name: 'Chocolate Chip Cookie', category: 'Bakery Items', sales: is7d ? 145 : is30d ? 690 : 4210, revenue: is7d ? '$290.00' : is30d ? '$1,380.00' : '$8,420.00', stock: 8, variance: '-4.8%' }
+  ];
+
+  // Branch goals
+  const branchPerformance = [
+    { name: 'Downtown', Actual: is7d ? 12400 : is30d ? 52400 : 312000, Target: is7d ? 11000 : is30d ? 50000 : 300000 },
+    { name: 'Suburban Mall', Actual: is7d ? 9100 : is30d ? 41200 : 260000, Target: is7d ? 10000 : is30d ? 45000 : 280000 },
+    { name: 'Metro Terminal', Actual: is7d ? 6920 : is30d ? 30980 : 212500, Target: is7d ? 6000 : is30d ? 28000 : 200000 }
+  ];
+
+  return { summary, revenueTrend, categorySales, topProducts, branchPerformance, totalRev };
 };
 
 export default function BusinessAnalyticsPage() {
@@ -58,7 +108,7 @@ export default function BusinessAnalyticsPage() {
     setLoading(true);
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 600);
+    }, 500);
     return () => clearTimeout(timer);
   }, [dateRange, refreshKey]);
 
@@ -66,9 +116,12 @@ export default function BusinessAnalyticsPage() {
     setRefreshKey(prev => prev + 1);
   };
 
+  // Compute dataset and summary metrics dynamically
+  const activeData = useMemo(() => getAnalyticsData(dateRange), [dateRange]);
+
   return (
     <div className="space-y-6 fade-in">
-      {/* Premium Gradient Title Card */}
+      {/* Premium Title Card */}
       <Card className="overflow-hidden rounded-[20px] border-slate-200 bg-white p-0 shadow-sm">
         <div className="flex flex-col gap-5 bg-gradient-to-br from-white via-slate-50 to-blue-50/50 p-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
@@ -83,37 +136,24 @@ export default function BusinessAnalyticsPage() {
 
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
-              <button
-                onClick={() => setDateRange('7d')}
-                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
-                  dateRange === '7d' ? 'bg-[#2563EB] text-white' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                7 Days
-              </button>
-              <button
-                onClick={() => setDateRange('30d')}
-                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
-                  dateRange === '30d' ? 'bg-[#2563EB] text-white' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                30 Days
-              </button>
-              <button
-                onClick={() => setDateRange('12m')}
-                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
-                  dateRange === '12m' ? 'bg-[#2563EB] text-white' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                12 Months
-              </button>
+              {['7d', '30d', '12m'].map(range => (
+                <button
+                  key={range}
+                  onClick={() => setDateRange(range)}
+                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+                    dateRange === range ? 'bg-[#2563EB] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '12 Months'}
+                </button>
+              ))}
             </div>
 
             <Button
               variant="outline"
               size="sm"
               onClick={handleRefresh}
-              className="flex items-center gap-2 border-slate-200 hover:bg-slate-50 font-bold bg-white text-slate-700 h-10 px-4 rounded-xl"
+              className="flex items-center gap-2 border-slate-200 hover:bg-slate-50 font-bold bg-white text-slate-700 h-10 px-4 rounded-xl shadow-sm"
             >
               <RefreshCw className="h-4 w-4 text-slate-500" />
               Refresh
@@ -137,16 +177,18 @@ export default function BusinessAnalyticsPage() {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Revenue</p>
-                  <p className="mt-2 text-3xl font-extrabold text-slate-900">{ANALYTICS_DATA.summary.revenue.value}</p>
+                  <p className="mt-2 text-3xl font-extrabold text-slate-900">{activeData.summary.revenue.value}</p>
                 </div>
                 <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
                   <DollarSign className="w-5 h-5" />
                 </div>
               </div>
               <div className="mt-4 flex items-center gap-1">
-                <span className="inline-flex items-center text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                <span className={`inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full ${
+                  activeData.summary.revenue.change.startsWith('+') ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+                }`}>
                   <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" />
-                  {ANALYTICS_DATA.summary.revenue.change}
+                  {activeData.summary.revenue.change}
                 </span>
                 <span className="text-xs font-semibold text-slate-400">vs last period</span>
               </div>
@@ -156,7 +198,7 @@ export default function BusinessAnalyticsPage() {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Orders</p>
-                  <p className="mt-2 text-3xl font-extrabold text-slate-900">{ANALYTICS_DATA.summary.orders.value}</p>
+                  <p className="mt-2 text-3xl font-extrabold text-slate-900">{activeData.summary.orders.value}</p>
                 </div>
                 <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
                   <ShoppingBag className="w-5 h-5" />
@@ -165,7 +207,7 @@ export default function BusinessAnalyticsPage() {
               <div className="mt-4 flex items-center gap-1">
                 <span className="inline-flex items-center text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
                   <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" />
-                  {ANALYTICS_DATA.summary.orders.change}
+                  {activeData.summary.orders.change}
                 </span>
                 <span className="text-xs font-semibold text-slate-400">vs last period</span>
               </div>
@@ -175,7 +217,7 @@ export default function BusinessAnalyticsPage() {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Avg. Order Value</p>
-                  <p className="mt-2 text-3xl font-extrabold text-slate-900">{ANALYTICS_DATA.summary.avgOrderValue.value}</p>
+                  <p className="mt-2 text-3xl font-extrabold text-slate-900">{activeData.summary.avgOrderValue.value}</p>
                 </div>
                 <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
                   <BarChart2 className="w-5 h-5" />
@@ -184,7 +226,7 @@ export default function BusinessAnalyticsPage() {
               <div className="mt-4 flex items-center gap-1">
                 <span className="inline-flex items-center text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
                   <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" />
-                  {ANALYTICS_DATA.summary.avgOrderValue.change}
+                  {activeData.summary.avgOrderValue.change}
                 </span>
                 <span className="text-xs font-semibold text-slate-400">vs last period</span>
               </div>
@@ -194,16 +236,18 @@ export default function BusinessAnalyticsPage() {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Conversion Rate</p>
-                  <p className="mt-2 text-3xl font-extrabold text-slate-900">{ANALYTICS_DATA.summary.conversionRate.value}</p>
+                  <p className="mt-2 text-3xl font-extrabold text-slate-900">{activeData.summary.conversionRate.value}</p>
                 </div>
                 <div className="p-3 bg-red-50 text-red-500 rounded-xl">
                   <Users className="w-5 h-5" />
                 </div>
               </div>
               <div className="mt-4 flex items-center gap-1">
-                <span className="inline-flex items-center text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
-                  <ArrowDownRight className="w-3.5 h-3.5 mr-0.5" />
-                  {ANALYTICS_DATA.summary.conversionRate.change}
+                <span className={`inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full ${
+                  activeData.summary.conversionRate.change.startsWith('+') ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+                }`}>
+                  {activeData.summary.conversionRate.change.startsWith('+') ? <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" /> : <ArrowDownRight className="w-3.5 h-3.5 mr-0.5" />}
+                  {activeData.summary.conversionRate.change}
                 </span>
                 <span className="text-xs font-semibold text-slate-400">vs last period</span>
               </div>
@@ -216,12 +260,12 @@ export default function BusinessAnalyticsPage() {
             <Card className="lg:col-span-2 border-slate-200 bg-white rounded-2xl p-6">
               <CardHeader className="p-0 pb-6">
                 <CardTitle className="text-lg font-bold text-slate-800">Revenue & Orders Trend</CardTitle>
-                <p className="text-xs text-slate-500">Monthly breakdown of gross revenue and transaction counts</p>
+                <p className="text-xs text-slate-500">Gross revenue performance on selected timeline</p>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={ANALYTICS_DATA.revenueTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <AreaChart data={activeData.revenueTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#2563EB" stopOpacity={0.2}/>
@@ -253,7 +297,7 @@ export default function BusinessAnalyticsPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={ANALYTICS_DATA.categorySales}
+                        data={activeData.categorySales}
                         cx="50%"
                         cy="50%"
                         innerRadius={55}
@@ -261,7 +305,7 @@ export default function BusinessAnalyticsPage() {
                         paddingAngle={4}
                         dataKey="value"
                       >
-                        {ANALYTICS_DATA.categorySales.map((entry, index) => (
+                        {activeData.categorySales.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
@@ -270,12 +314,12 @@ export default function BusinessAnalyticsPage() {
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-xs font-bold text-slate-400 uppercase">Total</span>
-                    <span className="text-xl font-extrabold text-slate-800">$124,580</span>
+                    <span className="text-xl font-extrabold text-slate-800">${activeData.totalRev.toLocaleString()}</span>
                   </div>
                 </div>
 
                 <div className="space-y-1.5 overflow-y-auto max-h-[110px] pr-1">
-                  {ANALYTICS_DATA.categorySales.map((cat, i) => (
+                  {activeData.categorySales.map((cat, i) => (
                     <div key={cat.name} className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
@@ -289,82 +333,113 @@ export default function BusinessAnalyticsPage() {
             </Card>
           </div>
 
-          {/* Bottom Row - Top Products & Branch Performance */}
+          {/* New Grid section: Category detail boxes & Branch comparison BarChart */}
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-            {/* Top Products Table */}
+            {/* Interactive Bar Chart for Branch Revenue Performance */}
             <Card className="lg:col-span-2 border-slate-200 bg-white rounded-2xl p-6">
               <CardHeader className="p-0 pb-4">
-                <CardTitle className="text-lg font-bold text-slate-800">Top Performing Products</CardTitle>
-                <p className="text-xs text-slate-500">Most sold items and their remaining inventory levels</p>
+                <CardTitle className="text-lg font-bold text-slate-800">Branch Performance (Target vs Actual)</CardTitle>
+                <p className="text-xs text-slate-500">AI projection model vs target metrics</p>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                        <th className="py-3 px-4 font-bold">Product</th>
-                        <th className="py-3 px-4 font-bold">Category</th>
-                        <th className="py-3 px-4 font-bold text-right">Units Sold</th>
-                        <th className="py-3 px-4 font-bold text-right">Revenue</th>
-                        <th className="py-3 px-4 font-bold text-center">Stock</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50 text-sm">
-                      {ANALYTICS_DATA.topProducts.map((p) => (
-                        <tr key={p.id} className="hover:bg-slate-50/50 transition">
-                          <td className="py-3.5 px-4 font-semibold text-slate-800">{p.name}</td>
-                          <td className="py-3.5 px-4 text-slate-500 text-xs font-medium">{p.category}</td>
-                          <td className="py-3.5 px-4 text-right font-bold text-slate-700">{p.sales}</td>
-                          <td className="py-3.5 px-4 text-right font-extrabold text-slate-800">{p.revenue}</td>
-                          <td className="py-3.5 px-4 text-center">
-                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
-                              p.stock < 15 ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-600'
-                            }`}>
-                              {p.stock} left
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="h-[260px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={activeData.branchPerformance} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+                      <Tooltip
+                        contentStyle={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+                        formatter={(value) => [`$${value.toLocaleString()}`]}
+                      />
+                      <Legend wrapperStyle={{ fontSize: 12 }} />
+                      <Bar dataKey="Target" fill="#E2E8F0" radius={[6, 6, 0, 0]} barSize={28} />
+                      <Bar dataKey="Actual" fill="#2563EB" radius={[6, 6, 0, 0]} barSize={28} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Branch Performance Targets */}
+            {/* Category breakdown boxes */}
             <Card className="border-slate-200 bg-white rounded-2xl p-6">
               <CardHeader className="p-0 pb-4">
-                <CardTitle className="text-lg font-bold text-slate-800">Branch Performance</CardTitle>
-                <p className="text-xs text-slate-500">Sales achievement vs target goal settings</p>
+                <CardTitle className="text-lg font-bold text-slate-800">Category Statistics</CardTitle>
+                <p className="text-xs text-slate-500">Detailed share indicators per grouping</p>
               </CardHeader>
-              <CardContent className="p-0 space-y-5">
-                {ANALYTICS_DATA.branchPerformance.map((branch) => {
-                  const percentage = Math.min(Math.round((branch.revenue / branch.target) * 100), 100);
-                  return (
-                    <div key={branch.name} className="space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-semibold text-slate-700">{branch.name}</span>
-                        <span className="font-bold text-slate-800">{percentage}%</span>
-                      </div>
-                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${percentage}%`,
-                            backgroundColor: branch.color
-                          }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
-                        <span>Actual: ${branch.revenue.toLocaleString()}</span>
-                        <span>Goal: ${branch.target.toLocaleString()}</span>
-                      </div>
+              <CardContent className="p-0 space-y-3.5">
+                {activeData.categorySales.map((cat, idx) => (
+                  <div key={cat.name} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <div className="w-2.5 h-10 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-bold text-slate-800 truncate">{cat.name}</div>
+                      <div className="text-[11px] font-semibold text-slate-400 mt-0.5">{cat.count} transactions</div>
                     </div>
-                  );
-                })}
+                    <div className="text-right">
+                      <div className="text-xs font-extrabold text-slate-800">${cat.value.toLocaleString()}</div>
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full mt-0.5 inline-block">
+                        +{Math.round((cat.value / activeData.totalRev) * 100)}% share
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </div>
+
+          {/* Bottom Table: Top Performing Products */}
+          <Card className="border-slate-200 bg-white rounded-2xl p-6">
+            <CardHeader className="p-0 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <CardTitle className="text-lg font-bold text-slate-800">Top Performing Products</CardTitle>
+                <p className="text-xs text-slate-500">Most sold items and their remaining inventory levels</p>
+              </div>
+              <div className="flex items-center gap-2 text-xs font-bold bg-amber-50 text-amber-700 px-3 py-1.5 rounded-xl border border-amber-100">
+                <Award className="w-4 h-4 text-amber-500" />
+                Updated Today
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      <th className="py-3 px-4 font-bold">Product</th>
+                      <th className="py-3 px-4 font-bold">Category</th>
+                      <th className="py-3 px-4 font-bold text-right">Units Sold</th>
+                      <th className="py-3 px-4 font-bold text-right">Revenue</th>
+                      <th className="py-3 px-4 font-bold text-center">AI Variance</th>
+                      <th className="py-3 px-4 font-bold text-center">Stock</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50 text-sm">
+                    {activeData.topProducts.map((p) => (
+                      <tr key={p.id} className="hover:bg-slate-50/50 transition">
+                        <td className="py-3.5 px-4 font-semibold text-slate-800">{p.name}</td>
+                        <td className="py-3.5 px-4 text-slate-500 text-xs font-medium">{p.category}</td>
+                        <td className="py-3.5 px-4 text-right font-bold text-slate-700">{p.sales}</td>
+                        <td className="py-3.5 px-4 text-right font-extrabold text-slate-800">{p.revenue}</td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className={`inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full ${
+                            p.variance.startsWith('+') ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+                          }`}>
+                            {p.variance}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
+                            p.stock < 15 ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {p.stock} left
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         </>
       )}
     </div>
