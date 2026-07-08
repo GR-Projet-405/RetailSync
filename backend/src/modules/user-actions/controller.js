@@ -13,7 +13,7 @@ const createLog = asyncHandler(async (req, res) => {
 
 // 2. GET /api/v1/user-actions - Retrieve audit logs with filters & search
 const getLogs = asyncHandler(async (req, res) => {
-  const { search, page, limit, module, riskLevel, startDate, endDate } = req.query;
+  const { search, page, limit, module, riskLevel, startDate, endDate, userId } = req.query;
 
   const result = await service.getLogs({
     search,
@@ -22,7 +22,8 @@ const getLogs = asyncHandler(async (req, res) => {
     module,
     riskLevel,
     startDate,
-    endDate
+    endDate,
+    userId
   });
 
   res.status(200).json({
@@ -33,7 +34,8 @@ const getLogs = asyncHandler(async (req, res) => {
 
 // 3. GET /api/v1/user-actions/stats - Retrieve aggregated stats
 const getStats = asyncHandler(async (req, res) => {
-  const stats = await service.getStats();
+  const { userId } = req.query;
+  const stats = await service.getStats({ userId });
   res.status(200).json({
     success: true,
     data: stats

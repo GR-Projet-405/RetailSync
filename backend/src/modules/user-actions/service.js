@@ -1,4 +1,5 @@
 const UserAction = require('./model');
+const User = require('../user-management/user.model');
 const mongoose = require('mongoose');
 const PDFDocument = require('pdfkit');
 
@@ -10,134 +11,76 @@ class UserActionsService {
     const count = await UserAction.countDocuments();
     if (count > 0) return;
 
-    // Create a dummy userId to represent Marcus Chen
-    const dummyUserId = new mongoose.Types.ObjectId();
     const today = new Date();
+
+    const seededUser = await User.findOne({ email: 'superadmin@retailsync.com' })
+      .populate('roleId')
+      .populate('branchId')
+      .lean();
+
+    const dummyUserId = seededUser?._id || new mongoose.Types.ObjectId();
+    const dummyUserName = seededUser ? `${seededUser.firstName} ${seededUser.lastName}` : 'Marcus Chen';
+    const dummyRole = seededUser ? seededUser.roleId?.name || 'SUPER_ADMIN' : 'Senior Logistics Lead';
+    const dummyBranch = seededUser ? seededUser.branchId?.name || 'Head Office' : 'Seattle Hub - Zone A';
 
     const dummyLogs = [
       {
         userId: dummyUserId,
-        userName: 'Marcus Chen',
-        role: 'Senior Logistics Lead',
-        branch: 'Seattle Hub - Zone A',
-        module: 'Inventory',
-        actionType: 'Modification',
-        description: "Modified quantity for 'Premium OLED Panel' at Branch: Downtown Core. Corrected shipment variance.",
-        metadata: { sku: 'SKU-9021', quantityChange: -5, reason: 'Shipment variance correction' },
+        userName: dummyUserName,
+        role: dummyRole,
+        branch: dummyBranch,
+        module: 'Authentication',
+        actionType: 'Login',
+        description: 'Successful login from authorized IP (192.168.1.144).',
+        metadata: { success: true },
         riskLevel: 'Low',
         ipAddress: '192.168.1.144',
         device: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(today.getTime() - 1 * 60 * 60 * 1000) // 1 hour ago
+      },
+      {
+        userId: dummyUserId,
+        userName: dummyUserName,
+        role: dummyRole,
+        branch: dummyBranch,
+        module: 'Inventory',
+        actionType: 'Modification',
+        description: "Updated SKU-9021 stock level for branch inventory.",
+        metadata: { sku: 'SKU-9021', quantityChange: -5 },
+        riskLevel: 'Low',
+        ipAddress: '192.168.1.144',
+        device: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/15.6.1',
         createdAt: new Date(today.getTime() - 2 * 60 * 60 * 1000) // 2 hours ago
       },
       {
         userId: dummyUserId,
-        userName: 'Marcus Chen',
-        role: 'Senior Logistics Lead',
-        branch: 'Seattle Hub - Zone A',
-        module: 'Authentication',
-        actionType: 'Login',
-        description: 'Successful login from authorized IP (192.168.1.144). Branch: Remote Office.',
-        metadata: { success: true },
-        riskLevel: 'Low',
-        ipAddress: '192.168.1.144',
-        device: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/15.6.1',
-        createdAt: new Date(today.getTime() - 8 * 60 * 60 * 1000) // 8 hours ago
-      },
-      {
-        userId: dummyUserId,
-        userName: 'Marcus Chen',
-        role: 'Senior Logistics Lead',
-        branch: 'Seattle Hub - Zone A',
-        module: 'Supplier',
-        actionType: 'Deletion',
-        description: "Permanently removed 'Global Tech Sourcing' from primary vendor list. Branch: Headquarters.",
-        metadata: { vendorName: 'Global Tech Sourcing', requiresVerification: true },
-        riskLevel: 'High',
-        ipAddress: '192.168.1.102',
-        device: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Edge/120.0.0.0',
-        createdAt: new Date(today.getTime() - 20 * 60 * 60 * 1000) // 20 hours ago
-      },
-      {
-        userId: dummyUserId,
-        userName: 'Marcus Chen',
-        role: 'Senior Logistics Lead',
-        branch: 'Seattle Hub - Zone A',
+        userName: dummyUserName,
+        role: dummyRole,
+        branch: dummyBranch,
         module: 'Customer',
         actionType: 'Modification',
-        description: "Registered new VIP loyalty account for 'Elena Rodriguez'. Branch: Downtown Core.",
+        description: "Registered VIP customer Elena Rodriguez in the loyalty program.",
         metadata: { customerName: 'Elena Rodriguez', loyaltyTier: 'VIP' },
         riskLevel: 'Low',
         ipAddress: '192.168.1.144',
         device: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1_1 like Mac OS X) Mobile/15E148',
-        createdAt: new Date(today.getTime() - 25 * 60 * 60 * 1000) // 25 hours ago
+        createdAt: new Date(today.getTime() - 5 * 60 * 60 * 1000) // 5 hours ago
       },
       {
         userId: dummyUserId,
-        userName: 'Marcus Chen',
-        role: 'Senior Logistics Lead',
-        branch: 'Seattle Hub - Zone A',
-        module: 'Authentication',
-        actionType: 'Login',
-        description: 'Failed login attempt. Invalid password entered.',
-        metadata: { loginAttempts: 3 },
-        riskLevel: 'Medium',
-        ipAddress: '185.220.101.5',
-        device: 'Unknown Device',
-        createdAt: new Date(today.getTime() - 36 * 60 * 60 * 1000) // 36 hours ago
+        userName: dummyUserName,
+        role: dummyRole,
+        branch: dummyBranch,
+        module: 'Supplier',
+        actionType: 'Deletion',
+        description: "Removed vendor 'Global Tech Sourcing' from supplier list.",
+        metadata: { vendorName: 'Global Tech Sourcing' },
+        riskLevel: 'High',
+        ipAddress: '192.168.1.102',
+        device: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Edge/120.0.0.0',
+        createdAt: new Date(today.getTime() - 11 * 60 * 60 * 1000) // 11 hours ago
       }
     ];
-
-    // Seed some general activities to make total statistics look realistic
-    for (let i = 0; i < 10; i++) {
-      dummyLogs.push({
-        userId: dummyUserId,
-        userName: 'Marcus Chen',
-        role: 'Senior Logistics Lead',
-        branch: 'Seattle Hub - Zone A',
-        module: 'Authentication',
-        actionType: 'Login',
-        description: `Successful login from authorized IP (192.168.1.144).`,
-        metadata: { success: true },
-        riskLevel: 'Low',
-        ipAddress: '192.168.1.144',
-        device: 'Chrome / Windows',
-        createdAt: new Date(today.getTime() - (i + 2) * 24 * 60 * 60 * 1000)
-      });
-    }
-
-    for (let i = 0; i < 16; i++) {
-      dummyLogs.push({
-        userId: dummyUserId,
-        userName: 'Marcus Chen',
-        role: 'Senior Logistics Lead',
-        branch: 'Seattle Hub - Zone A',
-        module: 'Inventory',
-        actionType: 'Modification',
-        description: `Updated product quantity levels for SKU-100${i}.`,
-        metadata: { sku: `SKU-100${i}`, prevStock: 50, newStock: 80 },
-        riskLevel: 'Low',
-        ipAddress: '192.168.1.144',
-        device: 'Chrome / Windows',
-        createdAt: new Date(today.getTime() - (i + 3) * 12 * 60 * 60 * 1000)
-      });
-    }
-
-    for (let i = 0; i < 3; i++) {
-      dummyLogs.push({
-        userId: dummyUserId,
-        userName: 'Marcus Chen',
-        role: 'Senior Logistics Lead',
-        branch: 'Seattle Hub - Zone A',
-        module: 'Authentication',
-        actionType: 'Security Alert',
-        description: `Security alert: Multiple failed authentication attempts from IP 185.220.101.5.`,
-        metadata: { blockedIp: '185.220.101.5', attemptCount: 5 },
-        riskLevel: 'High',
-        ipAddress: '185.220.101.5',
-        device: 'Unknown Browser',
-        createdAt: new Date(today.getTime() - (i + 4) * 24 * 60 * 60 * 1000)
-      });
-    }
 
     await UserAction.insertMany(dummyLogs);
     console.log('Seeded initial dummy user action logs successfully.');
@@ -157,6 +100,10 @@ class UserActionsService {
     await this.ensureDummyDataSeeded();
 
     const query = {};
+
+    if (filters.userId) {
+      query.userId = filters.userId;
+    }
 
     // Search filter across description, userName, actionType, module
     if (filters.search) {
@@ -231,12 +178,15 @@ class UserActionsService {
   /**
    * Return aggregated stats of logs
    */
-  async getStats() {
+  async getStats(filters = {}) {
     await this.ensureDummyDataSeeded();
 
-    const totalActions = await UserAction.countDocuments();
+    const baseQuery = filters.userId ? { userId: filters.userId } : {};
+
+    const totalActions = await UserAction.countDocuments(baseQuery);
     
     const totalLogins = await UserAction.countDocuments({
+      ...baseQuery,
       $or: [
         { actionType: 'Login' },
         { module: 'Authentication' }
@@ -244,6 +194,7 @@ class UserActionsService {
     });
 
     const totalModifications = await UserAction.countDocuments({
+      ...baseQuery,
       $or: [
         { actionType: 'Modification' },
         { module: { $in: ['Inventory', 'Supplier', 'Customer', 'Product'] } }
@@ -251,6 +202,7 @@ class UserActionsService {
     });
 
     const totalSecurityAlerts = await UserAction.countDocuments({
+      ...baseQuery,
       $or: [
         { riskLevel: 'High' },
         { actionType: 'Security Alert' }
