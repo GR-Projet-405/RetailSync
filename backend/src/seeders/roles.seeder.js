@@ -16,14 +16,24 @@ const seedRoles = async () => {
         permissions: ALL_PERMISSIONS, // Simplified for now, can be restricted later
         isSystemRole: true,
       },
-      {
-        name: 'BRANCH_MANAGER',
-        description: 'Manager of a specific branch',
-        permissions: [
-          'users.view', 'products.view', 'inventory.view', 'inventory.manage', 'sales.view', 'sales.manage', 'reports.view'
-        ],
-        isSystemRole: true,
-      },
+     {
+  name: 'BRANCH_MANAGER',
+  description: 'Manager of a specific branch',
+  permissions: [
+    'users.view',
+    'users.create',
+    'users.edit',
+    'products.view',
+    'inventory.view',
+    'inventory.manage',
+    'sales.view',
+    'sales.manage',
+    'reports.view',
+    'roles.view',
+    'branches.view',
+  ],
+  isSystemRole: true,
+},
       {
         name: 'INVENTORY_MANAGER',
         description: 'Manager of warehouse and stock',
