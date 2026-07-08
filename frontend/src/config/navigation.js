@@ -26,6 +26,13 @@ export const NAVIGATION_GROUPS = [
         allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]
       },
       {
+        id: 'user-actions',
+        name: 'User Actions',
+        path: '/user-actions',
+        icon: 'Activity',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]
+      },
+      {
         id: 'help-support',
         name: 'Help & Support',
         icon: 'HelpCircle',
