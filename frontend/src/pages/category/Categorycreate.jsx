@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import categoryService from '../../services/categoryService';
+import { toast } from 'react-toastify';
+
 
 const ICONS_LIST = ['🍔', '📦', '🧴', '🏠', '👕', '💊', '🍎', '🥤', '🧹', '📱', '🎮', '📚'];
 const COLORS = ['#3B82F6', '#22C55E', '#EF4444', '#F97316', '#A855F7', '#EC4899', '#06B6D4', '#6B7280'];
@@ -51,9 +53,10 @@ export default function CategoryCreate({ onBack, onSuccess }) {
         icon: form.icon,
         labelColor: form.labelColor,
       });
-      onSuccess();
+      toast.success('Category created successfully!');
+
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to create category');
+      toast.error(err.response?.data?.message || 'Failed to create category');
     } finally {
       setLoading(false);
     }
