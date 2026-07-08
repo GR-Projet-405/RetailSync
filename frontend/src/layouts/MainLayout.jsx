@@ -1,12 +1,11 @@
-import { Outlet } from 'react-router-dom';
+
+import React from 'react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import WorkspaceContainer from '../components/WorkspaceContainer';
-import { useSidebar } from '../contexts/SidebarContext';
 
-export const MainLayout = () => {
-  const { isSidebarOpen, closeMobileSidebar } = useSidebar();
-
+// This file now accepts 'children' directly so we can use it in App.jsx
+export const MainLayout = ({ children }) => {
   return (
     <div
       className="h-screen flex overflow-hidden relative"
@@ -20,23 +19,15 @@ export const MainLayout = () => {
       {/* Sidebar navigation */}
       <Sidebar />
 
-      {/* Mobile backdrop overlay */}
-      {isSidebarOpen && (
-        <div
-          onClick={closeMobileSidebar}
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-20 lg:hidden transition-opacity duration-300"
-        />
-      )}
-
       {/* Main panel */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <Navbar />
 
-        {/* Workspace Wrapper — scrollable outer area */}
+        {/* Workspace Wrapper */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative p-4 sm:p-5 md:p-6">
           {/* Workspace Container — frosted glass surface */}
           <WorkspaceContainer>
-            <Outlet />
+            {children} {/* Render the dashboard here */}
           </WorkspaceContainer>
         </main>
       </div>
