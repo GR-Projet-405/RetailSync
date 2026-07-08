@@ -2,10 +2,210 @@ const User = require('../user-management/user.model');
 const jwt = require('jsonwebtoken');
 const env = require('../../config/env');
 
+const OTP = require('./otp.model');
+const sendEmail = require('../../config/email');
+const Role = require('../role-management/role.model'); 
+
 const generateToken = (id) => {
   return jwt.sign({ id }, env.JWT_SECRET, {
     expiresIn: '30d',
   });
+};
+
+// Registration with OTP
+const register = async (userData) => {
+  // Check if user exists
+  const existingUser = await User.findOne({ 
+    $or: [{ email: userData.email }, { username: userData.username }] 
+  });
+
+  if (existingUser) {
+    const err = new Error('User with this email or username already exists');
+    err.statusCode = 409;
+    throw err;
+  }
+ // Get default role (EMPLOYEE)
+  const defaultRole = await Role.findOne({ name: 'EMPLOYEE' });
+  
+  if (!defaultRole) {
+    const err = new Error('Default role not found. Please run database seeders first.');
+    err.statusCode = 500;
+    throw err;
+  }
+
+  // Create user (inactive until email verified)
+  const user = await User.create({
+    ...userData,
+    roleId: defaultRole._id, 
+    status: 'INACTIVE',
+    isEmailVerified: false,
+  });
+
+  // Generate OTP
+  const otp = OTP.generateOTP();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+  await OTP.create({
+    userId: user._id,
+    otp,
+    purpose: 'EMAIL_VERIFICATION',
+    expiresAt,
+  });
+
+  // Send verification email
+  await sendEmail({
+    email: user.email,
+    subject: 'Verify Your Email - RetailSync',
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Welcome to RetailSync!</h2>
+        <p>Your OTP for email verification is:</p>
+        <h1 style="color: #2563eb; letter-spacing: 5px;">${otp}</h1>
+        <p>This OTP will expire in 10 minutes.</p>
+        <p>If you didn't request this, please ignore this email.</p>
+      </div>
+    `,
+  });
+
+  return { 
+    message: 'Registration successful. Please verify your email.',
+    userId: user._id 
+  };
+};
+
+// Verify OTP
+const verifyOTP = async (userId, otp, purpose) => {
+  const otpDoc = await OTP.findOne({
+    userId,
+    otp,
+    purpose,
+    isUsed: false,
+    expiresAt: { $gt: new Date() },
+  });
+
+  if (!otpDoc) {
+    const err = new Error('Invalid or expired OTP');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Mark OTP as used
+  otpDoc.isUsed = true;
+  await otpDoc.save();
+
+  // If email verification, activate user
+  if (purpose === 'EMAIL_VERIFICATION') {
+    await User.findByIdAndUpdate(userId, {
+      isEmailVerified: true,
+      status: 'ACTIVE',
+    });
+  }
+
+  return { success: true };
+};
+
+// Resend OTP
+const resendOTP = async (userId, purpose) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    const err = new Error('User not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Invalidate previous OTPs
+  await OTP.updateMany(
+    { userId, purpose, isUsed: false },
+    { isUsed: true }
+  );
+
+  // Generate new OTP
+  const otp = OTP.generateOTP();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  await OTP.create({
+    userId,
+    otp,
+    purpose,
+    expiresAt,
+  });
+
+  // Send email
+  const subject = purpose === 'EMAIL_VERIFICATION' 
+    ? 'Verify Your Email - RetailSync'
+    : 'Password Reset - RetailSync';
+
+  await sendEmail({
+    email: user.email,
+    subject,
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>${purpose === 'EMAIL_VERIFICATION' ? 'Email Verification' : 'Password Reset'}</h2>
+        <p>Your OTP is:</p>
+        <h1 style="color: #2563eb; letter-spacing: 5px;">${otp}</h1>
+        <p>This OTP will expire in 10 minutes.</p>
+      </div>
+    `,
+  });
+
+  return { message: 'OTP sent successfully' };
+};
+
+// Forgot Password
+const forgotPassword = async (email) => {
+  const user = await User.findOne({ email });
+  
+  if (!user) {
+    // Don't reveal if user exists
+    return { message: 'If the email exists, a reset OTP has been sent' };
+  }
+
+  // Generate OTP
+  const otp = OTP.generateOTP();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  await OTP.create({
+    userId: user._id,
+    otp,
+    purpose: 'PASSWORD_RESET',
+    expiresAt,
+  });
+
+  // Send email
+  await sendEmail({
+    email: user.email,
+    subject: 'Password Reset - RetailSync',
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Password Reset Request</h2>
+        <p>Your OTP for password reset is:</p>
+        <h1 style="color: #2563eb; letter-spacing: 5px;">${otp}</h1>
+        <p>This OTP will expire in 10 minutes.</p>
+        <p>If you didn't request this, please ignore this email.</p>
+      </div>
+    `,
+  });
+
+  return { message: 'If the email exists, a reset OTP has been sent', userId: user._id };
+};
+
+// Reset Password
+const resetPassword = async (userId, otp, newPassword, confirmPassword) => {
+  if (newPassword !== confirmPassword) {
+    const err = new Error('Passwords do not match');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Verify OTP
+  await verifyOTP(userId, otp, 'PASSWORD_RESET');
+
+  // Update password
+  const user = await User.findById(userId);
+  user.password = newPassword; // Will be hashed by pre-save hook
+  await user.save();
+
+  return { message: 'Password reset successful' };
 };
 
 const login = async (email, password) => {
@@ -57,7 +257,82 @@ const getMe = async (id) => {
   return user;
 };
 
+// Get available roles for selection (exclude sensitive roles)
+const getAvailableRoles = async () => {
+  // Roles that regular users can select (exclude admin roles)
+  const excludedRoles = ['SUPER_ADMIN', 'ADMIN', 'AUDITOR'];
+  
+  const roles = await Role.find({
+    name: { $nin: excludedRoles },
+  }).select('name description permissions');
+
+  return roles;
+};
+
+// Assign role to user after email verification
+const selectRole = async (userId, roleName) => {
+  // Find user
+  const user = await User.findById(userId);
+  
+  if (!user) {
+    const err = new Error('User not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Check if email is verified
+  if (!user.isEmailVerified) {
+    const err = new Error('Please verify your email first');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  // Check if role is allowed for selection
+  const excludedRoles = ['SUPER_ADMIN', 'ADMIN', 'AUDITOR'];
+  if (excludedRoles.includes(roleName)) {
+    const err = new Error('This role cannot be selected');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  // Find the role
+  const role = await Role.findOne({ name: roleName });
+  
+  if (!role) {
+    const err = new Error('Role not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Update user with selected role
+  user.roleId = role._id;
+  user.status = 'ACTIVE'; // Ensure user is active
+  await user.save();
+
+  return {
+    message: 'Role assigned successfully',
+    user: {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      username: user.username,
+      roleId: role._id,
+      roleName: role.name,
+      status: user.status,
+    },
+  };
+};
+
+
 module.exports = {
+  register,
+  verifyOTP,
+  resendOTP,
+  forgotPassword,
+  resetPassword,
   login,
   getMe,
+  getAvailableRoles,
+  selectRole,
 };
