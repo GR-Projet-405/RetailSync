@@ -104,9 +104,9 @@ export default function ProcessRefundPage() {
 
   if (!requestData) return null;
 
-  const total = requestData.estimatedRefundTotal || 0;
-  const subtotal = total / 1.15;
-  const taxAmount = total - subtotal;
+  const subtotal = requestData.estimatedRefundTotal || 0;
+  const taxAmount = subtotal * 0.15;
+  const total = subtotal + taxAmount;
 
   const origMethod = requestData.originalPaymentMethod || 'cash';
 

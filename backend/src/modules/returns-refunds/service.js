@@ -278,4 +278,3 @@ class ReturnsRefundsPageService {
 }
 
 module.exports = new ReturnsRefundsPageService();
-
