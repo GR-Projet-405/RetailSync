@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import categoryService from '../../services/categoryService';
+import { toast } from 'react-toastify';
 
 export default function CategoryList({ onView, onCreate, onEdit, onHierarchy }) {
   const [categories, setCategories] = useState([]);
@@ -27,18 +28,19 @@ export default function CategoryList({ onView, onCreate, onEdit, onHierarchy }) 
 
   useEffect(() => { fetchCategories(1); }, [fetchCategories]);
 
-  const handleDelete = async () => {
-    try {
-      setDeleteLoading(true);
-      await categoryService.remove(deleteModal._id);
-      setDeleteModal(null);
-      fetchCategories(pagination.page);
-    } catch (err) {
-      alert(err.response?.data?.message || 'Delete failed');
-    } finally {
-      setDeleteLoading(false);
-    }
-  };
+const handleDelete = async () => {
+  try {
+    setDeleteLoading(true);
+    await categoryService.remove(deleteModal._id);
+    toast.success(`"${deleteModal.name}" deactivated successfully!`);
+    setDeleteModal(null);
+    fetchCategories(pagination.page);
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Delete failed');
+  } finally {
+    setDeleteLoading(false);
+  }
+};
 
   const parentCount = categories.filter((c) => !c.parentId).length;
   const subCount = categories.filter((c) => c.parentId).length;
