@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const controller = require('./controller');
+const { getDetails, sendReceipt } = require('./controller');
 
-router.get('/', controller.getDetails);
+router.get('/', getDetails);
+router.post('/send-receipt', sendReceipt);
 
 module.exports = router;
