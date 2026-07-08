@@ -12,6 +12,13 @@ const getDetails = asyncHandler(async (req, res) => {
   });
 });
 
+const getDashboard = asyncHandler(async (req, res) => {
+  const data = await service.fetchDashboard(req);
+
+  res.status(200).json(data);
+});
+
 module.exports = {
-  getDetails
+  getDetails,
+  getDashboard
 };
