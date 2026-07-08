@@ -155,7 +155,6 @@ export const AppRoutes = () => {
             <KnowledgeBasePage />
           </ProtectedRoute>
         } />
-
         {/* Profile & Settings */}
         <Route path="/profile-settings" element={
           <ProtectedRoute allowedRoles={ALL_ROLES}>

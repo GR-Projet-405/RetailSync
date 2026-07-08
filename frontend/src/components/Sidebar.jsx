@@ -125,10 +125,13 @@ export const Sidebar = () => {
   const { user, hasRole } = useAuth();
   const { isSidebarCollapsed, isSidebarOpen, toggleSidebar } = useSidebar();
   const location = useLocation();
+
+  // Helper to render Lucide Icons by name dynamically
   const renderIcon = (iconName) => {
     const IconComponent = Icons[iconName];
     return IconComponent ? <IconComponent className="w-4 h-4 shrink-0" /> : null;
   };
+
 
   const isItemVisible = (item) =>
     !user || (item.allowedRoles && hasRole(...item.allowedRoles));
