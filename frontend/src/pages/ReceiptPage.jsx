@@ -1,6 +1,7 @@
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import Button from '../components/Button';
 import { ArrowLeft, Printer, Store } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react'; //QR Code generation library
 
 export default function ReceiptPage() {
     const location = useLocation();
@@ -29,37 +30,8 @@ export default function ReceiptPage() {
         { id: 3, name: 'Fantech K211 Keyboard', qty: 1, price: 1900, total: 1900 },
     ];
 
-    // CSS SVG Barcode Generator (Looks real without needing npm packages)
-    const renderBarcode = () => (
-        <div className="flex flex-col items-center mt-6">
-            <svg className="w-48 h-12" preserveAspectRatio="none" viewBox="0 0 100 100">
-                <rect x="0" y="0" width="3" height="100" fill="black" />
-                <rect x="5" y="0" width="1" height="100" fill="black" />
-                <rect x="8" y="0" width="4" height="100" fill="black" />
-                <rect x="14" y="0" width="2" height="100" fill="black" />
-                <rect x="18" y="0" width="1" height="100" fill="black" />
-                <rect x="22" y="0" width="5" height="100" fill="black" />
-                <rect x="29" y="0" width="2" height="100" fill="black" />
-                <rect x="34" y="0" width="1" height="100" fill="black" />
-                <rect x="37" y="0" width="4" height="100" fill="black" />
-                <rect x="44" y="0" width="2" height="100" fill="black" />
-                <rect x="49" y="0" width="1" height="100" fill="black" />
-                <rect x="53" y="0" width="5" height="100" fill="black" />
-                <rect x="60" y="0" width="2" height="100" fill="black" />
-                <rect x="65" y="0" width="4" height="100" fill="black" />
-                <rect x="72" y="0" width="1" height="100" fill="black" />
-                <rect x="75" y="0" width="3" height="100" fill="black" />
-                <rect x="80" y="0" width="2" height="100" fill="black" />
-                <rect x="84" y="0" width="4" height="100" fill="black" />
-                <rect x="91" y="0" width="1" height="100" fill="black" />
-                <rect x="94" y="0" width="3" height="100" fill="black" />
-                <rect x="99" y="0" width="1" height="100" fill="black" />
-            </svg>
-            <p className="mt-1 text-[10px] tracking-widest text-slate-500 font-mono">
-                {transaction._id.substring(10).toUpperCase()}
-            </p>
-        </div>
-    );
+    // The data that will be shown when the QR code is scanned
+    const qrVerificationData = `Receipt: ${shortTxnId}\nTotal: Rs.${formatCurrency(transaction.finalTotal)}\nVerify: https://retailos.com/verify/${transaction._id}`;
 
     return (
         // print:bg-white and print:p-0 ensures it looks perfect when printing
@@ -80,7 +52,7 @@ export default function ReceiptPage() {
 
                 {/* Header */}
                 <div className="flex flex-col items-center mb-6 text-center">
-                    <div className="flex items-center justify-center w-12 h-12 mb-3 text-blue-600 bg-blue-100 rounded-full">
+                    <div className="flex items-center justify-center w-12 h-12 mb-3 text-blue-600 bg-blue-100 rounded-full print:border print:border-slate-300">
                         <Store size={24} />
                     </div>
                     <h1 className="text-xl font-extrabold text-slate-900">RetailOS Pro</h1>
@@ -180,8 +152,20 @@ export default function ReceiptPage() {
                     </div>
                 )}
 
-                {/* Barcode */}
-                {renderBarcode()}
+                {/* Real Dynamic QR Code */}
+                <div className="flex flex-col items-center mt-6">
+                    <div className="p-2 bg-white border rounded-lg border-slate-200">
+                        <QRCodeSVG
+                            value={qrVerificationData}
+                            size={96}
+                            level={"M"}
+                            includeMargin={false}
+                        />
+                    </div>
+                    <p className="mt-2 text-[10px] tracking-widest text-slate-500 font-mono">
+                        {transaction._id.substring(10).toUpperCase()}
+                    </p>
+                </div>
 
                 {/* Footer Messages */}
                 <div className="mt-6 space-y-1 text-center">
