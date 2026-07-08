@@ -57,7 +57,11 @@ export default function TransactionDetailsPage() {
                     <Button variant="outline" className="flex items-center gap-2 font-bold text-red-600 border-red-200 hover:bg-red-50">
                         <RefreshCcw size={16} /> Issue Refund
                     </Button>
-                    <Button variant="primary" className="flex items-center gap-2 font-bold shadow-md shadow-blue-500/20">
+                    <Button
+                        onClick={() => navigate('/receipt', { state: { transaction, customer } })}
+                        variant="primary"
+                        className="flex items-center gap-2 font-bold shadow-md shadow-blue-500/20"
+                    >
                         <Download size={16} /> Download Invoice
                     </Button>
                 </div>

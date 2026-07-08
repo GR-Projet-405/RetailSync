@@ -41,6 +41,7 @@ import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
 import PaymentSuccessPage from '../pages/PaymentSuccessPage';
 import TransactionDetailsPage from '../pages/TransactionDetailsPage';
+import ReceiptPage from '../pages/ReceiptPage';
 
 
 
@@ -208,6 +209,10 @@ export const AppRoutes = () => {
           <TransactionDetailsPage />
         } />
 
+        {/* Receipt */}
+        <Route path="/receipt" element={
+          <ReceiptPage />
+        } />
 
         {/* Sales History */}
         <Route path="/sales-history" element={

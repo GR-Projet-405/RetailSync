@@ -2,6 +2,8 @@ import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import Button from '../components/Button';
 import { CheckCircle, Printer, Mail, Plus, ArrowRight, Star } from 'lucide-react';
 import toast from '../utils/toast';
+import { Download } from 'lucide-react';
+
 
 export default function PaymentSuccessPage() {
     const location = useLocation();
@@ -117,7 +119,10 @@ export default function PaymentSuccessPage() {
                         <Button onClick={handleEmail} variant="outline" className="flex items-center justify-center flex-1 h-12 gap-2 font-bold border-slate-300 text-slate-700 hover:bg-slate-50">
                             <Mail size={18} /> Email Receipt
                         </Button>
-                        <Button onClick={handlePrint} variant="primary" className="flex items-center justify-center flex-1 h-12 gap-2 font-bold shadow-md shadow-blue-500/20">
+                        <Button
+                            onClick={() => navigate('/receipt', { state: { transaction, customer } })}
+
+                            variant="primary" className="flex items-center justify-center flex-1 h-12 gap-2 font-bold shadow-md shadow-blue-500/20">
                             <Printer size={18} /> Print Receipt
                         </Button>
                     </div>
