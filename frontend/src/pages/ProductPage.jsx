@@ -1,18 +1,3 @@
-// import PageHeader from '../components/PageHeader';
-
-// export default function ProductPage() {
-//   return (
-//     <div>
-//       <PageHeader
-//         title="Product Management"
-//         description="Product Management Module - Under Development"
-//       />
-//       <div className="mt-8 p-8 border border-dashed border-slate-300 rounded-xl bg-slate-50 text-center text-slate-600">
-//         <p className="text-sm font-medium">Product Management components, filters, and records are under active development.</p>
-//       </div>
-//     </div>
-//   );
-// }
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, PackageX } from 'lucide-react';
 
@@ -25,6 +10,7 @@ import { cn } from '../utils/cn';
 
 import ProductFormModal from '../components/ProductFormModal';
 import ProductDetailsModal from '../components/ProductDetailsModal';
+import { useCategories } from '../hooks/useCategories';
 import {
   useProductsList,
   useProduct,
@@ -55,6 +41,9 @@ function useDebouncedValue(value, delay = 350) {
 }
 
 export default function ProductPage() {
+  // ---- Categories for filter dropdown + Add/Edit form ----
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+
   // ---- Filters / pagination state (Product List + Product Search combined) ----
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('');
@@ -224,6 +213,13 @@ export default function ProductPage() {
         }
       />
 
+      {!categoriesLoading && categories.length === 0 && (
+        <div className="mb-4 px-4 py-2.5 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+          No categories found. Create at least one category in{' '}
+          <span className="font-semibold">Category Management</span> before adding products.
+        </div>
+      )}
+
       {/* Filters (Product List + Product Search combined) */}
       <div className="flex flex-col sm:flex-row gap-3 mb-5">
         <SearchInput
@@ -237,7 +233,9 @@ export default function ProductPage() {
           className="px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white outline-none focus:border-blue-500"
         >
           <option value="">All Categories</option>
-          {/* Wire up real options once category-management API is available */}
+          {categories.map((c) => (
+            <option key={c._id} value={c._id}>{c.name}</option>
+          ))}
         </select>
         <select
           value={status}
@@ -304,6 +302,7 @@ export default function ProductPage() {
         onSubmit={handleFormSubmit}
         isSubmitting={isSaving}
         product={formModal.product}
+        categories={categories}
       />
 
       {/* Details modal */}
