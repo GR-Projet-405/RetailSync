@@ -29,6 +29,9 @@ app.use('/api/sales', require('../routes/salesRoutes'));
 require('./modules/branch-management/branch.model');
 require('./modules/role-management/role.model');
 require('./modules/user-management/user.model');
+require('./modules/promotions-discounts/promotion.model');
+require('./modules/promotions-discounts/coupon.model');
+require('./modules/promotions-discounts/discountRule.model');
 require('./modules/category-management/model');
 require('./modules/supplier-management/model');
 require('./modules/warehouse-management/model');
@@ -56,3 +59,5 @@ if (fs.existsSync(modulesPath)) {
 app.use(errorHandler);
 
 module.exports = app;
+// Trigger hot-reload for database connection state refreshing
+

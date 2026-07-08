@@ -8,6 +8,7 @@ import Button from '../../components/Button';
 import Card, { CardContent } from '../../components/Card';
 import Badge from '../../components/Badge';
 import Modal from '../../components/Modal';
+import api from '../../services/api';
 
 // Base mock discount rules matching the spec layout
 const INITIAL_RULES = [
@@ -19,7 +20,7 @@ const INITIAL_RULES = [
 ];
 
 export default function DiscountRulesPage() {
-  const [rules, setRules] = useState(INITIAL_RULES);
+  const [rules, setRules] = useState([]);
   const [activeTab, setActiveTab] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -47,6 +48,38 @@ export default function DiscountRulesPage() {
     status: 'Active',
   });
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchRules = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get('/promotions-discounts/discount-rules');
+      const fetchedData = response.data?.data || [];
+      const mappedData = fetchedData.map(r => ({
+        ...r,
+        id: r._id,
+        name: r.name,
+        type: r.type,
+        condition: r.condition,
+        discountLimit: r.discountLimit,
+        status: r.status,
+        priority: r.priority
+      }));
+      setRules(mappedData);
+    } catch (err) {
+      console.error('Failed to fetch discount rules:', err);
+      setError(err.message || 'Failed to fetch discount rules');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchRules();
+  }, []);
+
   // Filters by rule type tabs
   const filteredRules = useMemo(() => {
     return rules.filter(rule => {
@@ -69,19 +102,29 @@ export default function DiscountRulesPage() {
     }
   }, [formData.discountLimit]);
 
-  // Adjust rule priorities upwards/downwards
-  const movePriority = (index, direction) => {
+  const movePriority = async (index, direction) => {
     const sortedRules = [...rules].sort((a, b) => a.priority - b.priority);
     const targetIdx = direction === 'up' ? index - 1 : index + 1;
     
     if (targetIdx < 0 || targetIdx >= sortedRules.length) return;
 
-    // Swap priorities
-    const temp = sortedRules[index].priority;
-    sortedRules[index].priority = sortedRules[targetIdx].priority;
-    sortedRules[targetIdx].priority = temp;
+    // Swap priorities locally
+    const temp = sortedRules[index];
+    sortedRules[index] = sortedRules[targetIdx];
+    sortedRules[targetIdx] = temp;
 
-    setRules(sortedRules);
+    const ruleIds = sortedRules.map(r => r.id);
+
+    try {
+      setLoading(true);
+      await api.put('/promotions-discounts/discount-rules/reorder', { ruleIds });
+      await fetchRules();
+    } catch (err) {
+      console.error('Failed to reorder priorities:', err);
+      alert(err.message || 'Failed to reorder priorities');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOpenAddModal = () => {
@@ -110,16 +153,23 @@ export default function DiscountRulesPage() {
     setIsDetailModalOpen(true);
   };
 
-  const handleDeleteRule = (id) => {
+  const handleDeleteRule = async (id) => {
     if (window.confirm("Are you sure you want to delete this rule?")) {
-      const remaining = rules.filter(r => r.id !== id);
-      // Re-assign priorities sequentially
-      const updated = remaining.map((r, i) => ({ ...r, priority: i + 1 }));
-      setRules(updated);
+      try {
+        setLoading(true);
+        await api.delete(`/promotions-discounts/discount-rules/${id}`);
+        alert("Discount rule deleted successfully");
+        await fetchRules();
+      } catch (err) {
+        console.error('Failed to delete discount rule:', err);
+        alert(err.message || 'Failed to delete discount rule');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
 
@@ -138,22 +188,36 @@ export default function DiscountRulesPage() {
       return;
     }
 
-    if (editMode) {
-      setRules(rules.map(r => r.id === currentRule.id ? { ...formData, id: currentRule.id } : r));
-      setSuccessMessage("Discount rule updated successfully!");
-      setSuccessDetails({ ...formData, id: currentRule.id });
-    } else {
-      const newRule = {
-        ...formData,
-        id: rules.length > 0 ? Math.max(...rules.map(r => r.id)) + 1 : 1,
-        priority: rules.length + 1
-      };
-      setRules([...rules, newRule]);
-      setSuccessMessage("Discount rule created successfully!");
-      setSuccessDetails(newRule);
+    const payload = {
+      name: formData.name.trim(),
+      type: formData.type,
+      condition: formData.condition.trim(),
+      discountLimit: formData.discountLimit.trim(),
+      status: formData.status,
+      ...(editMode ? { priority: currentRule.priority } : {})
+    };
+
+    try {
+      setLoading(true);
+      if (editMode) {
+        await api.put(`/promotions-discounts/discount-rules/${currentRule.id}`, payload);
+        setSuccessMessage("Discount rule updated successfully!");
+        setSuccessDetails({ ...payload, id: currentRule.id });
+      } else {
+        const response = await api.post('/promotions-discounts/discount-rules', payload);
+        const newRule = response.data?.data || {};
+        setSuccessMessage("Discount rule created successfully!");
+        setSuccessDetails({ ...newRule, id: newRule._id });
+      }
+      setIsModalOpen(false);
+      setIsSuccessModalOpen(true);
+      await fetchRules();
+    } catch (err) {
+      console.error('Failed to save discount rule:', err);
+      setErrorMessage(err.message || 'Failed to save discount rule');
+    } finally {
+      setLoading(false);
     }
-    setIsModalOpen(false);
-    setIsSuccessModalOpen(true);
   };
 
   return (
@@ -228,7 +292,13 @@ export default function DiscountRulesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-              {filteredRules.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-12 text-center text-slate-400 select-none">
+                    Loading discount rules...
+                  </td>
+                </tr>
+              ) : filteredRules.length > 0 ? (
                 filteredRules.map((rule) => (
                   <tr key={rule.id} className="hover:bg-blue-50/10 transition-colors duration-150">
                     <td className="px-6 py-4 whitespace-nowrap font-bold text-slate-800">
