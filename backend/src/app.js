@@ -23,6 +23,8 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', service: 'RetailSync API Server' });
 });
 
+app.use('/api/sales', require('../routes/salesRoutes'));
+
 // Pre-load core models to avoid MissingSchemaError during population
 require('./modules/branch-management/branch.model');
 require('./modules/role-management/role.model');
@@ -40,6 +42,8 @@ app.use('/api/v1/customers', customerRoutes);
 const modulesPath = path.join(__dirname, 'modules');
 if (fs.existsSync(modulesPath)) {
   fs.readdirSync(modulesPath).forEach((folderName) => {
+    if (folderName === 'customer-management') return;
+
     const routePath = path.join(modulesPath, folderName, 'route.js');
     if (fs.existsSync(routePath)) {
       const router = require(routePath);

@@ -29,8 +29,13 @@ const inventorySchema = new mongoose.Schema(
   }
 );
 
-
 inventorySchema.index({ productId: 1, branchId: 1 }, { unique: true });
 inventorySchema.index({ branchId: 1 });
+
+// Pre-load all inventory models so they are registered with Mongoose
+// before any populate() calls reference them.
+require('./inventoryItem.model');
+require('./stockMovement.model');
+require('./stockAdjustment.model');
 
 module.exports = mongoose.model('Inventory', inventorySchema);
