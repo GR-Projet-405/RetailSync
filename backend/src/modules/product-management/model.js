@@ -121,6 +121,7 @@ productSchema.pre('validate', async function (next) {
   next();
 });
 
+
 // Virtual: profit margin percentage
 productSchema.virtual('marginPct').get(function () {
   if (!this.costPrice || this.costPrice === 0) return null;
@@ -134,3 +135,4 @@ productSchema.index({ status: 1 });
 productSchema.index({ name: 'text', sku: 'text' }); // full-text search
 
 module.exports = mongoose.models.Product || mongoose.model('Product', productSchema);
+

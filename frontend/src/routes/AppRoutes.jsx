@@ -5,7 +5,6 @@ import { ROLES } from '../config/roles';
 
 // Layouts
 import MainLayout from '../layouts/MainLayout';
-import POSLayout from '../layouts/POSLayout';
 
 // Page Imports
 import DashboardPage from '../pages/DashboardPage';
@@ -35,6 +34,8 @@ import PurchaseOrderPage from '../pages/PurchaseOrderPage';
 import GoodsReceivingPage from '../pages/GoodsReceivingPage';
 import StockTransferPage from '../pages/StockTransferPage';
 import POSBillingPage from '../pages/POSBillingPage';
+import POSCheckoutPage from '../pages/POSCheckoutPage';
+import ReceiptPreviewPage from '../pages/ReceiptPreviewPage';
 import PaymentProcessingPage from '../pages/PaymentProcessingPage';
 import SalesHistoryPage from '../pages/SalesHistoryPage';
 import SalesDashboardPage from '../pages/SalesDashboardPage';
@@ -92,18 +93,15 @@ export const AppRoutes = () => {
     <Routes>
       {/* Auth Routes */}
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/verify-otp" element={<VerifyOTPPage />} />
-      <Route path="/select-role" element={<SelectRolePage />} /> 
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      {/* POS Billing Route - Full-screen layout */}
+
       <Route element={
         <ProtectedRoute allowedRoles={POS_ROLES}>
-          <POSLayout />
+          <MainLayout />
         </ProtectedRoute>
       }>
         <Route path="/pos-billing" element={<POSBillingPage />} />
+        <Route path="/pos-checkout" element={<POSCheckoutPage />} />
+        <Route path="/pos-receipt" element={<ReceiptPreviewPage />} />
       </Route>
 
       {/* Main Dashboard Panel Layout */}
