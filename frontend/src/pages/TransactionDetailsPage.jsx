@@ -264,6 +264,7 @@ export default function TransactionDetailsPage() {
                     </div>
                 </Modal>
             )}
+
         </div>
     );
 }
