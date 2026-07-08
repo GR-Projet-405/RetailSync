@@ -1,15 +1,34 @@
-import PageHeader from '../components/PageHeader';
+import Breadcrumb from "../components/Breadcrumb";
+import PageHeader from "../components/PageHeader";
+import RecommendationBanner from "../components/ai-reordering/RecommendationBanner";
+import SummaryCards  from "../components/ai-reordering/SummaryCards";
+import FilterTabs from "../components/ai-reordering/FilterTabs";
+import RecommendationTable from "../components/ai-reordering/RecommendationTable";
+import { recommendationProducts } from "../data/aiReorderingData";
 
 export default function AIReorderingPage() {
   return (
     <div>
-      <PageHeader
-        title="AI Reordering"
-        description="AI Reordering Module - Under Development"
+
+      {/* Breadcrumb */}
+
+      <Breadcrumb
+        items={[
+          "Workspace",
+          "AI Reordering",
+          "Recommendations",
+        ]}
       />
-      <div className="mt-8 p-8 border border-dashed border-slate-300 rounded-xl bg-slate-50 text-center text-slate-600">
-        <p className="text-sm font-medium">AI Reordering components, filters, and records are under active development.</p>
-      </div>
+
+     
+      <PageHeader />
+      <RecommendationBanner />
+      <SummaryCards />
+      <FilterTabs />
+      <RecommendationTable
+          products={recommendationProducts}
+      />
+
     </div>
   );
 }

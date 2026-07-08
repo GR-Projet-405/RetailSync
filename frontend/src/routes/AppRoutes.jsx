@@ -39,6 +39,10 @@ import AIReorderingPage from '../pages/AIReorderingPage';
 import AIAssistantPage from '../pages/AIAssistantPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
+import SuggestedPurchaseListPage from '../pages/SuggestedPurchaseListPage';
+import ApprovalWorkflowPage from "../pages/ApprovalWorkflowPage";
+import ReorderHistoryPage from '../pages/ReorderHistoryPage';
+import InventoryPredictionPage from '../pages/InventoryPredictionPage';
 
 
 
@@ -246,11 +250,52 @@ export const AppRoutes = () => {
         } />
 
         {/* AI Reordering */}
-        <Route path="/ai-reordering" element={
-          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
-            <AIReorderingPage />
-          </ProtectedRoute>
-        } />
+        <Route
+            path="/ai-reordering/recommendation"
+            element={
+              <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+                <AIReorderingPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ai-reordering/purchase-list"
+            element={
+              <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+                <SuggestedPurchaseListPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ai-reordering/approval-workflow"
+            element={
+              <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+                <ApprovalWorkflowPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ai-reordering/history"
+            element={
+              <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+                <ReorderHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ai-reordering/inventory-prediction"
+            element={
+              <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+                <InventoryPredictionPage />
+              </ProtectedRoute>
+            }
+          />
+
+          
 
         {/* AI Assistant */}
         <Route path="/ai-assistant" element={
