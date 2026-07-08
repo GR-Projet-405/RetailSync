@@ -11,4 +11,7 @@ router.post('/customers', controller.addCustomer);
 // 3. Route to process the final payment (e.g., POST /api/payment-processing/process)
 router.post('/process', controller.processPayment);
 
+// 4. Route to fetch transaction history (e.g., GET /api/payment-processing/transactions)
+router.get('/transactions', controller.getTransactions);
+
 module.exports = router;

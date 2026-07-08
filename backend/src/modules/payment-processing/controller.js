@@ -31,8 +31,18 @@ const processPayment = asyncHandler(async (req, res) => {
   });
 });
 
+// GET: Fetch all transactions for History 
+const getTransactions = asyncHandler(async (req, res) => {
+  const transactions = await service.getAllTransactions();
+  res.status(200).json({
+    success: true,
+    data: transactions
+  });
+});
+
 module.exports = {
   getCustomers,
   addCustomer,
-  processPayment
+  processPayment,
+  getTransactions
 };

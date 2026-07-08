@@ -43,6 +43,15 @@ class PaymentProcessingService {
 
     return savedTransaction;
   }
+
+  // 4. Fetch all transactions (For the Sales History page)
+  async getAllTransactions() {
+    return await Transaction.find()
+      .populate('customerId', 'name phone email loyaltyPoints')
+      .populate('cashierId', 'name')
+      .sort({ createdAt: -1 }); // Sort by most recent transactions first
+  }
+
 }
 
 module.exports = new PaymentProcessingService();
