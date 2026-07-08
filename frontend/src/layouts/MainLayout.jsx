@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import WorkspaceContainer from '../components/WorkspaceContainer';
@@ -6,6 +6,9 @@ import { useSidebar } from '../contexts/SidebarContext';
 
 export const MainLayout = () => {
   const { isSidebarOpen, closeMobileSidebar } = useSidebar();
+  const { pathname } = useLocation();
+  const fullBleedRoutes = ['/help-support'];
+  const useContainer = !fullBleedRoutes.includes(pathname);
 
   return (
     <div
@@ -35,9 +38,12 @@ export const MainLayout = () => {
         {/* Workspace Wrapper — scrollable outer area */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative p-4 sm:p-5 md:p-6">
           {/* Workspace Container — frosted glass surface */}
+          {useContainer ? (
           <WorkspaceContainer>
             <Outlet />
           </WorkspaceContainer>
+          ) : (<Outlet />
+          )}
         </main>
       </div>
     </div>
