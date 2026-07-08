@@ -1,0 +1,492 @@
+{
+  "info": {
+    "name": "RetailSync - Business Analytics Backend",
+    "_postman_id": "9d5b91c8-1d5f-44c8-a31d-6e5ad45fc9a2",
+    "description": "Postman collection for testing RetailSync Business Analytics backend endpoints. Run Login first to store the JWT token, then create a snapshot and query the analytics endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5001",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "loginEmail",
+      "value": "admin@retailsync.com",
+      "type": "string"
+    },
+    {
+      "key": "loginPassword",
+      "value": "Admin@123",
+      "type": "string"
+    },
+    {
+      "key": "snapshotId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login - Save JWT Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{loginEmail}}\",\n  \"password\": \"{{loginPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.token) {",
+                  "  pm.collectionVariables.set('token', json.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Business Analytics",
+      "item": [
+        {
+          "name": "Module Details",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/business-analytics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "business-analytics"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Analytics Snapshot",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"snapshotDate\": \"2026-07-08T00:00:00.000Z\",\n  \"branchName\": \"Main Branch HQ\",\n  \"branchCode\": \"HQ-001\",\n  \"channel\": \"POS\",\n  \"sales\": {\n    \"orderCount\": 42,\n    \"itemCount\": 128,\n    \"grossRevenue\": 9850,\n    \"discounts\": 420,\n    \"tax\": 550,\n    \"refunds\": 120,\n    \"cogs\": 6100\n  },\n  \"inventory\": {\n    \"stockValue\": 48500\n  },\n  \"customers\": {\n    \"newCustomers\": 9,\n    \"returningCustomers\": 31,\n    \"loyaltyPointsIssued\": 1240\n  },\n  \"products\": [\n    {\n      \"sku\": \"SKU-COKE-1L\",\n      \"name\": \"Coca Cola 1L\",\n      \"category\": \"Beverages\",\n      \"quantitySold\": 46,\n      \"revenue\": 2300,\n      \"grossProfit\": 820,\n      \"currentStock\": 8,\n      \"reorderLevel\": 20,\n      \"daysOfSupply\": 2,\n      \"inventoryStatus\": \"LOW_STOCK\"\n    },\n    {\n      \"sku\": \"SKU-RICE-5KG\",\n      \"name\": \"Premium Rice 5kg\",\n      \"category\": \"Grocery\",\n      \"quantitySold\": 18,\n      \"revenue\": 4500,\n      \"grossProfit\": 1350,\n      \"currentStock\": 42,\n      \"reorderLevel\": 15,\n      \"daysOfSupply\": 14,\n      \"inventoryStatus\": \"HEALTHY\"\n    },\n    {\n      \"sku\": \"SKU-SOAP-100G\",\n      \"name\": \"Herbal Soap 100g\",\n      \"category\": \"Personal Care\",\n      \"quantitySold\": 0,\n      \"revenue\": 0,\n      \"grossProfit\": 0,\n      \"currentStock\": 96,\n      \"reorderLevel\": 12,\n      \"daysOfSupply\": 90,\n      \"inventoryStatus\": \"DEAD_STOCK\"\n    }\n  ],\n  \"notes\": \"Sample analytics snapshot for Postman testing.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/business-analytics/snapshots",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "business-analytics",
+                "snapshots"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Snapshot created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data._id) {",
+                  "  pm.collectionVariables.set('snapshotId', json.data._id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Snapshots",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/business-analytics/snapshots?period=daily&page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "business-analytics",
+                "snapshots"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "daily"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Snapshot By ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/business-analytics/snapshots/{{snapshotId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "business-analytics",
+                "snapshots",
+                "{{snapshotId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Snapshot Notes",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Updated from Postman.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/business-analytics/snapshots/{{snapshotId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "business-analytics",
+                "snapshots",
+                "{{snapshotId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Analytics Summary",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/business-analytics/summary?period=daily",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "business-analytics",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "daily"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Sales Trends",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/business-analytics/sales-trends?period=daily",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "business-analytics",
+                "sales-trends"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "daily"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Top Products",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/business-analytics/top-products?sortBy=revenue&limit=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "business-analytics",
+                "top-products"
+              ],
+              "query": [
+                {
+                  "key": "sortBy",
+                  "value": "revenue"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Branch Performance",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/business-analytics/branch-performance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "business-analytics",
+                "branch-performance"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Inventory Health",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/business-analytics/inventory-health?limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "business-analytics",
+                "inventory-health"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Snapshot",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/business-analytics/snapshots/{{snapshotId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "business-analytics",
+                "snapshots",
+                "{{snapshotId}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
