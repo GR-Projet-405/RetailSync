@@ -42,6 +42,7 @@ import HelpSupportPage from '../pages/HelpSupportPage';
 import PaymentSuccessPage from '../pages/PaymentSuccessPage';
 import TransactionDetailsPage from '../pages/TransactionDetailsPage';
 import ReceiptPage from '../pages/ReceiptPage';
+import PaymentHistoryPage from '../pages/PaymentHistoryPage';
 
 
 
@@ -216,9 +217,9 @@ export const AppRoutes = () => {
 
         {/* Sales History */}
         <Route path="/sales-history" element={
-          <ProtectedRoute allowedRoles={SALES_ROLES}>
-            <SalesHistoryPage />
-          </ProtectedRoute>
+          //<ProtectedRoute allowedRoles={SALES_ROLES}>
+          <PaymentHistoryPage />
+          //</ProtectedRoute>
         } />
 
         {/* Returns & Refunds */}
