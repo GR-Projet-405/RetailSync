@@ -6,6 +6,7 @@ import Button from '../components/Button';
 import { Search, Package, AlertCircle, Send, Barcode, HelpCircle, UploadCloud, Check, Save, Trash2, Edit2, Info } from 'lucide-react';
 import api from '../services/api';
 import Swal from 'sweetalert2';
+import toast from '../utils/toast'; 
 
 export default function ReturnsRefundsPage() {
   const [receiptId, setReceiptId] = useState('');
@@ -43,16 +44,11 @@ export default function ReturnsRefundsPage() {
       }
     } catch (error) {
       if (error.response?.data?.isExpired === true) {
-        setUiState('ERROR'); 
+        setUiState('ERROR');
         setActiveDetailSku(null);
       } else {
         setUiState('IDLE');
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: error.response?.data?.message || 'Receipt ID not found or server error.',
-          confirmButtonColor: '#2563eb'
-        });
+        toast.error(error.response?.data?.message || 'Receipt ID not found or server error.');
       }
     }
   };
@@ -94,6 +90,7 @@ export default function ReturnsRefundsPage() {
       ...prev,
       [sku]: { reason, condition, comments, isSaved: true }
     }));
+    toast.success('Return details saved successfully.');
   };
 
   const handleEditSidebarDetails = (sku) => {
@@ -114,12 +111,7 @@ export default function ReturnsRefundsPage() {
   const handleSubmitReturnRequest = async () => {
     const unsavedItems = selectedSkus.filter(sku => !formStates[sku] || !formStates[sku].isSaved);
     if (unsavedItems.length > 0) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Missing Details',
-        text: 'Please add and save return details for all selected items before submitting.',
-        confirmButtonColor: '#2563eb'
-      });
+      toast.warning('Please add and save return details for all selected items before submitting.');
       return;
     }
 
@@ -160,22 +152,18 @@ export default function ReturnsRefundsPage() {
 
       if (response.data.success) {
         Swal.close();
+        toast.success('Return request submitted successfully.');
         setUiState('TRACKING');
       }
 
     } catch (error) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Submission Failed',
-        text: error.response?.data?.message || 'Something went wrong while submitting the request.',
-        confirmButtonColor: '#2563eb'
-      });
+      Swal.close();
+      toast.error(error.response?.data?.message || 'Something went wrong while submitting the request.');
     }
   };
 
   const activeItemInfo = receiptItems.find(item => item.sku === activeDetailSku);
   const activeFormInfo = formStates[activeDetailSku] || { reason: 'Defective/Damaged Product', condition: 'Opened', comments: '', isSaved: false };
-
 
   const availableItemsCount = receiptItems.filter(i => i.availableQty > 0).length;
 
@@ -304,8 +292,7 @@ export default function ReturnsRefundsPage() {
                           const isActiveRow = activeDetailSku === item.sku;
                           const currentQty = returnQuantities[item.sku] || 1;
                           const rowTotal = isChecked ? (item.unitPrice * currentQty) : 0;
-                          
-                        
+
                           const isFullyReturned = item.availableQty === 0;
 
                           return (
@@ -314,7 +301,7 @@ export default function ReturnsRefundsPage() {
                                 <input
                                   type="checkbox"
                                   checked={isChecked}
-                                  disabled={isFullyReturned} 
+                                  disabled={isFullyReturned}
                                   onChange={() => toggleSelect(item.sku)}
                                   className="w-4 h-4 text-blue-600 rounded cursor-pointer border-slate-300 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                 />
@@ -331,7 +318,6 @@ export default function ReturnsRefundsPage() {
                                   onChange={(e) => handleQtyChange(item.sku, e.target.value)}
                                   className="bg-white border border-slate-200 rounded px-2 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500 disabled:opacity-50"
                                 >
-                                  
                                   {[...Array(item.availableQty || 1)].map((_, i) => (
                                     <option key={i + 1} value={i + 1}>{i + 1}</option>
                                   ))}
@@ -344,11 +330,10 @@ export default function ReturnsRefundsPage() {
                                 Rs. {rowTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                               </td>
                               <td className="px-5 py-4 text-center">
-                                
                                 {isFullyReturned ? (
-                                   <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded bg-slate-200 text-slate-500">
-                                      Returned
-                                   </span>
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded bg-slate-200 text-slate-500">
+                                    Returned
+                                  </span>
                                 ) : itemForm.isSaved ? (
                                   <button
                                     onClick={() => setActiveDetailSku(item.sku)}
@@ -390,7 +375,6 @@ export default function ReturnsRefundsPage() {
                   </div>
                 )}
 
-
                 <div className="p-5 space-y-3">
                   {uiState === 'VALID' && (
                     <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-3 flex gap-2.5 items-center text-slate-600 text-xs font-medium mb-1">
@@ -426,7 +410,6 @@ export default function ReturnsRefundsPage() {
 
         </div>
 
-
         <div className="flex flex-col lg:col-span-1">
           {uiState === 'VALID' && activeDetailSku && activeItemInfo ? (
             <Card className="flex-1 flex flex-col justify-between p-6 min-h-[460px] border-slate-200/80 bg-white font-sans fade-up">
@@ -456,7 +439,6 @@ export default function ReturnsRefundsPage() {
                         {activeFormInfo.condition}
                       </span>
                     </div>
-
 
                     <div>
                       <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wide mb-2">Photo Proof (Optional)</label>

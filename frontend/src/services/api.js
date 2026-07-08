@@ -8,6 +8,7 @@ const api = axios.create({
   timeout: 15000,
 });
 
+// ─── Request interceptor ───
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('retailsync_token');
@@ -17,11 +18,10 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ─── Response interceptor ─────────────────────────────────
+// ─── Response interceptor ───
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-
     return Promise.reject(error);
   }
 );

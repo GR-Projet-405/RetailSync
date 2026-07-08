@@ -21,8 +21,8 @@ class ReturnsRefundsPageService {
       throw { statusCode: 400, message: 'Validation Error: 30-Day Return Limit Exceeded.', isExpired: true };
     }
 
-    const existingReturns = await ReturnsRefundsPage.find({ 
-      receiptId: cleanId, 
+    const existingReturns = await ReturnsRefundsPage.find({
+      receiptId: cleanId,
       status: { $ne: 'Rejected' } 
     });
 
@@ -35,7 +35,7 @@ class ReturnsRefundsPageService {
     });
 
     const dbItems = transaction.get('items') || [];
-    
+
     const formattedItems = dbItems.map(item => {
       const sku = item.sku || 'N/A';
       const originalQty = item.qty || 1;
@@ -69,7 +69,7 @@ class ReturnsRefundsPageService {
     const { receiptId, items, estimatedRefundTotal } = data;
 
     const lastReturn = await ReturnsRefundsPage.findOne().sort({ createdAt: -1 });
-    let newReturnIdNumber = 91; 
+    let newReturnIdNumber = 91;
 
     if (lastReturn && lastReturn.returnId) {
       const lastNumber = parseInt(lastReturn.returnId.split('-')[1], 10);
@@ -85,9 +85,9 @@ class ReturnsRefundsPageService {
       returnId: generatedReturnId,
       receiptId: receiptId,
       transactionRef: transaction ? transaction._id : null,
-      items: items, 
+      items: items,
       estimatedRefundTotal: estimatedRefundTotal,
-      status: 'Ready for Refund Processing'
+      status: 'Pending'
     });
 
     return await newReturnRequest.save();
@@ -100,6 +100,182 @@ class ReturnsRefundsPageService {
     }
     return returnData;
   }
+
+  async getReturnHistory() {
+
+    const returns = await ReturnsRefundsPage.find().sort({ createdAt: -1 }).lean();
+    const Customer = mongoose.models.Customer;
+    const User = mongoose.models.User;
+
+    const history = [];
+    for (const ret of returns) {
+      let customerName = 'Walk-in Customer';
+      let cashierName = 'System / Unknown';
+
+      if (ret.transactionRef) {
+        const trans = await LocalTransaction.findById(ret.transactionRef);
+        if (trans) {
+          if (trans.get('customerId') && Customer) {
+            try {
+              const cust = await Customer.findById(trans.get('customerId'));
+              if (cust) customerName = cust.name;
+            } catch (e) { }
+          }
+          if (trans.get('cashierId') && User) {
+            try {
+              const user = await User.findById(trans.get('cashierId'));
+              if (user) cashierName = user.firstName || user.name || 'System User';
+            } catch (e) { }
+          }
+        }
+      }
+
+      history.push({
+        id: ret.returnId,
+        date: new Date(ret.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        receipt: ret.receiptId,
+        customer: customerName,
+        cashier: cashierName,
+        amount: ret.estimatedRefundTotal,
+        status: ret.status
+      });
+    }
+
+    return history;
+  }
+
+  async getReturnByReturnId(returnId) {
+    const returnData = await ReturnsRefundsPage.findOne({ returnId: returnId }).lean();
+    if (!returnData) {
+      throw { statusCode: 404, message: 'Return request not found.' };
+    }
+
+    const Customer = mongoose.models.Customer;
+    const User = mongoose.models.User;
+
+    let customerName = 'Walk-in Customer';
+    let cashierName = 'System / Unknown';
+    let purchaseDate = returnData.createdAt;
+
+    if (returnData.transactionRef) {
+      const trans = await LocalTransaction.findById(returnData.transactionRef);
+      if (trans) {
+        purchaseDate = trans.get('createdAt');
+        if (trans.get('customerId') && Customer) {
+          try {
+            const cust = await Customer.findById(trans.get('customerId'));
+            if (cust) customerName = cust.name;
+          } catch (e) { }
+        }
+        if (trans.get('cashierId') && User) {
+          try {
+            const user = await User.findById(trans.get('cashierId'));
+            if (user) cashierName = user.firstName || user.name || 'System User';
+          } catch (e) { }
+        }
+      }
+    }
+
+    return {
+      ...returnData,
+      customerName,
+      cashierName,
+      purchaseDate
+    };
+  }
+
+  async reviewReturnRequest(returnId, status, internalNotes, managerId) {
+    const returnRequest = await ReturnsRefundsPage.findOne({ returnId: returnId });
+
+    if (!returnRequest) {
+      throw { statusCode: 404, message: 'Return request not found.' };
+    }
+
+    returnRequest.status = status; 
+    returnRequest.internalNotes = internalNotes;
+    returnRequest.approvedBy = managerId || null;
+
+    return await returnRequest.save();
+  }
+
+  async getReturnByReturnId(returnId) {
+    const returnData = await ReturnsRefundsPage.findOne({ returnId: returnId }).lean();
+    if (!returnData) throw { statusCode: 404, message: 'Return request not found.' };
+
+    const Customer = mongoose.models.Customer;
+    const User = mongoose.models.User;
+
+    let customerName = 'Walk-in Customer';
+    let cashierName = 'System / Unknown';
+    let purchaseDate = returnData.createdAt;
+    let originalPaymentMethod = 'cash'; 
+    let cardLastFourDigits = '';
+
+    if (returnData.transactionRef) {
+      const trans = await LocalTransaction.findById(returnData.transactionRef);
+      if (trans) {
+        purchaseDate = trans.get('createdAt');
+        originalPaymentMethod = trans.get('paymentMethod') || 'cash'; 
+        cardLastFourDigits = trans.get('cardLastFourDigits') || '';
+
+        if (trans.get('customerId') && Customer) {
+          try {
+            const cust = await Customer.findById(trans.get('customerId'));
+            if (cust) customerName = cust.name;
+          } catch (e) { }
+        }
+        if (trans.get('cashierId') && User) {
+          try {
+            const user = await User.findById(trans.get('cashierId'));
+            if (user) cashierName = user.firstName || user.name || 'System User';
+          } catch (e) { }
+        }
+      }
+    }
+
+    return {
+      ...returnData,
+      customerName,
+      cashierName,
+      purchaseDate,
+      originalPaymentMethod,
+      cardLastFourDigits
+    };
+  }
+
+  async processRefund(returnId, refundMethod, managerEmail, managerPassword) {
+    const User = mongoose.models.User;
+    const bcrypt = require('bcryptjs');
+
+    if (!managerEmail || !managerPassword) {
+      throw { statusCode: 400, message: 'Manager authorization credentials are required.' };
+    }
+
+    const manager = await User.findOne({ email: managerEmail }).populate('roleId');
+    if (!manager) {
+      throw { statusCode: 401, message: 'Invalid Manager Email.' };
+    }
+
+    const validRoles = ['BRANCH_MANAGER', 'ADMIN', 'SUPER_ADMIN'];
+    if (!manager.roleId || !validRoles.includes(manager.roleId.name)) {
+      throw { statusCode: 403, message: 'Access Denied. Only a Manager can authorize refunds.' };
+    }
+
+    const isPasswordMatch = await bcrypt.compare(managerPassword, manager.password);
+    if (!isPasswordMatch) {
+      throw { statusCode: 401, message: 'Invalid Manager Password.' };
+    }
+
+    const returnRequest = await ReturnsRefundsPage.findOne({ returnId: returnId });
+    if (!returnRequest) throw { statusCode: 404, message: 'Return request not found.' };
+
+    returnRequest.status = 'Refund Issued';
+    returnRequest.refundMethod = refundMethod;
+
+    return await returnRequest.save();
+  }
+
 }
 
 module.exports = new ReturnsRefundsPageService();
+

@@ -32,9 +32,10 @@ import PaymentProcessingPage from '../pages/PaymentProcessingPage';
 import SalesHistoryPage from '../pages/SalesHistoryPage';
 import ReturnsRefundsPage from '../pages/ReturnsRefundsPage';
 import ReturnStatusPage from '../pages/ReturnStatusPage';
-import ReturnHistoryPage from '../pages/ReturnHistoryPage'; 
+import ReturnHistoryPage from '../pages/ReturnHistoryPage';
 import ReviewReturnRequestPage from '../pages/ReviewReturnRequestPage';
-import ProcessRefundPage from '../pages/ProcessRefundPage'; 
+import ReturnApprovalsPage from '../pages/ReturnApprovalsPage';
+import ProcessRefundPage from '../pages/ProcessRefundPage';
 import PromotionsDiscountsPage from '../pages/PromotionsDiscountsPage';
 import ReportsPage from '../pages/ReportsPage';
 import BusinessAnalyticsPage from '../pages/BusinessAnalyticsPage';
@@ -43,7 +44,6 @@ import AIReorderingPage from '../pages/AIReorderingPage';
 import AIAssistantPage from '../pages/AIAssistantPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
-
 
 
 // Convenience arrays
@@ -209,38 +209,43 @@ export const AppRoutes = () => {
 
         {/* Returns & Refunds */}
         <Route path="/returns-refunds" element={
-          
-            <ReturnsRefundsPage />
-          
 
-        } />
-
-        {/* Return Approval (Manager Only) */}
-        <Route path="/returns/approval/:transactionId" element={
-        
-            <ReviewReturnRequestPage />
-        
+          <ReturnsRefundsPage />
         } />
 
         {/* Track Return Status */}
         <Route path="/returns/status/:returnId" element={
-          
-            <ReturnStatusPage />
-          
+
+          <ReturnStatusPage />
+
         } />
 
         {/* Process Refund */}
         <Route path="/returns/process-refund/:returnId" element={
-          
-            <ProcessRefundPage />
-      
+
+          <ProcessRefundPage />
+
         } />
 
         {/* Return History */}
         <Route path="/returns/history" element={
-          
-            <ReturnHistoryPage />
-          
+
+          <ReturnHistoryPage />
+
+        } />
+
+        {/* Manager's Pending Approvals List */}
+        <Route path="/returns/approvals" element={
+          //<ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]}>
+          <ReturnApprovalsPage />
+          //</ProtectedRoute>
+        } />
+
+        {/* Manager's Detailed Review Page */}
+        <Route path="/returns/approval/:returnId" element={
+          //<ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]}>
+          <ReviewReturnRequestPage />
+          //</ProtectedRoute>
         } />
 
         {/* Promotions & Discounts */}
