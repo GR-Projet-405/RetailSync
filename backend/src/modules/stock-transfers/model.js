@@ -1,4 +1,7 @@
 const mongoose = require('mongoose');
+require('../branch-management/branch.model');
+require('../product-management/model');
+require('../user-management/user.model');
 
 const stockTransferItemSchema = new mongoose.Schema({
   productId: {
@@ -101,7 +104,6 @@ const stockTransferSchema = new mongoose.Schema(
   }
 );
 
-stockTransferSchema.index({ transferNumber: 1 });
 stockTransferSchema.index({ sourceBranch: 1 });
 stockTransferSchema.index({ destinationBranch: 1 });
 stockTransferSchema.index({ status: 1 });

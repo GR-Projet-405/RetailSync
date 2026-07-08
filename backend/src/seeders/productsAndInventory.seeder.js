@@ -1,4 +1,7 @@
 const User = require('../modules/user-management/user.model');
+require('../modules/role-management/role.model');
+require('../modules/category-management/model');
+require('../modules/supplier-management/model');
 const Branch = require('../modules/branch-management/branch.model');
 const Product = require('../modules/product-management/model');
 const Inventory = require('../modules/inventory-management/model');
@@ -44,11 +47,11 @@ const seedProductsAndInventory = async () => {
     }
 
     const productsToSeed = [
-      { sku: 'SKU-0001', name: 'Wireless Mouse', price: 29.99, costPrice: 15.00, category: 'Accessories', status: 'ACTIVE' },
-      { sku: 'SKU-0002', name: 'Mechanical Keyboard', price: 79.99, costPrice: 40.00, category: 'Accessories', status: 'ACTIVE' },
-      { sku: 'SKU-0003', name: 'Gaming Monitor', price: 249.99, costPrice: 150.00, category: 'Electronics', status: 'ACTIVE' },
-      { sku: 'SKU-0004', name: 'USB-C Adapter', price: 19.99, costPrice: 8.00, category: 'Accessories', status: 'ACTIVE' },
-      { sku: 'SKU-0005', name: 'Bluetooth Speaker', price: 49.99, costPrice: 25.00, category: 'Electronics', status: 'ACTIVE' },
+      { sku: 'SKU-0001', name: 'Wireless Mouse', price: 29.99, costPrice: 15.00, category: 'Accessories', status: 'ACTIVE', barcode: 'BAR-0001' },
+      { sku: 'SKU-0002', name: 'Mechanical Keyboard', price: 79.99, costPrice: 40.00, category: 'Accessories', status: 'ACTIVE', barcode: 'BAR-0002' },
+      { sku: 'SKU-0003', name: 'Gaming Monitor', price: 249.99, costPrice: 150.00, category: 'Electronics', status: 'ACTIVE', barcode: 'BAR-0003' },
+      { sku: 'SKU-0004', name: 'USB-C Adapter', price: 19.99, costPrice: 8.00, category: 'Accessories', status: 'ACTIVE', barcode: 'BAR-0004' },
+      { sku: 'SKU-0005', name: 'Bluetooth Speaker', price: 49.99, costPrice: 25.00, category: 'Electronics', status: 'ACTIVE', barcode: 'BAR-0005' },
     ];
 
     const productMap = {};
