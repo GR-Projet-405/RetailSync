@@ -27,6 +27,9 @@ app.get('/health', (req, res) => {
 require('./modules/branch-management/branch.model');
 require('./modules/role-management/role.model');
 require('./modules/user-management/user.model');
+require('./modules/goods-receiving/model');
+require('./modules/supplier-management/model');
+
 
 // Dynamically register routes for all 28 modular folders
 const modulesPath = path.join(__dirname, 'modules');

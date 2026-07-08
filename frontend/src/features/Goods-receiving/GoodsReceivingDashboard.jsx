@@ -6,6 +6,7 @@ import Badge from '../../components/Badge';
 import DataTable from '../../components/DataTable';
 import Spinner from '../../components/Spinner';
 import { useDashboardStats } from '../../hooks/useGoodsReceiving';
+import GoodsReceiptForm from "../Goods-receiving/GoodsReceiptForm";
 
 const STATUS_VARIANT = {
   VERIFIED: 'success',
@@ -55,7 +56,7 @@ export default function GoodsReceivingDashboard() {
       <PageHeader
         title="Receiving Dashboard"
         description="Today's goods receiving activity at a glance 📦"
-        actions={<Button onClick={() => navigate('/goods-receiving/new')}>+ New Receipt</Button>}
+        actions={<Button onClick={() => navigate('/GoodsReceiptForm')}>+ New Receipt</Button>}
       />
 
       {isLoading && (

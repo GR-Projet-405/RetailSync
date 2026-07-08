@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const GoodsReceivingPage = require('../purchase-orders/model');
+const GoodsReceivingPage = require('../goods-receiving/model');
 
 // Adjust this path to wherever your Purchase Order model actually lives.
 // It's only used to pull the supplier + PO number when a receipt is created.

@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/Card'
 import Button from '../../components/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCreateReceipt } from '../../hooks/useGoodsReceiving';
+import { useSuppliers } from '../../hooks/useSuppliers';
 
 // Matches the focus/border styling used in SearchInput.jsx for visual consistency
 const inputClass =
@@ -23,6 +24,7 @@ export default function GoodsReceiptForm() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const createReceipt = useCreateReceipt();
+  const { data: suppliers, isLoading: suppliersLoading } = useSuppliers();
 
   const [form, setForm] = useState({
     supplier: '',
@@ -43,8 +45,8 @@ export default function GoodsReceiptForm() {
   const handleSubmit = async (saveAsDraft) => {
     setError('');
 
-    if (!form.poNumber || !form.deliveryDate || !form.destinationWarehouse) {
-      setError('Please fill in Purchase Order #, Delivery Date, and Destination Warehouse 🙏');
+    if (!form.supplier || !form.poNumber || !form.deliveryDate || !form.destinationWarehouse) {
+      setError('Please select a Supplier and fill in Purchase Order #, Delivery Date, and Destination Warehouse 🙏');
       return;
     }
     if (items.some((i) => !i.productName || !i.sku)) {
@@ -93,12 +95,19 @@ export default function GoodsReceiptForm() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Supplier">
-            <input
+            <select
               className={inputClass}
-              placeholder="Supplier name…"
               value={form.supplier}
               onChange={(e) => updateField('supplier', e.target.value)}
-            />
+              disabled={suppliersLoading}
+            >
+              <option value="">{suppliersLoading ? 'Loading suppliers…' : 'Select supplier…'}</option>
+              {suppliers?.map((s) => (
+                <option key={s._id} value={s._id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
           </Field>
           <Field label="Purchase Order #">
             <input

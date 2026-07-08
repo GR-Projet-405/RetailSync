@@ -44,6 +44,7 @@ import AIReorderingPage from '../pages/AIReorderingPage';
 import AIAssistantPage from '../pages/AIAssistantPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
+import GoodsReceiptForm from '../features/Goods-receiving/GoodsReceiptForm';
 
 
 
@@ -190,6 +191,10 @@ export const AppRoutes = () => {
             <GoodsReceivingPage />
           </ProtectedRoute>
         } />
+        {/* Goods Receipt Form */}
+        <Route path="/GoodsReceiptForm" element=
+        {<GoodsReceiptForm />}
+        />
 
         {/* Stock Transfers */}
         <Route path="/stock-transfers" element={
