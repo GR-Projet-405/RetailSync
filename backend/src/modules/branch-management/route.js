@@ -5,12 +5,6 @@ const { verifyToken } = require('../../middleware/auth.middleware');
 
 router.get('/', controller.getDetails);
 router.get('/active', verifyToken, controller.getActiveBranches);
-
 router.get('/branches', controller.getBranches);
-
-router.get('/active', verifyToken, controller.getActiveBranches);
-
-router.get('/branches', controller.getBranches);
->>>>>>> Stashed changes
 
 module.exports = router;
