@@ -7,7 +7,7 @@ import { useSidebar } from '../contexts/SidebarContext';
 export const MainLayout = () => {
   const { isSidebarOpen, closeMobileSidebar } = useSidebar();
   const { pathname } = useLocation();
-  const fullBleedRoutes = ['/help-support'];
+  const fullBleedRoutes = ['/help-support', '/help-support/contact'];
   const useContainer = !fullBleedRoutes.includes(pathname);
 
   return (

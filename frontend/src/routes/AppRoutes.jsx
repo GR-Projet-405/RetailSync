@@ -60,6 +60,7 @@ import AIAlertsPage from '../pages/AIAlertsPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import SystemEventsPage from '../features/system-events/SystemEventsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
+import ContactSupportPage from '../pages/ContactSupportPage';
 import CreatePurchaseOrderPage from "../pages/CreatePurchaseOrderPage";
 import ApprovalWorkflowPage from "../pages/ApprovalWorkflowPage";
 import PurchaseOrderTrackingPage from "../pages/PurchaseOrderTrackingPage";
@@ -131,6 +132,13 @@ export const AppRoutes = () => {
         <Route path="/help-support" element={
           <ProtectedRoute allowedRoles={ALL_ROLES}>
             <HelpSupportPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Contact Support */}
+        <Route path="/help-support/contact" element={
+          <ProtectedRoute allowedRoles={ALL_ROLES}>
+            <ContactSupportPage />
           </ProtectedRoute>
         } />
 

@@ -60,6 +60,13 @@ export const NAVIGATION_GROUPS = [
             allowedRoles: Object.values(ROLES)
           },
           {
+            id: 'contact-support',
+            name: 'Contact Support',
+            path: '/help-support/contact',
+            icon: 'MessageCircle',
+            allowedRoles: Object.values(ROLES)
+          },
+          {
             id: 'faq',
             name: 'FAQ',
             path: '/faq',
