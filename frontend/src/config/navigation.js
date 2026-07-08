@@ -319,6 +319,13 @@ export const NAVIGATION_GROUPS = [
         path: '/ai-assistant',
         icon: 'MessageSquareCode',
         allowedRoles: Object.values(ROLES)
+      },
+      {
+        id: 'ai-alerts',
+        name: 'AI Anomalies & Alerts',
+        path: '/ai-alerts',
+        icon: 'BellRing',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]
       }
     ]
   }

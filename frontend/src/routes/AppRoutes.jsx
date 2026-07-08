@@ -55,6 +55,7 @@ import BusinessAnalyticsPage from '../pages/BusinessAnalyticsPage';
 import AIForecastingPage from '../pages/AIForecastingPage';
 import AIReorderingPage from '../pages/AIReorderingPage';
 import AIAssistantPage from '../pages/AIAssistantPage';
+import AIAlertsPage from '../pages/AIAlertsPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import SystemEventsPage from '../features/system-events/SystemEventsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
@@ -410,6 +411,13 @@ export const AppRoutes = () => {
         <Route path="/ai-assistant" element={
           <ProtectedRoute allowedRoles={ALL_ROLES}>
             <AIAssistantPage />
+          </ProtectedRoute>
+        } />
+
+        {/* AI Anomalies & Alerts */}
+        <Route path="/ai-alerts" element={
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+            <AIAlertsPage />
           </ProtectedRoute>
         } />
       </Route>
