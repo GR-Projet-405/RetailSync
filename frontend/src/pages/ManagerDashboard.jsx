@@ -272,7 +272,6 @@ export default function ManagerDashboard() {
           <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
             <span className="bg-slate-50 p-1.5 rounded text-slate-600"><FaClipboardList /></span> Inventory Status
           </h3>
-          {/* CHANGED: <button> to <Link> */}
           <Link 
             to="/inventory"
             className="bg-blue-600 text-white text-xs font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition"
@@ -283,27 +282,31 @@ export default function ManagerDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="flex flex-col items-center p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-blue-200 transition">
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">TOTAL PRODUCTS</p>
-            <p className="text-2xl font-bold text-slate-800 mt-2">{inventory.totalProducts}</p>
+            {/* Added ? after inventory */}
+            <p className="text-2xl font-bold text-slate-800 mt-2">{inventory?.totalProducts || 0}</p>
           </div>
           <div className="flex flex-col items-center p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-blue-200 transition">
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">TOTAL STOCK UNITS</p>
-            <p className="text-2xl font-bold text-slate-800 mt-2">{inventory.totalStockUnits}</p>
+            {/* Added ? after inventory */}
+            <p className="text-2xl font-bold text-slate-800 mt-2">{inventory?.totalStockUnits || 0}</p>
           </div>
           <div className="flex flex-col items-center p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-blue-200 transition">
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">LOW STOCK ITEMS</p>
-            <p className="text-2xl font-bold text-red-500 mt-2">{inventory.lowStockItems}</p>
+            {/* Added ? after inventory */}
+            <p className="text-2xl font-bold text-red-500 mt-2">{inventory?.lowStockItems || 0}</p>
           </div>
           <div className="flex flex-col items-center p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-blue-200 transition">
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">RETURN ITEMS</p>
-            <p className="text-2xl font-bold text-slate-800 mt-2">{inventory.returnItems}</p>
+            {/* Added ? after inventory */}
+            <p className="text-2xl font-bold text-slate-800 mt-2">{inventory?.returnItems || 0}</p>
           </div>
           <div className="flex flex-col items-center p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-blue-200 transition">
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">PENDING ORDERS</p>
-            <p className="text-2xl font-bold text-slate-800 mt-2">{inventory.pendingOrders}</p>
+            {/* Added ? after inventory */}
+            <p className="text-2xl font-bold text-slate-800 mt-2">{inventory?.pendingOrders || 0}</p>
           </div>
         </div>
       </div>
-
       {/* --- GLOBAL RECENT ACTIVITY --- */}
       <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="flex justify-between items-center mb-6">

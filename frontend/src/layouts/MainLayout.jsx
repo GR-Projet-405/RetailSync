@@ -1,4 +1,4 @@
-
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import React from 'react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
@@ -22,13 +22,22 @@ export const MainLayout = ({ children }) => {
       {/* Main panel */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <Navbar />
-
         {/* Workspace Wrapper */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative p-4 sm:p-5 md:p-6">
           {/* Workspace Container — frosted glass surface */}
-          <WorkspaceContainer>
-            {children} {/* Render the dashboard here */}
-          </WorkspaceContainer>
+          {/* Commented out useContainer logic for now
+          {useContainer ? (
+            <WorkspaceContainer>
+              {children} 
+            </WorkspaceContainer>
+          ) : (
+            <Outlet />
+          )}
+          */}
+          
+          {/* Temporary render to make the app work */}
+          {children}
+          
         </main>
       </div>
     </div>
