@@ -36,6 +36,7 @@ import ReturnHistoryPage from '../pages/ReturnHistoryPage';
 import ReviewReturnRequestPage from '../pages/ReviewReturnRequestPage';
 import ReturnApprovalsPage from '../pages/ReturnApprovalsPage';
 import ProcessRefundPage from '../pages/ProcessRefundPage';
+import ReturnSlipPage from '../pages/ReturnSlipPage'; 
 import PromotionsDiscountsPage from '../pages/PromotionsDiscountsPage';
 import ReportsPage from '../pages/ReportsPage';
 import BusinessAnalyticsPage from '../pages/BusinessAnalyticsPage';
@@ -246,6 +247,12 @@ export const AppRoutes = () => {
           //<ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]}>
           <ReviewReturnRequestPage />
           //</ProtectedRoute>
+        } />
+
+        <Route path="/returns/slip/:returnId" element={
+          
+          <ReturnSlipPage />
+          
         } />
 
         {/* Promotions & Discounts */}

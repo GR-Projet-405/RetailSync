@@ -177,10 +177,10 @@ export default function ReturnStatusPage() {
             </p>
           </div>
 
-          <div
-            onClick={() => window.print()}
-            className="flex items-center justify-center p-5 transition-colors bg-white border-2 border-dashed shadow-sm cursor-pointer border-slate-300 rounded-xl hover:bg-slate-50"
-          >
+            <div
+              onClick={() => navigate(`/returns/slip/${returnId}`)}
+              className="flex items-center justify-center p-5 transition-colors bg-white border-2 border-dashed shadow-sm cursor-pointer border-slate-300 rounded-xl hover:bg-slate-50"
+            >
             <div className="flex items-center gap-2 text-sm font-bold text-blue-600">
               <Printer size={18} />
               <span>Print Return Slip</span>
