@@ -45,6 +45,8 @@ import AIAssistantPage from '../pages/AIAssistantPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
 import GoodsReceiptForm from '../features/Goods-receiving/GoodsReceiptForm';
+import ReceivingItemsHistory from '../features/Goods-receiving/ReceivedItemsHistory';
+import VerificationScreen from '../features/Goods-receiving/VerificationScreen';
 
 
 
@@ -195,6 +197,17 @@ export const AppRoutes = () => {
         <Route path="/GoodsReceiptForm" element=
         {<GoodsReceiptForm />}
         />
+        {/* Goods Received Items History */}
+        <Route path="/ReceivingItemsHistory" element=
+        {<ReceivingItemsHistory />}
+        />
+
+        {/* Verification Screen */}
+                <Route path="/goods-receiving/verify/:id" element={
+                  <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+                    <VerificationScreen />
+                  </ProtectedRoute>
+                } />
 
         {/* Stock Transfers */}
         <Route path="/stock-transfers" element={

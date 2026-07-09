@@ -7,6 +7,8 @@ import DataTable from '../../components/DataTable';
 import Spinner from '../../components/Spinner';
 import { useDashboardStats } from '../../hooks/useGoodsReceiving';
 import GoodsReceiptForm from "../Goods-receiving/GoodsReceiptForm";
+import ReceivingItemsHistory from "../Goods-receiving/ReceivedItemsHistory";
+import VerificationScreen from "../Goods-receiving/VerificationScreen";
 
 const STATUS_VARIANT = {
   VERIFIED: 'success',
@@ -54,10 +56,20 @@ export default function GoodsReceivingDashboard() {
   return (
     <>
       <PageHeader
-        title="Receiving Dashboard"
+       title="Receiving Dashboard"
         description="Today's goods receiving activity at a glance 📦"
-        actions={<Button onClick={() => navigate('/GoodsReceiptForm')}>+ New Receipt</Button>}
+        actions={
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => navigate('/ReceivingItemsHistory')}>
+              Received Item History
+            </Button>
+            <Button onClick={() => navigate('/GoodsReceiptForm')}>+ New Receipt</Button>
+          </div>
+        }
       />
+      {/* <PageHeader
+        
+      /> */}
 
       {isLoading && (
         <div className="flex justify-center py-16">
@@ -95,7 +107,7 @@ export default function GoodsReceivingDashboard() {
               </CardContent>
             </Card>
 
-            <Card className={stats.pendingVerification > 0 ? 'border-amber-300 bg-amber-50/40' : ''}>
+            {/* <Card className={stats.pendingVerification > 0 ? 'border-amber-300 bg-amber-50/40' : ''}>
               <CardContent>
                 <p className="text-sm text-slate-500">Pending Verification</p>
                 <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.pendingVerification}</p>
@@ -103,7 +115,25 @@ export default function GoodsReceivingDashboard() {
                   {stats.pendingVerification > 0 ? '⚠️ Needs attention' : '✅ All caught up'}
                 </p>
               </CardContent>
-            </Card>
+            </Card> */}
+            {/* verification screen  */}
+            <Card
+                          onClick={() => navigate('/VerificationScreen')}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => e.key === 'Enter' && navigate('/VerificationScreen')}
+                          className={`cursor-pointer transition hover:shadow-md ${
+                            stats.pendingVerification > 0 ? 'border-amber-300 bg-amber-50/40' : ''
+                          }`}
+                        >
+                          <CardContent>
+                            <p className="text-sm text-slate-500">Pending Verification</p>
+                            <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.pendingVerification}</p>
+                            <p className={`text-xs mt-1 ${stats.pendingVerification > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                              {stats.pendingVerification > 0 ? '⚠️ Needs attention' : '✅ All caught up'}
+                            </p>
+                          </CardContent>
+                        </Card>
 
             <Card>
               <CardContent>
