@@ -1,11 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import React from 'react';
-//import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './contexts/AuthContext';
 import { SidebarProvider } from './contexts/SidebarContext';
-import AppRoutes from './routes/AppRoutes';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -17,15 +15,17 @@ import MainLayout from './layouts/MainLayout';
 import AuditLogsPage from './pages/AuditLogsPage';
 
 const PrivateRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
-  return token ? children : <Navigate to="/login" />;
+  const token = localStorage.getItem('retailsync_token') || localStorage.getItem('token');
+  return token ? children : <Navigate to="/login" replace />;
 };
 
 function App() {
-  const [userRole, setUserRole] = useState(null);
+  const [userRole, setUserRole] = useState(() => {
+    return localStorage.getItem('retailsync_userRole') || localStorage.getItem('userRole');
+  });
 
   useEffect(() => {
-    const role = localStorage.getItem('userRole');
+    const role = localStorage.getItem('retailsync_userRole') || localStorage.getItem('userRole');
     setUserRole(role);
   }, []);
 
@@ -33,8 +33,14 @@ function App() {
     setUserRole(newRole);
   };
 
-  if (userRole === null && window.location.pathname !== '/login') {
-    return <div className="h-screen flex items-center justify-center text-blue-600">Loading RetailSync...</div>;
+  if (!userRole && window.location.pathname !== '/login') {
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </BrowserRouter>
+    );
   }
 
   return (

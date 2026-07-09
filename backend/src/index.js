@@ -10,6 +10,15 @@ const server = app.listen(PORT, () => {
   console.log(`[Server] Running in ${env.NODE_ENV} mode on port ${PORT}`);
 });
 
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[Server] Port ${PORT} is already in use. Stop the other process or set a different PORT.`);
+  } else {
+    console.error('[Server] Failed to start:', err);
+  }
+  process.exit(1);
+});
+
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM signal received: closing HTTP server');

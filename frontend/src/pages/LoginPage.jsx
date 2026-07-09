@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
 export default function LoginPage({ onLoginSuccess }) {
@@ -15,25 +15,26 @@ export default function LoginPage({ onLoginSuccess }) {
     setError('');
 
     try {
-      // 1. Send the login request to your backend
-      const res = await axios.post('http://localhost:5000/api/v1/auth/login', { 
-        email, 
-        password 
+      const res = await api.post('/auth/login', {
+        email,
+        password,
       });
 
-      // 2. Save the Token and Role to the browser
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('userRole', res.data.user.role);
-      
-      // 3. Tell App.jsx to update the user role immediately
+      const token = res.data.token || res.data.data?.token;
+      const user = res.data.user || res.data.data?.user;
+
+      localStorage.setItem('retailsync_token', token);
+      localStorage.setItem('token', token);
+      localStorage.setItem('retailsync_userRole', user?.role || '');
+      localStorage.setItem('userRole', user?.role || '');
+
       if (onLoginSuccess) {
-        onLoginSuccess(res.data.user.role);
+        onLoginSuccess(user?.role);
       }
 
-      // 4. Navigate to the dashboard
       navigate('/dashboard');
-
     } catch (err) {
+      console.error('Login failed:', err);
       setError('Invalid email or password. Please try again.');
     } finally {
       setLoading(false);
