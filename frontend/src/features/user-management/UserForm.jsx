@@ -383,7 +383,7 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
                   <option value="">No branch assigned</option>
                   {branches.map((b) => (
                     <option key={b._id} value={b._id}>
-                      {b.name} {b.code ? `(${b.code})` : ''}
+                      {b.branchName || b.name} {(b.branchCode || b.code) ? `(${b.branchCode || b.code})` : ''}
                     </option>
                   ))}
                 </Select>
