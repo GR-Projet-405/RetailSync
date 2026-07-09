@@ -92,6 +92,16 @@ branchSchema.virtual('formattedAddress').get(function () {
   return address;
 });
 
+// Virtual for backward compatible name property
+branchSchema.virtual('name').get(function () {
+  return this.branchName;
+});
+
+// Virtual for backward compatible code property
+branchSchema.virtual('code').get(function () {
+  return this.branchCode;
+});
+
 // Ensure virtuals are included in JSON
 branchSchema.set('toJSON', { virtuals: true });
 branchSchema.set('toObject', { virtuals: true });
