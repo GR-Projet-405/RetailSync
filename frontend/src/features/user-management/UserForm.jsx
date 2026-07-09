@@ -2,10 +2,14 @@ import { useState, useEffect } from 'react';
 import { User, Mail, Lock, Phone, Shield, Building2, ImageIcon, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../../components/Button';
+<<<<<<< HEAD
 import { useBranches } from '../../hooks/useBranches';
 import { useRoles } from '../../hooks/useRoles';
 
 
+=======
+import api from '../../services/api'; // Safe centralized Axios instance wrapper
+>>>>>>> origin/dev
 
 const STATUSES = [
   { value: 'ACTIVE', label: 'Active' },
@@ -114,11 +118,16 @@ const validate = (form, isEdit = false) => {
 };
 
 // ─── UserForm ─────────────────────────────────────────────
+<<<<<<< HEAD
 export default function UserForm({ initialData = null, onSubmit, onCancel, isLoading = false, currentUserRole }) {
+=======
+export default function UserForm({ initialData = null, onSubmit, onCancel, isLoading = false, branches = [] }) {
+>>>>>>> origin/dev
   const isEdit = Boolean(initialData);
   const { data: branchesData } = useBranches();
   const branches = branchesData || [];
 
+<<<<<<< HEAD
   const { data: rolesData } = useRoles();
   const allRoles = rolesData?.data || [];
 
@@ -130,6 +139,11 @@ const roles = currentUserRole === 'BRANCH_MANAGER'
 console.log('currentUserRole:', currentUserRole);
 console.log('allRoles:', allRoles);
 console.log('roles:', roles);
+=======
+  // Dynamic storage state array container for database roles
+  const [dbRoles, setDbRoles] = useState([]);
+
+>>>>>>> origin/dev
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -138,9 +152,14 @@ console.log('roles:', roles);
     password: '',
     phoneNumber: '',
     profileImage: '',
+<<<<<<< HEAD
     profileImageFile: null,
     roleId: '',    
     branchId: '',
+=======
+    role: '', 
+    branch: '',
+>>>>>>> origin/dev
     status: 'ACTIVE',
     ...initialData,
   });
@@ -149,8 +168,24 @@ console.log('roles:', roles);
   const [showPassword, setShowPassword] = useState(false);
   const [touched, setTouched] = useState({});
 
-  // Sync on initialData change
+  // Dynamic fetch implementation looking at the live database route
   useEffect(() => {
+    const fetchLiveRoles = async () => {
+      try {
+        const res = await api.get('/role-management/list');
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          setDbRoles(res.data.data);
+        }
+      } catch (err) {
+        console.error('Failed to load live database roles:', err.message);
+      }
+    };
+    fetchLiveRoles();
+  }, []);
+
+  // Sync initialData cleanly
+  useEffect(() => {
+<<<<<<< HEAD
   if (initialData) {
     setForm({
       firstName: '',
@@ -170,6 +205,26 @@ console.log('roles:', roles);
     });
   }
 }, [initialData]);
+=======
+    if (initialData) {
+      setForm({
+        firstName: '',
+        lastName: '',
+        username: '',
+        email: '',
+        password: '',
+        phoneNumber: '',
+        profileImage: '',
+        role: '',
+        branch: '',
+        status: 'ACTIVE',
+        ...initialData,
+        branch: initialData.branchId?._id || initialData.branchId || initialData.branch?._id || initialData.branch || '',
+        role: initialData.roleId?._id || initialData.roleId || initialData.role || '',
+      });
+    }
+  }, [initialData]);
+>>>>>>> origin/dev
 
   const set = (field) => (e) => {
     const value = e.target.value;
@@ -185,12 +240,12 @@ console.log('roles:', roles);
     const validationErrors = validate(form, isEdit);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      // Mark all fields as touched
       const allTouched = Object.keys(form).reduce((acc, k) => ({ ...acc, [k]: true }), {});
       setTouched(allTouched);
       return;
     }
 
+<<<<<<< HEAD
     // Build payload — strip password if empty in edit mode
     const payload = new FormData();
     const formCopy = { ...form };
@@ -211,6 +266,25 @@ console.log('roles:', roles);
       payload.append('profileImage', form.profileImage);
     }
 
+=======
+    const payload = {
+      firstName: form.firstName,
+      lastName: form.lastName,
+      username: form.username,
+      email: form.email,
+      status: form.status,
+      roleId: form.role,               // Transmits the 24-character hex ID string cleanly
+      branchId: form.branch || null,   // Transmits the 24-character hex ID string cleanly
+      phoneNumber: form.phoneNumber || null,
+      profileImage: form.profileImage || null,
+    };
+
+    if (isEdit && !form.password) {
+      delete payload.password;
+    } else if (form.password) {
+      payload.password = form.password;
+    }
+>>>>>>> origin/dev
 
     onSubmit(payload);
   };
@@ -338,6 +412,7 @@ console.log('roles:', roles);
           <Shield size={11} /> Role & Branch Assignment
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<<<<<<< HEAD
           {currentUserRole !== 'BRANCH_MANAGER' && (
             <Field label="Role" required error={touched.roleId && errors.roleId}>
               <Select
@@ -371,6 +446,37 @@ console.log('roles:', roles);
               </Select>
             </Field>
           )}
+=======
+          <Field label="Role" required error={touched.role && errors.role}>
+            <Select
+              icon={Shield}
+              value={form.role}
+              onChange={set('role')}
+              error={touched.role && errors.role}
+            >
+              <option value="">Select role...</option>
+              {dbRoles.map((r) => (
+                <option key={r._id} value={r._id}>
+                  {r.name.replace('_', ' ')}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Assigned Branch">
+            <Select
+              icon={Building2}
+              value={form.branch || ''}
+              onChange={set('branch')}
+            >
+              <option value="">No branch assigned</option>
+              {branches.map((b) => (
+                <option key={b._id} value={b._id}>
+                  {b.name} {b.code ? `(${b.code})` : ''}
+                </option>
+              ))}
+            </Select>
+          </Field>
+>>>>>>> origin/dev
         </div>
 
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">

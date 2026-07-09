@@ -116,10 +116,28 @@ const deleteRole = async (req, res) => {
   }
 };
 
+
+const fetchLiveDatabaseRoles = async (req, res) => {
+  try {
+    const roles = await roleService.getSeedAndSchemaRoles();
+    res.status(200).json({
+      success: true,
+      message: 'Roles retrieved successfully from live database records',
+      data: roles,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   getRoles,
   getRoleById,
   createRole,
   updateRole,
   deleteRole,
+  fetchLiveDatabaseRoles,
 };

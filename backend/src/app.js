@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
@@ -23,18 +25,35 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', service: 'RetailSync API Server' });
 });
 
+<<<<<<< HEAD
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+=======
+app.use('/api/sales', require('../routes/salesRoutes'));
+>>>>>>> origin/dev
 
 // Pre-load core models to avoid MissingSchemaError during population
 require('./modules/branch-management/branch.model');
 require('./modules/role-management/role.model');
 require('./modules/user-management/user.model');
+require('./modules/promotions-discounts/promotion.model');
+require('./modules/promotions-discounts/coupon.model');
+require('./modules/promotions-discounts/discountRule.model');
+require('./modules/category-management/model');
+require('./modules/supplier-management/model');
+require('./modules/warehouse-management/model');
+require('./modules/product-management/model');
+require('./modules/inventory-management/model');
+
+const customerRoutes = require('./modules/customer-management/route');
+app.use('/api/v1/customers', customerRoutes);
 
 // Dynamically register routes for all 28 modular folders
 const modulesPath = path.join(__dirname, 'modules');
 if (fs.existsSync(modulesPath)) {
   fs.readdirSync(modulesPath).forEach((folderName) => {
+    if (folderName === 'customer-management') return;
+
     const routePath = path.join(modulesPath, folderName, 'route.js');
     if (fs.existsSync(routePath)) {
       const router = require(routePath);
@@ -47,3 +66,5 @@ if (fs.existsSync(modulesPath)) {
 app.use(errorHandler);
 
 module.exports = app;
+// Trigger hot-reload for database connection state refreshing
+
