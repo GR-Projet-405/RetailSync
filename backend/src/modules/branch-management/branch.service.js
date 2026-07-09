@@ -2,6 +2,8 @@ const Branch = require('./branch.model');
 const User = require('../user-management/user.model');
 const { createLog } = require('../audit-logs/auditLog.service');
 const mongoose = require('mongoose');
+const inventoryService = require('../inventory-management/service');
+const StockTransfer = require('../stock-transfers/model');
 
 const getBranches = async (query = {}) => {
   const { page = 1, limit = 10, search, status, manager, city } = query;
@@ -214,6 +216,51 @@ const assignManager = async (branchId, newManagerId, performedBy) => {
 
 const getBranchDashboard = async (branchId) => {
   // Mock data for dashboard as per SRS
+  // TODO (Sprint 4C): Replace mock implementations with real MongoDB aggregations scoped to branchId:
+  // 
+  // 1. todaySales:
+  //    const today = new Date(); today.setHours(0,0,0,0);
+  //    await Sale.aggregate([
+  //      { $match: { branchId: new mongoose.Types.ObjectId(branchId), createdAt: { $gte: today } } },
+  //      { $group: { _id: null, total: { $sum: '$grandTotal' } } }
+  //    ])
+  //
+  // 2. monthlySales:
+  //    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  //    await Sale.aggregate([
+  //      { $match: { branchId: new mongoose.Types.ObjectId(branchId), createdAt: { $gte: startOfMonth } } },
+  //      { $group: { _id: null, total: { $sum: '$grandTotal' } } }
+  //    ])
+  //
+  // 3. currentStockValue:
+  //    await Inventory.aggregate([
+  //      { $match: { branchId: new mongoose.Types.ObjectId(branchId) } },
+  //      { $lookup: { from: 'products', localField: 'productId', foreignField: '_id', as: 'product' } },
+  //      { $unwind: '$product' },
+  //      { $group: { _id: null, total: { $sum: { $multiply: ['$quantity', '$product.costPrice'] } } } }
+  //    ])
+  //
+  // 4. lowStockItemsCount:
+  //    await Inventory.countDocuments({
+  //      branchId: new mongoose.Types.ObjectId(branchId),
+  //      $expr: { $lte: ['$quantity', '$reorderLevel'] }
+  //    })
+  //
+  // 5. staffCount:
+  //    await User.countDocuments({ branchId: new mongoose.Types.ObjectId(branchId), status: 'ACTIVE' })
+  //
+  // 6. pendingTransfers:
+  //    await StockTransfer.countDocuments({
+  //      $or: [
+  //        { sourceBranch: new mongoose.Types.ObjectId(branchId) },
+  //        { destinationBranch: new mongoose.Types.ObjectId(branchId) }
+  //      ],
+  //      status: 'PENDING'
+  //    })
+  //
+  // 7. salesTrend:
+  //    Aggregate revenue grouped by month for the last 6 months using $match on branchId and $group on month.
+
   return {
     todaySales: Math.floor(Math.random() * 100000) + 10000,
     monthlySales: Math.floor(Math.random() * 3000000) + 500000,
@@ -226,6 +273,27 @@ const getBranchDashboard = async (branchId) => {
       revenue: Math.floor(Math.random() * 10000000) + 15000000
     }))
   };
+};
+
+const getBranchInventory = async (branchId) => {
+  await getBranchById(branchId);
+  return await inventoryService.getBranchInventory(branchId);
+};
+
+const getBranchTransfers = async (branchId) => {
+  await getBranchById(branchId);
+  return await StockTransfer.find({
+    $or: [
+      { sourceBranch: branchId },
+      { destinationBranch: branchId }
+    ]
+  })
+  .populate('sourceBranch')
+  .populate('destinationBranch')
+  .populate('items.productId')
+  .populate('createdBy', 'firstName lastName username email')
+  .populate('updatedBy', 'firstName lastName username email')
+  .sort({ createdAt: -1 });
 };
 
 const getAdminDashboardSummary = async () => {
@@ -283,5 +351,7 @@ module.exports = {
   getBranchDashboard,
   getAdminDashboardSummary,
   getBranchEmployees,
-  getActiveBranches
+  getActiveBranches,
+  getBranchInventory,
+  getBranchTransfers
 };

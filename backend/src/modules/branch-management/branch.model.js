@@ -8,11 +8,17 @@ const branchSchema = new mongoose.Schema(
       unique: true,
       uppercase: true,
       trim: true,
+      get: function(val) {
+        return val || (this._doc && this._doc.code);
+      }
     },
     branchName: {
       type: String,
       required: [true, 'Branch name is required'],
       trim: true,
+      get: function(val) {
+        return val || (this._doc && this._doc.name);
+      }
     },
     address: {
       line1: {
@@ -102,9 +108,9 @@ branchSchema.virtual('code').get(function () {
   return this.branchCode;
 });
 
-// Ensure virtuals are included in JSON
-branchSchema.set('toJSON', { virtuals: true });
-branchSchema.set('toObject', { virtuals: true });
+// Ensure virtuals and getters are included in JSON
+branchSchema.set('toJSON', { virtuals: true, getters: true });
+branchSchema.set('toObject', { virtuals: true, getters: true });
 
 const Branch = mongoose.model('Branch', branchSchema);
 
