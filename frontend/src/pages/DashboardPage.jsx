@@ -103,7 +103,7 @@ export default function DashboardPage() {
   return (
     <div>
       <PageHeader
-        title="How can we help you today?"
+        title="Help and Support Dashboard"
         description="Find answers, manage your tickets, or chat with our experts."
       />
 

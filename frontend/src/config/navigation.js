@@ -6,7 +6,7 @@ export const NAVIGATION_GROUPS = [
     items: [
       {
         id: 'dashboard',
-        name: 'Dashboard',
+        name: 'Help and Support Dashboard',
         path: '/dashboard',
         icon: 'LayoutDashboard',
         allowedRoles: Object.values(ROLES)
