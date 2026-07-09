@@ -128,7 +128,6 @@ productSchema.virtual('marginPct').get(function () {
   return (((this.sellingPrice - this.costPrice) / this.costPrice) * 100).toFixed(2);
 });
 
-productSchema.index({ sku: 1 });
 productSchema.index({ categoryId: 1 });
 productSchema.index({ supplierId: 1 });
 productSchema.index({ status: 1 });

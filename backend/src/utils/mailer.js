@@ -12,13 +12,17 @@ const transporter = nodemailer.createTransport({
 
 // Verify the connection once at startup so config issues surface early
 // instead of silently failing on the first real send.
-transporter.verify((err) => {
-  if (err) {
-    console.error('Nodemailer transport verification failed:', err.message);
-  } else {
-    console.log('Nodemailer is ready to send emails.');
-  }
-});
+if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  transporter.verify((err) => {
+    if (err) {
+      console.error('Nodemailer transport verification failed:', err.message);
+    } else {
+      console.log('Nodemailer is ready to send emails.');
+    }
+  });
+} else {
+  console.log('Nodemailer: Verification skipped (no EMAIL_USER/EMAIL_PASS found in environment).');
+}
 
 /**
  * Send an email.

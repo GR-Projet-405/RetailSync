@@ -17,7 +17,9 @@ import ForgotPasswordPage from '../features/auth/ForgotPasswordPage';
 import ResetPasswordPage from '../features/auth/ResetPasswordPage';
 import NotificationsPage from '../pages/NotificationsPage';
 import ProfileSettingsPage from '../pages/ProfileSettingsPage';
-import BranchPage from '../pages/BranchPage';
+import BranchListPage from '../pages/admin/BranchListPage';
+import BranchDetailsPage from '../pages/admin/BranchDetailsPage';
+import BranchDashboard from '../pages/manager/BranchDashboard';
 import EmployeePage from '../pages/EmployeeDashboard';
 import CustomerPage from '../pages/CustomerPage';
 import SupplierPage from '../pages/SupplierPage';
@@ -208,10 +210,23 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
-        {/* Branch Management */}
-        <Route path="/branches" element={
+        {/* Branch Management (Admin) */}
+        <Route path="/admin/branches" element={
           <ProtectedRoute allowedRoles={ADMIN_ROLES}>
-            <BranchPage />
+            <BranchListPage />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/admin/branches/:id" element={
+          <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+            <BranchDetailsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Branch Dashboard (Manager) */}
+        <Route path="/branch/dashboard" element={
+          <ProtectedRoute allowedRoles={[ROLES.BRANCH_MANAGER, ROLES.SUPER_ADMIN]}>
+            <BranchDashboard />
           </ProtectedRoute>
         } />
 
