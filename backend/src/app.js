@@ -25,12 +25,10 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', service: 'RetailSync API Server' });
 });
 
-<<<<<<< HEAD
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-=======
+
 app.use('/api/sales', require('../routes/salesRoutes'));
->>>>>>> origin/dev
 
 // Pre-load core models to avoid MissingSchemaError during population
 require('./modules/branch-management/branch.model');
