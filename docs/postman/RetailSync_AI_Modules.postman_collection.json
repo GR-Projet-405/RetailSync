@@ -82,10 +82,14 @@
                   "pm.test('Login succeeded', function () {",
                   "  pm.response.to.have.status(200);",
                   "});",
+                  "",
                   "const json = pm.response.json();",
-                  "if (json && json.data && json.data.token) {",
-                  "  pm.collectionVariables.set('token', json.data.token);",
-                  "}"
+                  "const token = json?.data?.token || json?.token;",
+                  "if (!token) {",
+                  "  pm.collectionVariables.unset('token');",
+                  "  throw new Error('Login response did not include a token');",
+                  "}",
+                  "pm.collectionVariables.set('token', token);"
                 ]
               }
             }
