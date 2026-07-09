@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
-const { Customer, Transaction } = require('./model');
+
+const { Transaction } = require('./model');
+const Customer = require('../customer-management/model');
 
 class PaymentProcessingService {
 
@@ -14,8 +16,17 @@ class PaymentProcessingService {
   }
 
   // 2. Add a new customer
+  // 2. Add a new customer
   async createCustomer(customerData) {
-    const newCustomer = new Customer(customerData);
+    const formattedData = {
+      firstName: customerData.firstName || 'Guest',
+      lastName: customerData.lastName || '',
+      phone: customerData.phone,
+      email: customerData.email || '',
+      customerType: 'Regular'
+    };
+
+    const newCustomer = new Customer(formattedData);
     return await newCustomer.save();
   }
 
@@ -49,18 +60,18 @@ class PaymentProcessingService {
     if (customerId) {
       const customer = await Customer.findById(customerId);
       if (customer) {
-        customer.loyaltyPoints = (customer.loyaltyPoints - pointsRedeemed) + pointsEarned;
+        // null or undefined pointsRedeemed should be treated as 0
+        customer.loyaltyPoints = (customer.loyaltyPoints || 0) - (pointsRedeemed || 0) + (pointsEarned || 0);
         await customer.save();
       }
     }
-
     return savedTransaction;
   }
 
   // 4. Fetch all transactions
   async getAllTransactions() {
     return await Transaction.find()
-      .populate('customerId', 'name phone email loyaltyPoints')
+      .populate('customerId', 'firstName lastName phone email loyaltyPoints')
       .populate('cashierId', 'name')
       .sort({ createdAt: -1 });
   }

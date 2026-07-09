@@ -3,7 +3,7 @@ import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
-import { RefreshCcw, Download, User, Tag, Star, Phone, Mail, Award } from 'lucide-react';
+import { RefreshCcw, Download, User, Tag, Star, Phone, Mail, Award, ArrowLeft } from 'lucide-react';
 
 export default function TransactionDetailsPage() {
     const location = useLocation();
@@ -29,23 +29,40 @@ export default function TransactionDetailsPage() {
 
     const shortTxnId = `#${transaction.receiptId}`;
 
-    // Mock Data for Items (In a real app, this comes from the database: transaction.items)
+    // Mock Data for Items
     const purchasedItems = transaction.items?.length > 0 ? transaction.items : [
         { id: 1, name: 'Logitech MX Master 3S', category: 'Electronics / Peripherals', sku: 'SKU-1002', qty: 1, originalPrice: 12000, price: 11000, total: 11000 },
         { id: 2, name: 'Anker USB-C Braided Cable', category: 'Accessories', sku: 'SKU-5004', qty: 2, originalPrice: 1150, price: 1150, total: 2300 },
         { id: 3, name: 'Fantech K211 Keyboard', category: 'Electronics / Peripherals', sku: 'SKU-8002', qty: 1, originalPrice: 1900, price: 1900, total: 1900 },
     ];
 
+    // Calculate points based on navigation source (History vs New Payment)
+    const displayPointsBalance = isHistory
+        ? (customer?.loyaltyPoints || 0)
+        : ((customer?.loyaltyPoints || 0) - (transaction.pointsRedeemed || 0) + (transaction.pointsEarned || 0));
+
+    // Get Cashier and Branch names from transaction (Fallbacks included)
+    const cashierName = transaction.cashierId?.name || 'Nimal Perera';
+    const branchName = transaction.cashierId?.branchId?.name || 'Downtown Flagship';
+
     return (
         <div className="space-y-6 fade-in">
 
-            {/* Top Breadcrumb & Header Area */}
-            <div className="flex items-center gap-2 mb-2 text-sm text-slate-500">
-                <span className="cursor-pointer hover:text-blue-600" onClick={() => navigate('/payment-processing')}>Payments</span>
-                <span>&gt;</span>
-                <span>Payment History</span>
-                <span>&gt;</span>
-                <span className="font-bold text-slate-700">Transaction Details</span>
+            {/* Dynamic Top Navigation (Breadcrumbs OR Back Button) */}
+            <div className="mb-2">
+                {isHistory ? (
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                        <span className="cursor-pointer hover:text-blue-600" onClick={() => navigate('/payment-processing')}>Payments</span>
+                        <span>&gt;</span>
+                        <span className="cursor-pointer hover:text-blue-600" onClick={() => navigate('/payment-history')}>Payment History</span>
+                        <span>&gt;</span>
+                        <span className="font-bold text-slate-700">Transaction Details</span>
+                    </div>
+                ) : (
+                    <Button variant="outline" onClick={() => navigate(-1)} className="flex items-center gap-2 px-3 py-1.5 h-auto text-sm border-slate-300 text-slate-600 bg-white hover:bg-slate-50">
+                        <ArrowLeft size={16} /> Back
+                    </Button>
+                )}
             </div>
 
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -77,7 +94,6 @@ export default function TransactionDetailsPage() {
                             <CardTitle className="text-xl font-bold text-slate-800">Purchased Items</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-0">
-
                             {/* Table Header */}
                             <div className="grid grid-cols-12 gap-4 py-3 text-xs font-bold tracking-wider uppercase border-b text-slate-400 border-slate-100">
                                 <div className="col-span-5">Item Name</div>
@@ -111,14 +127,12 @@ export default function TransactionDetailsPage() {
                                     </div>
                                 ))}
                             </div>
-
                         </CardContent>
                     </Card>
                 </div>
 
                 {/* Right Column: Summaries */}
                 <div className="space-y-6 lg:col-span-1">
-
                     {/* Payment Summary */}
                     <Card>
                         <CardContent className="pt-6 space-y-4">
@@ -159,7 +173,6 @@ export default function TransactionDetailsPage() {
                                     <p className="font-bold text-emerald-600">- Rs. {formatCurrency(transaction.memberDiscount)}</p>
                                 </div>
 
-                                {/* Dynamic Points Details from Database */}
                                 {transaction.pointsRedeemed > 0 && (
                                     <div>
                                         <p className="text-slate-500 mb-0.5">Points Redeemed</p>
@@ -185,16 +198,18 @@ export default function TransactionDetailsPage() {
                     {/* Customer & Cashier Profile */}
                     <Card>
                         <CardContent className="pt-6 space-y-5">
-
                             <div>
                                 <p className="mb-3 text-xs font-bold tracking-wider uppercase text-slate-400">Customer Profile</p>
                                 {customer ? (
                                     <div className="flex items-center justify-between p-3 border border-blue-100 rounded-lg bg-blue-50/50">
                                         <div className="flex items-center gap-3">
                                             <div className="flex items-center justify-center w-8 h-8 text-xs font-bold text-blue-700 uppercase bg-blue-100 rounded-full">
-                                                <User size={16} />
+                                                {/* Safely generate initials */}
+                                                {(customer.firstName?.charAt(0) || '') + (customer.lastName?.charAt(0) || '')}
                                             </div>
-                                            <p className="text-sm font-semibold text-slate-800">{customer.name}</p>
+                                            <p className="text-sm font-semibold text-slate-800">
+                                                {customer.firstName} {customer.lastName}
+                                            </p>
                                         </div>
                                         <button
                                             onClick={() => setIsProfileModalOpen(true)}
@@ -214,14 +229,12 @@ export default function TransactionDetailsPage() {
                                 <p className="mb-2 text-xs font-bold tracking-wider uppercase text-slate-400">Processed By (Cashier)</p>
                                 <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
                                     <User size={16} className="text-blue-500" />
-                                    {/* In a real app, this maps to transaction.cashierId.name */}
-                                    Nimal Perera <span className="font-normal text-slate-400">(Downtown Flagship)</span>
+                                    {/* Dynamic Cashier and Branch Display */}
+                                    {cashierName} <span className="font-normal text-slate-400">({branchName})</span>
                                 </div>
                             </div>
-
                         </CardContent>
                     </Card>
-
                 </div>
             </div>
 
@@ -235,10 +248,13 @@ export default function TransactionDetailsPage() {
                 >
                     <div className="flex flex-col items-center pt-2 pb-4 space-y-4">
                         <div className="flex items-center justify-center w-20 h-20 text-2xl font-extrabold text-blue-700 uppercase bg-blue-100 rounded-full ring-4 ring-blue-50">
-                            {customer.name.substring(0, 2)}
+                            {/* Safely generate initials */}
+                            {(customer.firstName?.charAt(0) || '') + (customer.lastName?.charAt(0) || '')}
                         </div>
                         <div className="text-center">
-                            <h3 className="text-xl font-bold text-slate-800">{customer.name}</h3>
+                            <h3 className="text-xl font-bold text-slate-800">
+                                {customer.firstName} {customer.lastName}
+                            </h3>
                             <p className="text-sm text-slate-500">Loyalty Member</p>
                         </div>
 
@@ -262,16 +278,12 @@ export default function TransactionDetailsPage() {
                                         </span>
                                     </div>
                                     <span className="font-extrabold text-amber-700">
-                                        {/* is history or not */}
-                                        {isHistory
-                                            ? (customer.loyaltyPoints || 0)
-                                            : ((customer.loyaltyPoints || 0) - (transaction.pointsRedeemed || 0) + (transaction.pointsEarned || 0))
-                                        } Pts
+                                        {displayPointsBalance} Pts
                                     </span>
                                 </div>
 
                                 <div className="flex justify-between text-[11px] font-medium text-amber-700/60 pl-7">
-                                    <span>{isHistory ? "Database Record Sync" : `Previous: ${customer.loyaltyPoints || 0}`}</span>
+                                    <span>{isHistory ? "Current Database Balance" : `Previous: ${customer.loyaltyPoints || 0}`}</span>
                                     {transaction.pointsEarned > 0 && <span>Earned: +{transaction.pointsEarned}</span>}
                                     {transaction.pointsRedeemed > 0 && <span>Redeemed: -{transaction.pointsRedeemed}</span>}
                                 </div>
@@ -284,7 +296,6 @@ export default function TransactionDetailsPage() {
                     </div>
                 </Modal>
             )}
-
         </div>
     );
 }

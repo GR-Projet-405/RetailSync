@@ -1,6 +1,6 @@
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import Button from '../components/Button';
-import { CheckCircle, Printer, Mail, Plus, ArrowRight, Star } from 'lucide-react';
+import { CheckCircle, Printer, Mail, Plus, ArrowRight, Star, Award } from 'lucide-react';
 import toast from '../utils/toast';
 import { Download } from 'lucide-react';
 
@@ -53,7 +53,6 @@ export default function PaymentSuccessPage() {
                 body: JSON.stringify({
                     transactionId: transaction._id,
                     email: customer.email,
-
                 })
             });
 
@@ -82,7 +81,13 @@ export default function PaymentSuccessPage() {
                         <CheckCircle size={48} strokeWidth={2.5} />
                     </div>
                     <h2 className="text-3xl font-extrabold text-slate-800">Payment Successful!</h2>
-                    <p className="mt-1 text-slate-500">The transaction has been completed securely.</p>
+                    {/* Displaying Customer Name using new firstName and lastName */}
+                    {customer && (
+                        <p className="mt-1 font-medium text-slate-500">Thank you, {customer.firstName} {customer.lastName}!</p>
+                    )}
+                    {!customer && (
+                        <p className="mt-1 text-slate-500">The transaction has been completed securely.</p>
+                    )}
                 </div>
 
                 {/* Transaction Details Box */}
@@ -137,13 +142,30 @@ export default function PaymentSuccessPage() {
 
                     </div>
 
-                    {/* Loyalty Points Banner (Only shows if points were earned) */}
-                    {transaction.pointsEarned > 0 && customer && (
-                        <div className="flex items-center justify-center gap-2 p-3 mt-4 text-orange-600 border border-orange-200 rounded-lg bg-orange-50">
-                            <Star size={18} className="text-orange-500 fill-orange-500" />
-                            <p className="text-sm font-semibold">
-                                Customer Earned +{transaction.pointsEarned} Loyalty Points!
-                            </p>
+                    {/* Loyalty Points Banner - Shows Earned AND Redeemed Points */}
+                    {(transaction.pointsEarned > 0 || transaction.pointsRedeemed > 0) && customer && (
+                        <div className="flex flex-col gap-2 p-4 mt-4 border border-orange-200 rounded-lg bg-orange-50">
+
+                            {/* Points Earned */}
+                            {transaction.pointsEarned > 0 && (
+                                <div className="flex items-center gap-2 text-orange-600">
+                                    <Star size={18} className="text-orange-500 fill-orange-500" />
+                                    <p className="text-sm font-semibold">
+                                        Customer Earned +{transaction.pointsEarned} Loyalty Points!
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Points Redeemed */}
+                            {transaction.pointsRedeemed > 0 && (
+                                <div className="flex items-center gap-2 text-amber-600">
+                                    <Award size={18} className="text-amber-500" />
+                                    <p className="text-sm font-semibold">
+                                        Redeemed -{transaction.pointsRedeemed} Points for this purchase.
+                                    </p>
+                                </div>
+                            )}
+
                         </div>
                     )}
 
@@ -154,7 +176,6 @@ export default function PaymentSuccessPage() {
                         </Button>
                         <Button
                             onClick={() => navigate('/receipt', { state: { transaction, customer } })}
-
                             variant="primary" className="flex items-center justify-center flex-1 h-12 gap-2 font-bold shadow-md shadow-blue-500/20">
                             <Printer size={18} /> Print Receipt
                         </Button>

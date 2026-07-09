@@ -33,16 +33,16 @@ router.post('/login', (req, res) => {
 
   console.log("6. SUCCESS: User found!");
   const token = jwt.sign(
-    { email: user.email, role: user.role }, 
+    { email: user.email, role: user.role },
     'your_secret_key_123',
     { expiresIn: '1d' }
   );
 
   console.log("7. Token generated, sending response...");
-  res.json({ 
-    success: true, 
-    token, 
-    user: { email: user.email, role: user.role } 
+  res.json({
+    success: true,
+    token,
+    user: { email: user.email, role: user.role }
   });
 });
 

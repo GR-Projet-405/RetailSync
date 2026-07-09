@@ -32,7 +32,6 @@ export default function PaymentHistoryPage() {
         const fetchTransactions = async () => {
             setIsLoading(true);
             try {
-                // Assuming you have a GET route for transactions in your backend
                 const response = await fetch(`${API_BASE_URL}/transactions`);
                 const result = await response.json();
                 if (result.success) {
@@ -58,7 +57,8 @@ export default function PaymentHistoryPage() {
 
     // Filter Logic
     const filteredTransactions = transactions.filter(txn => {
-        const customerName = txn.customerId?.name || 'Guest';
+        // Safe generation of customer name using firstName and lastName
+        const customerName = txn.customerId ? `${txn.customerId.firstName} ${txn.customerId.lastName}`.trim() : 'Guest';
         const txnId = `#${txn.receiptId}`;
 
         // 1. Search Filter
@@ -103,10 +103,10 @@ export default function PaymentHistoryPage() {
         filteredTransactions.forEach(txn => {
             const id = `#${txn.receiptId}`;
             const date = new Date(txn.createdAt).toLocaleString();
-            const customer = txn.customerId?.name || 'Guest';
+            const customer = txn.customerId ? `${txn.customerId.firstName} ${txn.customerId.lastName}`.trim() : 'Guest';
             const method = txn.paymentMethod;
             const amount = txn.finalTotal;
-            const status = 'Completed'; // Update if you add status to DB
+            const status = 'Completed';
 
             // Wrap strings in quotes to avoid commas breaking the CSV
             csvRows.push(`${id},"${date}","${customer}",${method},${amount},${status}`);
@@ -147,7 +147,7 @@ export default function PaymentHistoryPage() {
         <div className="space-y-6 fade-up">
             <div>
                 <div className="flex items-center gap-2 mb-2 text-sm text-slate-500">
-                    <span className="cursor-pointer hover:text-blue-600">Payments</span>
+                    <span className="cursor-pointer hover:text-blue-600" onClick={() => navigate('/payment-processing')}>Payments</span>
                     <span>&gt;</span>
                     <span className="font-bold text-slate-700">Payment History</span>
                 </div>
@@ -246,7 +246,10 @@ export default function PaymentHistoryPage() {
                                             <tr key={txn._id} className="transition-colors hover:bg-slate-50/80 group">
                                                 <td className="p-5 font-bold text-blue-600">{txnId}</td>
                                                 <td className="p-5 font-medium text-slate-600">{formatDate(txn.createdAt)}</td>
-                                                <td className="p-5 font-semibold text-slate-700">{txn.customerId?.name || 'Guest'}</td>
+                                                <td className="p-5 font-semibold text-slate-700">
+                                                    {/* Display Customer name with firstName and lastName */}
+                                                    {txn.customerId ? `${txn.customerId.firstName} ${txn.customerId.lastName}`.trim() : 'Guest'}
+                                                </td>
                                                 <td className="p-5">
                                                     <div className="flex items-center gap-2 font-medium capitalize text-slate-700">
                                                         {renderMethodIcon(txn.paymentMethod)} {txn.paymentMethod}

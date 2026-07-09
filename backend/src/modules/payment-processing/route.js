@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const controller = require('./controller');
 
-// 1. Route to get/search customers (e.g., GET /api/payment-processing/customers?search=077)
+// 1. Route to get/search customers (e.g., GET /api/payment-processing/payment-customers?search=077)
 router.get('/customers', controller.getCustomers);
 
 // 2. Route to add a new customer (e.g., POST /api/payment-processing/customers)

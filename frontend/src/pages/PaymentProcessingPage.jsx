@@ -33,8 +33,9 @@ export default function PaymentProcessingPage() {
   const [pointsToRedeem, setPointsToRedeem] = useState('');
   const [appliedPointsDiscount, setAppliedPointsDiscount] = useState(0);
 
-  // --- NEW CUSTOMER FORM STATES ---
-  const [newCustName, setNewCustName] = useState('');
+  // --- NEW CUSTOMER FORM STATES (Updated to match new schema) ---
+  const [newCustFirstName, setNewCustFirstName] = useState('');
+  const [newCustLastName, setNewCustLastName] = useState('');
   const [newCustPhone, setNewCustPhone] = useState('');
   const [newCustEmail, setNewCustEmail] = useState('');
 
@@ -43,9 +44,7 @@ export default function PaymentProcessingPage() {
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
-
   // CALCULATION LOGIC
-
   const subTotal = 152200;
   const taxAmount = 2100;
   // If a registered customer is selected, give a member discount
@@ -98,9 +97,7 @@ export default function PaymentProcessingPage() {
     (paymentMethod === 'card' && !isCardValid) ||
     (paymentMethod === 'qr') || isProcessing;
 
-
   // CUSTOMER & POINTS LOGIC
-
 
   // Remove customer and reset everything to Guest mode
   const handleRemoveCustomer = () => {
@@ -163,8 +160,8 @@ export default function PaymentProcessingPage() {
 
   // Save new customer to the database
   const handleAddNewCustomer = async () => {
-    if (!newCustName || !newCustPhone) {
-      toast.warning("Name and Phone are required!");
+    if (!newCustFirstName || !newCustLastName || !newCustPhone) {
+      toast.warning("First Name, Last Name and Phone are required!");
       return;
     }
 
@@ -172,7 +169,13 @@ export default function PaymentProcessingPage() {
       const response = await fetch(`${API_BASE_URL}/customers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newCustName, phone: newCustPhone, email: newCustEmail })
+        // Updated payload with firstName and lastName
+        body: JSON.stringify({
+          firstName: newCustFirstName,
+          lastName: newCustLastName,
+          phone: newCustPhone,
+          email: newCustEmail
+        })
       });
       const result = await response.json();
 
@@ -180,7 +183,8 @@ export default function PaymentProcessingPage() {
         toast.success("Customer Added Successfully!");
         setSelectedCustomer(result.data);
         setIsAddCustomerModalOpen(false);
-        setNewCustName(''); setNewCustPhone(''); setNewCustEmail('');
+        // Reset form
+        setNewCustFirstName(''); setNewCustLastName(''); setNewCustPhone(''); setNewCustEmail('');
       } else {
         toast.error("Failed to add customer. Phone might already exist.");
       }
@@ -374,10 +378,13 @@ export default function PaymentProcessingPage() {
                 <>
                   <div className="relative flex items-center gap-3 p-3 border border-blue-100 rounded-lg bg-blue-50/50">
                     <div className="flex items-center justify-center w-10 h-10 text-sm font-bold text-blue-700 uppercase bg-blue-100 rounded-full">
-                      {selectedCustomer.name.substring(0, 2)}
+                      {/* Generates initials safely from firstName and lastName */}
+                      {(selectedCustomer.firstName?.charAt(0) || '') + (selectedCustomer.lastName?.charAt(0) || '')}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-800">{selectedCustomer.name}</p>
+                      <p className="text-sm font-semibold text-slate-800">
+                        {selectedCustomer.firstName} {selectedCustomer.lastName}
+                      </p>
                       <p className="text-xs text-slate-500">{selectedCustomer.phone}</p>
                     </div>
                     {/* Remove Customer Button */}
@@ -468,7 +475,6 @@ export default function PaymentProcessingPage() {
 
       {/* MODALS */}
 
-
       {/* 1. Select Customer Modal */}
       <Modal isOpen={isCustomerModalOpen} onClose={() => setIsCustomerModalOpen(false)} title="Select Customer" size="sm">
         <div className="space-y-4">
@@ -484,9 +490,12 @@ export default function PaymentProcessingPage() {
               customersList.map((cust) => (
                 <button key={cust._id} onClick={() => { setSelectedCustomer(cust); setIsCustomerModalOpen(false); }} className="flex items-center justify-between w-full p-3 transition-colors border border-transparent rounded-lg hover:bg-blue-50 hover:border-blue-100">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-10 h-10 text-sm font-bold text-blue-700 uppercase bg-blue-100 rounded-full">{cust.name.substring(0, 2)}</div>
+                    <div className="flex items-center justify-center w-10 h-10 text-sm font-bold text-blue-700 uppercase bg-blue-100 rounded-full">
+                      {/* Generates initials safely */}
+                      {(cust.firstName?.charAt(0) || '') + (cust.lastName?.charAt(0) || '')}
+                    </div>
                     <div className="text-left">
-                      <p className="text-sm font-semibold text-slate-800">{cust.name}</p>
+                      <p className="text-sm font-semibold text-slate-800">{cust.firstName} {cust.lastName}</p>
                       <p className="text-xs text-slate-500">{cust.phone}</p>
                     </div>
                   </div>
@@ -514,8 +523,12 @@ export default function PaymentProcessingPage() {
       <Modal isOpen={isAddCustomerModalOpen} onClose={() => setIsAddCustomerModalOpen(false)} title="Add New Customer" size="sm">
         <div className="space-y-4">
           <div>
-            <label className="block mb-1.5 text-xs font-bold uppercase text-slate-600">Name *</label>
-            <input type="text" value={newCustName} onChange={(e) => setNewCustName(e.target.value)} placeholder="e.g. Ruwan Silva" className="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500" />
+            <label className="block mb-1.5 text-xs font-bold uppercase text-slate-600">First Name *</label>
+            <input type="text" value={newCustFirstName} onChange={(e) => setNewCustFirstName(e.target.value)} placeholder="e.g. Ruwan" className="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500" />
+          </div>
+          <div>
+            <label className="block mb-1.5 text-xs font-bold uppercase text-slate-600">Last Name *</label>
+            <input type="text" value={newCustLastName} onChange={(e) => setNewCustLastName(e.target.value)} placeholder="e.g. Silva" className="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500" />
           </div>
           <div>
             <label className="block mb-1.5 text-xs font-bold uppercase text-slate-600">Mobile *</label>
@@ -531,7 +544,6 @@ export default function PaymentProcessingPage() {
           </div>
         </div>
       </Modal>
-
 
     </div>
   );

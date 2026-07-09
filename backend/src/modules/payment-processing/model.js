@@ -1,26 +1,11 @@
 const mongoose = require('mongoose');
 
-
-// 1. Customer Schema
-
-const CustomerSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  phone: { type: String, required: true, unique: true },
-  email: { type: String, default: '' },
-  loyaltyPoints: { type: Number, default: 0 }
-}, { timestamps: true });
-
-
-// 2. Transaction Schema
-
+// 1. Transaction Schema 
 const TransactionSchema = new mongoose.Schema({
-
   receiptId: { type: String, required: true, unique: true },
 
-  // Link to the customer (Guest = null)
+  // Link to the centralized Customer model
   customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', default: null },
-
-  // Link to the User (Cashier) who processed the payment
   cashierId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
   // Array to store the purchased items from the Cart
@@ -56,13 +41,10 @@ const TransactionSchema = new mongoose.Schema({
     enum: ['Completed', 'Refunded', 'Pending'],
     default: 'Completed'
   },
-
-  // if the transaction is refunded, this field will store the total refunded amount
   refundedAmount: { type: Number, default: 0 }
-
 }, { timestamps: true });
 
+// Export the Transaction model
 module.exports = {
-  Customer: mongoose.model('Customer', CustomerSchema),
-  Transaction: mongoose.model('Transaction', TransactionSchema)
+  Transaction: mongoose.models.Transaction || mongoose.model('Transaction', TransactionSchema)
 };
