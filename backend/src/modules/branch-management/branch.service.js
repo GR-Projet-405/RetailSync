@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const inventoryService = require('../inventory-management/service');
 const StockTransfer = require('../stock-transfers/model');
 const Sale = require('../../../models/Sale');
+const Inventory = require('../inventory-management/model');
 
 const getBranches = async (query = {}) => {
   const { page = 1, limit = 10, search, status, manager, city } = query;
@@ -248,7 +249,7 @@ const getBranchDashboard = async (branchId) => {
   const sixMonthsAgoStart = new Date(months[0].year, months[0].monthNum - 1, 1, 0, 0, 0, 0);
 
   // Concurrency using Promise.all()
-  const [todayResult, monthResult, trendData] = await Promise.all([
+  const [todayResult, monthResult, trendData, inventoryValResult, lowStockCount, transfersCount] = await Promise.all([
     Sale.aggregate([
       {
         $match: {
@@ -296,11 +297,59 @@ const getBranchDashboard = async (branchId) => {
           revenue: { $sum: '$totalAmount' }
         }
       }
-    ])
+    ]),
+    Inventory.aggregate([
+      {
+        $match: {
+          branchId: new mongoose.Types.ObjectId(branchId)
+        }
+      },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'productId',
+          foreignField: '_id',
+          as: 'product'
+        }
+      },
+      {
+        $unwind: {
+          path: '$product',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalValue: {
+            $sum: {
+              $multiply: [
+                '$quantity',
+                { $ifNull: ['$product.costPrice', 0] }
+              ]
+            }
+          }
+        }
+      }
+    ]),
+    Inventory.countDocuments({
+      branchId: new mongoose.Types.ObjectId(branchId),
+      $expr: { $lte: ['$quantity', '$reorderLevel'] }
+    }),
+    StockTransfer.countDocuments({
+      $or: [
+        { sourceBranch: new mongoose.Types.ObjectId(branchId) },
+        { destinationBranch: new mongoose.Types.ObjectId(branchId) }
+      ],
+      status: 'PENDING'
+    })
   ]);
 
   const todaySales = todayResult[0]?.total || 0;
   const monthlySales = monthResult[0]?.total || 0;
+  const currentStockValue = inventoryValResult[0]?.totalValue || 0;
+  const lowStockItemsCount = lowStockCount || 0;
+  const pendingTransfers = transfersCount || 0;
 
   // Populate actual revenue into last 6 months list, filling missing months with 0
   trendData.forEach(item => {
@@ -315,15 +364,15 @@ const getBranchDashboard = async (branchId) => {
     revenue: m.revenue
   }));
 
-  // Return real calculated Sales metrics alongside mock stubs for remaining KPIs
+  // Return real calculated metrics alongside mock stubs for remaining KPIs
   return {
     todaySales,
     monthlySales,
     monthlyRevenue: monthlySales, // alias support
-    currentStockValue: Math.floor(Math.random() * 5000000) + 1000000,
-    lowStockItemsCount: Math.floor(Math.random() * 50),
-    staffCount: Math.floor(Math.random() * 30) + 5,
-    pendingTransfers: Math.floor(Math.random() * 10),
+    currentStockValue,
+    lowStockItemsCount,
+    staffCount: Math.floor(Math.random() * 30) + 5, // mock (Sprint 4C.3)
+    pendingTransfers,
     salesTrend
   };
 };
