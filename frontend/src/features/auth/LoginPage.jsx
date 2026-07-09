@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
+<<<<<<< HEAD
 import { Link, useNavigate } from 'react-router-dom';
+=======
+import { useNavigate, Link } from 'react-router-dom';
+>>>>>>> dev
 import { useAuth } from '../../contexts/AuthContext';
 import { ShoppingCart, Eye, EyeOff, Loader2 } from 'lucide-react';
 
@@ -140,6 +144,7 @@ const LoginPage = () => {
             </div>
           </form>
 
+<<<<<<< HEAD
           <div className="mt-6 text-center text-sm text-slate-600">
             Don't have an account?{' '}
             <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
@@ -149,6 +154,18 @@ const LoginPage = () => {
 
           <div className="mt-4 text-center text-xs text-slate-500">
             &copy; 2026 RetailSync Inc. All rights reserved.
+=======
+          <div className="mt-8 text-center">
+            <p className="text-xs text-slate-500">
+              Don't have an account?{' '}
+              <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
+                Register here
+              </Link>
+            </p>
+            <p className="text-xs text-slate-500 mt-2">
+              &copy; 2026 RetailSync Inc. All rights reserved.
+            </p>
+>>>>>>> dev
           </div>
         </div>
       </div>
