@@ -6,6 +6,9 @@ import { Download } from 'lucide-react';
 
 
 export default function PaymentSuccessPage() {
+
+    const API_BASE_URL = 'http://localhost:5000/api/v1/payment-processing';
+
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -33,8 +36,38 @@ export default function PaymentSuccessPage() {
         window.print();
     };
 
-    const handleEmail = () => {
-        toast.success("Receipt sent to customer's email!");
+    const handleEmail = async () => {
+        // 1. check if customer email exists
+        if (!customer || !customer.email) {
+            toast.error("Customer email not found!");
+            return;
+        }
+
+        toast.info("Sending email... Please wait.");
+
+        // 3. send a POST request to the backend to send the email
+        try {
+            const response = await fetch(`${API_BASE_URL}/email-receipt`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    transactionId: transaction._id,
+                    email: customer.email,
+                    shortTxnId: shortTxnId
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                toast.success(`Receipt sent to ${customer.email} successfully!`);
+            } else {
+                toast.error("Failed to send email. Please try again.");
+            }
+        } catch (error) {
+            console.error("Error sending email:", error);
+            toast.error("Server error. Could not send the email.");
+        }
     };
 
     return (

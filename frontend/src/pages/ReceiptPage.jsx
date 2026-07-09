@@ -8,7 +8,7 @@ export default function ReceiptPage() {
     const navigate = useNavigate();
 
     // Get data passed from the previous page
-    const { transaction, customer } = location.state || {};
+    const { transaction, customer, isHistory } = location.state || {};
 
     if (!transaction) {
         return <Navigate to="/payment-processing" replace />;
@@ -144,10 +144,16 @@ export default function ReceiptPage() {
                     <div className="flex flex-col items-center mb-4 text-center">
                         <p className="text-sm font-bold text-slate-800">Customer: {customer.name}</p>
                         {transaction.pointsEarned > 0 && (
-                            <p className="text-xs font-semibold text-slate-600">Loyalty Points Earned: {transaction.pointsEarned}</p>
+                            <p className="text-xs font-semibold text-slate-600">Points Earned: +{transaction.pointsEarned}</p>
                         )}
-                        <p className="text-xs font-semibold text-slate-600">
-                            New Points Balance: {(customer.loyaltyPoints || 0) + (transaction.pointsEarned || 0)} Pts
+                        {transaction.pointsRedeemed > 0 && (
+                            <p className="text-xs font-semibold text-slate-600">Points Redeemed: -{transaction.pointsRedeemed}</p>
+                        )}
+                        <p className="mt-1 text-xs font-bold text-slate-800">
+                            Points Balance: {isHistory
+                                ? (customer.loyaltyPoints || 0)
+                                : ((customer.loyaltyPoints || 0) - (transaction.pointsRedeemed || 0) + (transaction.pointsEarned || 0))
+                            } Pts
                         </p>
                     </div>
                 )}

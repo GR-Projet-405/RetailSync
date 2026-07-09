@@ -46,7 +46,7 @@ export default function PaymentProcessingPage() {
 
   // CALCULATION LOGIC
 
-  const subTotal = 15200;
+  const subTotal = 152200;
   const taxAmount = 2100;
   // If a registered customer is selected, give a member discount
   const memberDiscount = selectedCustomer ? 1200 : 0;
@@ -66,6 +66,31 @@ export default function PaymentProcessingPage() {
 
   // Quick cash button handler
   const handleQuickCash = (amount) => setTenderedInput(formatCurrency(amount).replace('.00', ''));
+
+  // Auto-generate logical cash amounts based on the final total
+  const getQuickCashSuggestions = (total) => {
+    if (total <= 0) return [0, 0, 0, 0];
+
+    const exact = total;
+
+    // next logical cash amounts: next 500, next 1000, next 5000
+    let next500 = Math.ceil(total / 500) * 500;
+    if (next500 === exact) next500 += 500;
+
+    // next 1000 should be greater than next500, so we check and adjust accordingly
+    let next1000 = Math.ceil(total / 1000) * 1000;
+    if (next1000 <= next500) next1000 = next500 + 500;
+
+    // next 5000 should be greater than next1000, so we check and adjust accordingly
+    let next5000 = Math.ceil(total / 5000) * 5000;
+    if (next5000 <= next1000) next5000 = Math.ceil(next1000 / 5000) * 5000;
+    if (next5000 <= next1000) next5000 += 5000; // Backup fallback
+
+    return [exact, next500, next1000, next5000];
+  };
+
+  // auto-generate quick cash suggestions whenever the amount due changes
+  const quickCashOptions = getQuickCashSuggestions(amountDue);
 
   // Disable process button if conditions are not met
   const isProcessDisabled =
@@ -246,11 +271,14 @@ export default function PaymentProcessingPage() {
                   </div>
                   <div>
                     <label className="block mb-3 text-xs font-bold tracking-wider uppercase text-slate-500">Quick Cash</label>
-                    <div className="grid grid-cols-4 gap-3">
-                      <Button onClick={() => handleQuickCash(amountDue)} variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:bg-blue-50">Exact</Button>
-                      <Button onClick={() => handleQuickCash(16500)} variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:bg-blue-50">16,500</Button>
-                      <Button onClick={() => handleQuickCash(17000)} variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:bg-blue-50">17,000</Button>
-                      <Button onClick={() => handleQuickCash(20000)} variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:bg-blue-50">20,000</Button>
+                    <div>
+                      <label className="block mb-3 text-xs font-bold tracking-wider uppercase text-slate-500">Quick Cash</label>
+                      <div className="grid grid-cols-4 gap-3">
+                        <Button onClick={() => handleQuickCash(quickCashOptions[0])} variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:bg-blue-50">Exact</Button>
+                        <Button onClick={() => handleQuickCash(quickCashOptions[1])} variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:bg-blue-50">{quickCashOptions[1].toLocaleString('en-US')}</Button>
+                        <Button onClick={() => handleQuickCash(quickCashOptions[2])} variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:bg-blue-50">{quickCashOptions[2].toLocaleString('en-US')}</Button>
+                        <Button onClick={() => handleQuickCash(quickCashOptions[3])} variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:bg-blue-50">{quickCashOptions[3].toLocaleString('en-US')}</Button>
+                      </div>
                     </div>
                   </div>
                   <div>

@@ -40,9 +40,20 @@ const getTransactions = asyncHandler(async (req, res) => {
   });
 });
 
+// POST: Send Email Receipt 
+const sendEmailReceipt = asyncHandler(async (req, res) => {
+  const { transactionId, email, shortTxnId } = req.body;
+  await service.sendReceiptEmail(transactionId, email, shortTxnId);
+  res.status(200).json({
+    success: true,
+    message: 'Email sent successfully!'
+  });
+});
+
 module.exports = {
   getCustomers,
   addCustomer,
   processPayment,
-  getTransactions
+  getTransactions,
+  sendEmailReceipt
 };

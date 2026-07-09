@@ -14,4 +14,7 @@ router.post('/process', controller.processPayment);
 // 4. Route to fetch transaction history (e.g., GET /api/payment-processing/transactions)
 router.get('/transactions', controller.getTransactions);
 
+// 5. Route to send email receipt 
+router.post('/email-receipt', controller.sendEmailReceipt);
+
 module.exports = router;

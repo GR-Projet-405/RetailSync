@@ -129,7 +129,8 @@ export default function PaymentHistoryPage() {
         navigate('/transaction-details', {
             state: {
                 transaction: txn,
-                customer: txn.customerId || null
+                customer: txn.customerId || null,
+                isHistory: true
             }
         });
     };

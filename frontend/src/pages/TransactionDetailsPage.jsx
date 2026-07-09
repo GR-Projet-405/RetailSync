@@ -12,8 +12,8 @@ export default function TransactionDetailsPage() {
     // Modal State for Customer Profile
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
-    // Get data passed from the success page
-    const { transaction, customer } = location.state || {};
+    // Get data passed from the previous page
+    const { transaction, customer, isHistory } = location.state || {};
 
     // If no transaction data is found, send them back to payment page
     if (!transaction) {
@@ -58,7 +58,7 @@ export default function TransactionDetailsPage() {
                         <RefreshCcw size={16} /> Issue Refund
                     </Button>
                     <Button
-                        onClick={() => navigate('/receipt', { state: { transaction, customer } })}
+                        onClick={() => navigate('/receipt', { state: { transaction, customer, isHistory } })}
                         variant="primary"
                         className="flex items-center gap-2 font-bold shadow-md shadow-blue-500/20"
                     >
@@ -253,12 +253,28 @@ export default function TransactionDetailsPage() {
                                     <span className="text-sm font-bold text-slate-700">{customer.email}</span>
                                 </div>
                             )}
-                            <div className="flex items-center justify-between p-3 border rounded-lg bg-amber-50 border-amber-200">
-                                <div className="flex items-center gap-3">
-                                    <Award size={18} className="text-amber-500" />
-                                    <span className="text-sm font-bold text-amber-800">Total Points</span>
+                            <div className="flex flex-col gap-1 p-3 border rounded-lg bg-amber-50 border-amber-200">
+                                <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-2">
+                                        <Award size={18} className="text-amber-500" />
+                                        <span className="text-sm font-bold text-amber-800">
+                                            {isHistory ? "Current Balance" : "Updated Balance"}
+                                        </span>
+                                    </div>
+                                    <span className="font-extrabold text-amber-700">
+                                        {/* is history or not */}
+                                        {isHistory
+                                            ? (customer.loyaltyPoints || 0)
+                                            : ((customer.loyaltyPoints || 0) - (transaction.pointsRedeemed || 0) + (transaction.pointsEarned || 0))
+                                        } Pts
+                                    </span>
                                 </div>
-                                <span className="font-extrabold text-amber-700">{customer.loyaltyPoints} Pts</span>
+
+                                <div className="flex justify-between text-[11px] font-medium text-amber-700/60 pl-7">
+                                    <span>{isHistory ? "Database Record Sync" : `Previous: ${customer.loyaltyPoints || 0}`}</span>
+                                    {transaction.pointsEarned > 0 && <span>Earned: +{transaction.pointsEarned}</span>}
+                                    {transaction.pointsRedeemed > 0 && <span>Redeemed: -{transaction.pointsRedeemed}</span>}
+                                </div>
                             </div>
                         </div>
 

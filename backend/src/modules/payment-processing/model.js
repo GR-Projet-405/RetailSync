@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 
+
 // 1. Customer Schema
 
 const CustomerSchema = new mongoose.Schema({
@@ -27,7 +28,7 @@ const TransactionSchema = new mongoose.Schema({
     sku: { type: String },
     qty: { type: Number },
     originalPrice: { type: Number },
-    price: { type: Number }, // Price after any item-level discounts
+    price: { type: Number },
     total: { type: Number }
   }],
 
@@ -45,7 +46,17 @@ const TransactionSchema = new mongoose.Schema({
   paymentMethod: { type: String, enum: ['cash', 'card', 'qr'], required: true },
   tenderedAmount: { type: Number, default: 0 },
   changeDue: { type: Number, default: 0 },
-  cardLastFourDigits: { type: String, default: '' }
+  cardLastFourDigits: { type: String, default: '' },
+
+  // Transaction Status
+  status: {
+    type: String,
+    enum: ['Completed', 'Refunded', 'Pending'],
+    default: 'Completed'
+  },
+
+  // if the transaction is refunded, this field will store the total refunded amount
+  refundedAmount: { type: Number, default: 0 }
 
 }, { timestamps: true });
 
