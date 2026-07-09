@@ -10,6 +10,7 @@ import { BranchStatusBadge } from '../../components/branch/BranchStatusBadge';
 import { BranchKpiCard } from '../../components/branch/BranchKpiCard';
 import { RecentActivityTimeline } from '../../components/branch/RecentActivityTimeline';
 import DataTable from '../../components/DataTable';
+import Badge from '../../components/Badge';
 
 const BranchDetailsPage = () => {
   const { id } = useParams();
@@ -36,6 +37,128 @@ const BranchDetailsPage = () => {
     queryFn: () => branchApi.getBranchAuditLogs(id),
   });
 
+  const { data: inventoryResponse, isLoading: isInventoryLoading, isError: isInventoryError } = useQuery({
+    queryKey: ['branch', id, 'inventory-summary'],
+    queryFn: () => branchApi.getBranchInventory(id),
+    enabled: activeTab === 'inventory',
+  });
+
+  const { data: transfersResponse, isLoading: isTransfersLoading, isError: isTransfersError } = useQuery({
+    queryKey: ['branch', id, 'transfers'],
+    queryFn: () => branchApi.getBranchTransfers(id),
+    enabled: activeTab === 'transfers',
+  });
+
+  const inventoryColumns = [
+    {
+      header: 'Product',
+      key: 'productId',
+      accessorKey: 'productId',
+      render: (row) => row.productId?.name || '-',
+      cell: (val, row) => row.productId?.name || '-',
+    },
+    {
+      header: 'SKU',
+      key: 'productId',
+      accessorKey: 'productId',
+      render: (row) => row.productId?.sku || '-',
+      cell: (val, row) => row.productId?.sku || '-',
+    },
+    {
+      header: 'Quantity',
+      key: 'quantity',
+      accessorKey: 'quantity',
+      render: (row) => row.quantity ?? 0,
+      cell: (val) => val ?? 0,
+    },
+    {
+      header: 'Reorder Level',
+      key: 'reorderLevel',
+      accessorKey: 'reorderLevel',
+      render: (row) => row.reorderLevel ?? 0,
+      cell: (val) => val ?? 0,
+    },
+    {
+      header: 'Status',
+      key: 'quantity',
+      accessorKey: 'quantity',
+      render: (row) => {
+        const isLow = (row.quantity ?? 0) <= (row.reorderLevel ?? 10);
+        const statusVal = row.quantity === 0 ? 'OUT OF STOCK' : (isLow ? 'LOW STOCK' : 'IN STOCK');
+        return <BranchStatusBadge status={statusVal} />;
+      },
+      cell: (val, row) => {
+        const isLow = (row.quantity ?? 0) <= (row.reorderLevel ?? 10);
+        const statusVal = row.quantity === 0 ? 'OUT OF STOCK' : (isLow ? 'LOW STOCK' : 'IN STOCK');
+        return <BranchStatusBadge status={statusVal} />;
+      }
+    }
+  ];
+
+  const transferColumns = [
+    {
+      header: 'Transfer Number',
+      key: 'transferNumber',
+      accessorKey: 'transferNumber',
+      render: (row) => <span className="font-semibold text-blue-600">{row.transferNumber}</span>,
+      cell: (val) => <span className="font-semibold text-blue-600">{val}</span>,
+    },
+    {
+      header: 'Source Branch',
+      key: 'sourceBranch',
+      accessorKey: 'sourceBranch',
+      render: (row) => row.sourceBranch?.branchName || row.sourceBranch?.name || '-',
+      cell: (val) => val?.branchName || val?.name || '-',
+    },
+    {
+      header: 'Destination Branch',
+      key: 'destinationBranch',
+      accessorKey: 'destinationBranch',
+      render: (row) => row.destinationBranch?.branchName || row.destinationBranch?.name || '-',
+      cell: (val) => val?.branchName || val?.name || '-',
+    },
+    {
+      header: 'Status',
+      key: 'status',
+      accessorKey: 'status',
+      render: (row) => {
+        let variant = 'primary';
+        if (row.status === 'DELIVERED') variant = 'success';
+        if (row.status === 'PENDING') variant = 'warning';
+        if (row.status === 'CANCELLED' || row.status === 'REJECTED') variant = 'danger';
+        return <Badge variant={variant}>{row.status}</Badge>;
+      },
+      cell: (val) => {
+        let variant = 'primary';
+        if (val === 'DELIVERED') variant = 'success';
+        if (val === 'PENDING') variant = 'warning';
+        if (val === 'CANCELLED' || val === 'REJECTED') variant = 'danger';
+        return <Badge variant={variant}>{val}</Badge>;
+      }
+    },
+    {
+      header: 'Total Items',
+      key: 'items',
+      accessorKey: 'items',
+      render: (row) => row.items?.length || 0,
+      cell: (val) => val?.length || 0,
+    },
+    {
+      header: 'Created Date',
+      key: 'createdAt',
+      accessorKey: 'createdAt',
+      render: (row) => new Date(row.createdAt).toLocaleDateString(),
+      cell: (val) => new Date(val).toLocaleDateString(),
+    },
+    {
+      header: 'Created By',
+      key: 'createdBy',
+      accessorKey: 'createdBy',
+      render: (row) => row.createdBy ? `${row.createdBy.firstName} ${row.createdBy.lastName}` : '-',
+      cell: (val) => val ? `${val.firstName} ${val.lastName}` : '-',
+    }
+  ];
+
   if (isLoading) {
     return <div className="flex h-[400px] items-center justify-center"><Spinner size="lg" /></div>;
   }
@@ -51,6 +174,7 @@ const BranchDetailsPage = () => {
     { id: 'overview', label: 'Overview', icon: Icons.LayoutDashboard },
     { id: 'employees', label: 'Employees', icon: Icons.Users },
     { id: 'inventory', label: 'Inventory', icon: Icons.Package },
+    { id: 'transfers', label: 'Transfers', icon: Icons.ArrowLeftRight },
   ];
 
   return (
@@ -223,9 +347,47 @@ const BranchDetailsPage = () => {
 
             {activeTab === 'inventory' && (
               <div>
-                <div className="text-center text-slate-500 py-8">
-                  Inventory details will load here from the Inventory module.
-                </div>
+                {isInventoryLoading ? (
+                  <div className="flex justify-center items-center py-12">
+                    <Spinner size="md" />
+                  </div>
+                ) : isInventoryError ? (
+                  <div className="text-center text-rose-600 py-8 border border-rose-100 bg-rose-50/50 rounded-xl">
+                    Failed to load inventory details. Please try again.
+                  </div>
+                ) : !inventoryResponse?.data || inventoryResponse.data.length === 0 ? (
+                  <div className="text-center text-slate-500 py-12 border border-dashed border-slate-200 rounded-xl">
+                    No inventory records found for this branch.
+                  </div>
+                ) : (
+                  <DataTable 
+                    columns={inventoryColumns}
+                    data={inventoryResponse.data}
+                  />
+                )}
+              </div>
+            )}
+
+            {activeTab === 'transfers' && (
+              <div>
+                {isTransfersLoading ? (
+                  <div className="flex justify-center items-center py-12">
+                    <Spinner size="md" />
+                  </div>
+                ) : isTransfersError ? (
+                  <div className="text-center text-rose-600 py-8 border border-rose-100 bg-rose-50/50 rounded-xl">
+                    Failed to load stock transfers. Please try again.
+                  </div>
+                ) : !transfersResponse?.data || transfersResponse.data.length === 0 ? (
+                  <div className="text-center text-slate-500 py-12 border border-dashed border-slate-200 rounded-xl">
+                    No stock transfers found for this branch.
+                  </div>
+                ) : (
+                  <DataTable 
+                    columns={transferColumns}
+                    data={transfersResponse.data}
+                  />
+                )}
               </div>
             )}
           </div>

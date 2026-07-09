@@ -61,10 +61,16 @@ const getBranchDashboard = async (req, res) => {
       branchId = req.user.branchId;
     }
     
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(branchId)) {
+      return res.status(400).json({ success: false, message: 'Invalid branch ID format' });
+    }
+    
     const dashboardData = await branchService.getBranchDashboard(branchId);
     res.status(200).json({ success: true, data: dashboardData });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    const statusCode = error.message === 'Branch not found' ? 404 : 400;
+    res.status(statusCode).json({ success: false, message: error.message });
   }
 };
 
@@ -100,11 +106,31 @@ const getBranchEmployees = async (req, res) => {
 
 // Mock endpoints for tabs
 const getBranchInventory = async (req, res) => {
-  res.status(200).json({ success: true, data: [] });
+  try {
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid branch ID format' });
+    }
+    const data = await branchService.getBranchInventory(req.params.id);
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    const statusCode = error.message === 'Branch not found' ? 404 : 400;
+    res.status(statusCode).json({ success: false, message: error.message });
+  }
 };
 
 const getBranchTransfers = async (req, res) => {
-  res.status(200).json({ success: true, data: [] });
+  try {
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid branch ID format' });
+    }
+    const data = await branchService.getBranchTransfers(req.params.id);
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    const statusCode = error.message === 'Branch not found' ? 404 : 400;
+    res.status(statusCode).json({ success: false, message: error.message });
+  }
 };
 
 const getBranchAuditLogs = async (req, res) => {
