@@ -1,21 +1,19 @@
+const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
-// Import the models we created
 const { Customer, Transaction } = require('./model');
-
 
 class PaymentProcessingService {
 
-  // 1. Fetch customers (Used for the Search modal in Frontend)
+  // 1. Fetch customers
   async fetchCustomers(searchQuery = '') {
     let query = {};
     if (searchQuery) {
-      // Search by phone number
       query = { phone: { $regex: searchQuery, $options: 'i' } };
     }
     return await Customer.find(query);
   }
 
-  // 2. Add a new customer (From the 'Add New Customer' modal)
+  // 2. Add a new customer
   async createCustomer(customerData) {
     const newCustomer = new Customer(customerData);
     return await newCustomer.save();
@@ -24,6 +22,20 @@ class PaymentProcessingService {
   // 3. Process the Final Payment
   async processTransaction(transactionData) {
     const { customerId, finalTotal, pointsRedeemed } = transactionData;
+
+    //generate a unique receipt ID based on the current date and a random string
+    const generatedId = new mongoose.Types.ObjectId();
+    transactionData._id = generatedId;
+
+    //date string in the format YYMMDD
+    const date = new Date();
+    const dateString = date.toISOString().slice(2, 10).replace(/-/g, '');
+
+    // generate a unique part from the ObjectId (last 8 characters)
+    const uniquePart = generatedId.toString().slice(-8).toUpperCase();
+
+    // final receipt ID format: TXN-YYMMDD-UNIQUEPART
+    transactionData.receiptId = `TXN-${dateString}-${uniquePart}`;
 
     // Calculate new points earned (Rs. 100 = 1 Point)
     const pointsEarned = Math.floor(finalTotal / 100);
@@ -37,7 +49,6 @@ class PaymentProcessingService {
     if (customerId) {
       const customer = await Customer.findById(customerId);
       if (customer) {
-        // Subtract redeemed points and add newly earned points
         customer.loyaltyPoints = (customer.loyaltyPoints - pointsRedeemed) + pointsEarned;
         await customer.save();
       }
@@ -46,30 +57,27 @@ class PaymentProcessingService {
     return savedTransaction;
   }
 
-  // 4. Fetch all transactions (For the Sales History page)
+  // 4. Fetch all transactions
   async getAllTransactions() {
     return await Transaction.find()
       .populate('customerId', 'name phone email loyaltyPoints')
       .populate('cashierId', 'name')
-      .sort({ createdAt: -1 }); // Sort by most recent transactions first
+      .sort({ createdAt: -1 });
   }
 
-  // 5. Send Email Receipt (Fully Detailed with Loyalty & Cash Info)
-  async sendReceiptEmail(transactionId, email, shortTxnId) {
-    // 1. Fetch transaction AND link the Customer details using .populate()
+  // 5. Send Email Receipt
+  async sendReceiptEmail(transactionId, email) {
     const transaction = await Transaction.findById(transactionId).populate('customerId');
     if (!transaction) throw new Error("Transaction not found");
 
-    // 2. Setup the email sender (Nodemailer Transporter)
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: 'ashenlakmal05@gmail.com', // Company Email account
-        pass: 'suvf aklf rjbt yyob'      // App Password for the Email account
+        user: 'ashenlakmal05@gmail.com',
+        pass: 'suvf aklf rjbt yyob'
       }
     });
 
-    // 3. Create a table for purchased items dynamically
     let itemsHtml = '';
     if (transaction.items && transaction.items.length > 0) {
       itemsHtml = `
@@ -90,7 +98,6 @@ class PaymentProcessingService {
         `;
     }
 
-    // 4. Cash Tendered & Change (Only shows if payment method is cash)
     let cashDetailsHtml = '';
     if (transaction.paymentMethod === 'cash') {
       cashDetailsHtml = `
@@ -105,7 +112,6 @@ class PaymentProcessingService {
         `;
     }
 
-    // 5. Loyalty Points Section 
     let loyaltyHtml = '';
     if (transaction.customerId) {
       const customer = transaction.customerId;
@@ -120,7 +126,7 @@ class PaymentProcessingService {
         `;
     }
 
-    // 6. Build the complete Email HTML design
+    //use the short transaction ID for the email subject
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 450px; margin: auto; border: 1px solid #e2e8f0; padding: 25px; border-radius: 12px; background-color: #f8fafc;">
           
@@ -132,7 +138,7 @@ class PaymentProcessingService {
           <div style="background-color: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
               
               <div style="margin-bottom: 15px; font-size: 14px;">
-                  <p style="margin: 4px 0; color: #475569;"><strong>Receipt No:</strong> ${shortTxnId}</p>
+                  <p style="margin: 4px 0; color: #475569;"><strong>Receipt No:</strong> #${transaction.receiptId}</p>
                   <p style="margin: 4px 0; color: #475569;"><strong>Date:</strong> ${new Date(transaction.createdAt).toLocaleString('en-GB')}</p>
                   <p style="margin: 4px 0; color: #475569;"><strong>Payment Method:</strong> <span style="text-transform: capitalize;">${transaction.paymentMethod}</span></p>
               </div>
@@ -184,18 +190,15 @@ class PaymentProcessingService {
       </div>
     `;
 
-    // 7. Configure the final email package
     const mailOptions = {
-      from: '"RetailOS Pro POS" <ashenlakmal05@gmail.com>', // Sender's display name and email
-      to: email, // Customer's email address
-      subject: `Your Receipt from RetailOS Pro (${shortTxnId})`,
-      html: htmlContent // The HTML design we built above
+      from: '"RetailOS Pro POS" <ashenlakmal05@gmail.com>',
+      to: email,
+      subject: `Your Receipt from RetailOS Pro (#${transaction.receiptId})`,
+      html: htmlContent
     };
 
-    // 8. Send the email and return the result
     return await transporter.sendMail(mailOptions);
   }
-
 }
 
 module.exports = new PaymentProcessingService();

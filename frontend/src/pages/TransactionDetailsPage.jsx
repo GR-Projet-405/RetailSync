@@ -27,7 +27,7 @@ export default function TransactionDetailsPage() {
         return new Date(dateString).toLocaleDateString('en-GB', options).replace(',', '');
     };
 
-    const shortTxnId = `#TXN-${transaction._id.substring(18).toUpperCase()}`;
+    const shortTxnId = `#${transaction.receiptId}`;
 
     // Mock Data for Items (In a real app, this comes from the database: transaction.items)
     const purchasedItems = transaction.items?.length > 0 ? transaction.items : [

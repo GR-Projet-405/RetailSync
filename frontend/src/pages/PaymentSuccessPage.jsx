@@ -29,8 +29,8 @@ export default function PaymentSuccessPage() {
         return new Date(dateString).toLocaleDateString('en-GB', options).replace(',', '');
     };
 
-    // Generate a short readable TXN ID from the MongoDB ObjectId
-    const shortTxnId = `#TXN-${transaction._id.substring(18).toUpperCase()}`;
+    // We just use the custom receiptId saved in the database!
+    const displayTxnId = `#${transaction.receiptId}`;
 
     const handlePrint = () => {
         window.print();
@@ -53,7 +53,7 @@ export default function PaymentSuccessPage() {
                 body: JSON.stringify({
                     transactionId: transaction._id,
                     email: customer.email,
-                    shortTxnId: shortTxnId
+
                 })
             });
 
@@ -93,7 +93,7 @@ export default function PaymentSuccessPage() {
                         <div className="flex justify-between">
                             <div>
                                 <p className="text-[11px] font-bold tracking-wider text-slate-400 uppercase mb-1">Transaction ID</p>
-                                <p className="font-bold text-slate-800">{shortTxnId}</p>
+                                <p className="font-bold text-slate-800">{displayTxnId}</p>
                             </div>
                             <div className="text-right">
                                 <p className="text-[11px] font-bold tracking-wider text-slate-400 uppercase mb-1">Date & Time</p>

@@ -59,7 +59,7 @@ export default function PaymentHistoryPage() {
     // Filter Logic
     const filteredTransactions = transactions.filter(txn => {
         const customerName = txn.customerId?.name || 'Guest';
-        const txnId = `#TXN-${txn._id.substring(18).toUpperCase()}`;
+        const txnId = `#${txn.receiptId}`;
 
         // 1. Search Filter
         const matchesSearch =
@@ -101,7 +101,7 @@ export default function PaymentHistoryPage() {
         const csvRows = [headers.join(',')];
 
         filteredTransactions.forEach(txn => {
-            const id = `#TXN-${txn._id.substring(18).toUpperCase()}`;
+            const id = `#${txn.receiptId}`;
             const date = new Date(txn.createdAt).toLocaleString();
             const customer = txn.customerId?.name || 'Guest';
             const method = txn.paymentMethod;
@@ -240,7 +240,7 @@ export default function PaymentHistoryPage() {
                                     <tr><td colSpan="7" className="py-10 text-center text-slate-500">No transactions found.</td></tr>
                                 ) : (
                                     paginatedTransactions.map((txn) => {
-                                        const txnId = `#TXN-${txn._id.substring(18).toUpperCase()}`;
+                                        const txnId = `#${txn.receiptId}`;
 
                                         return (
                                             <tr key={txn._id} className="transition-colors hover:bg-slate-50/80 group">

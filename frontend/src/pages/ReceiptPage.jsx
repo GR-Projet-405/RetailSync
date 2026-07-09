@@ -21,7 +21,7 @@ export default function ReceiptPage() {
         return new Date(dateString).toLocaleDateString('en-GB', options).replace(',', '');
     };
 
-    const shortTxnId = `#TXN-${transaction._id.substring(18).toUpperCase()}`;
+    const shortTxnId = `#${transaction.receiptId}`;
 
     // Use actual items or fallback mock items
     const purchasedItems = transaction.items?.length > 0 ? transaction.items : [
@@ -31,7 +31,7 @@ export default function ReceiptPage() {
     ];
 
     // The data that will be shown when the QR code is scanned
-    const qrVerificationData = `Receipt: ${shortTxnId}\nTotal: Rs.${formatCurrency(transaction.finalTotal)}\nVerify: https://retailos.com/verify/${transaction._id}`;
+    const qrVerificationData = `Receipt: ${shortTxnId}\nTotal: Rs.${formatCurrency(transaction.finalTotal)}\nVerify: https://retailos.com/verify/${transaction.receiptId}`;
 
     return (
         // print:bg-white and print:p-0 ensures it looks perfect when printing

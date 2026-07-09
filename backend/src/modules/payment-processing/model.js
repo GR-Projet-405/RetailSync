@@ -15,6 +15,8 @@ const CustomerSchema = new mongoose.Schema({
 
 const TransactionSchema = new mongoose.Schema({
 
+  receiptId: { type: String, required: true, unique: true },
+
   // Link to the customer (Guest = null)
   customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', default: null },
 
