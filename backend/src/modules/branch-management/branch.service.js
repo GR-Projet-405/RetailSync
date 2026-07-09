@@ -249,7 +249,7 @@ const getBranchDashboard = async (branchId) => {
   const sixMonthsAgoStart = new Date(months[0].year, months[0].monthNum - 1, 1, 0, 0, 0, 0);
 
   // Concurrency using Promise.all()
-  const [todayResult, monthResult, trendData, inventoryValResult, lowStockCount, transfersCount] = await Promise.all([
+  const [todayResult, monthResult, trendData, inventoryValResult, lowStockCount, transfersCount, staffResult] = await Promise.all([
     Sale.aggregate([
       {
         $match: {
@@ -342,6 +342,10 @@ const getBranchDashboard = async (branchId) => {
         { destinationBranch: new mongoose.Types.ObjectId(branchId) }
       ],
       status: 'PENDING'
+    }),
+    User.countDocuments({
+      branchId: new mongoose.Types.ObjectId(branchId),
+      status: 'ACTIVE'
     })
   ]);
 
@@ -350,6 +354,7 @@ const getBranchDashboard = async (branchId) => {
   const currentStockValue = inventoryValResult[0]?.totalValue || 0;
   const lowStockItemsCount = lowStockCount || 0;
   const pendingTransfers = transfersCount || 0;
+  const staffCount = staffResult || 0;
 
   // Populate actual revenue into last 6 months list, filling missing months with 0
   trendData.forEach(item => {
@@ -364,14 +369,14 @@ const getBranchDashboard = async (branchId) => {
     revenue: m.revenue
   }));
 
-  // Return real calculated metrics alongside mock stubs for remaining KPIs
+  // Return real calculated metrics for all branch KPIs
   return {
     todaySales,
     monthlySales,
     monthlyRevenue: monthlySales, // alias support
     currentStockValue,
     lowStockItemsCount,
-    staffCount: Math.floor(Math.random() * 30) + 5, // mock (Sprint 4C.3)
+    staffCount,
     pendingTransfers,
     salesTrend
   };
