@@ -18,7 +18,7 @@ import ResetPasswordPage from '../features/auth/ResetPasswordPage';
 import NotificationsPage from '../pages/NotificationsPage';
 import ProfileSettingsPage from '../pages/ProfileSettingsPage';
 import BranchPage from '../pages/BranchPage';
-import EmployeePage from '../pages/EmployeePage';
+import EmployeePage from '../pages/EmployeeDashboard';
 import CustomerPage from '../pages/CustomerPage';
 import SupplierPage from '../pages/SupplierPage';
 import UserRolePage from '../pages/UserRolePage';
