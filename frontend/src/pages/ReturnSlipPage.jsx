@@ -151,6 +151,13 @@ export default function ReturnSlipPage() {
             <span>Refund Method</span>
             <span className="font-bold uppercase text-slate-800">{refundMethod}</span>
           </div>
+          
+          {returnData.pointsDeducted > 0 && (
+            <div className="flex justify-between mt-1 text-red-600">
+              <span>Loyalty Points Reverted</span>
+              <span className="font-bold">-{returnData.pointsDeducted} Pts</span>
+            </div>
+          )}
         </div>
 
         {/* Real Dynamic QR Code */}

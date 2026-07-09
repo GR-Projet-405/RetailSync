@@ -210,49 +210,50 @@ export const AppRoutes = () => {
 
         {/* Returns & Refunds */}
         <Route path="/returns-refunds" element={
-
-          <ReturnsRefundsPage />
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <ReturnsRefundsPage />
+          </ProtectedRoute>
         } />
 
         {/* Track Return Status */}
         <Route path="/returns/status/:returnId" element={
-
-          <ReturnStatusPage />
-
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <ReturnStatusPage />
+          </ProtectedRoute>
         } />
 
         {/* Process Refund */}
         <Route path="/returns/process-refund/:returnId" element={
-
-          <ProcessRefundPage />
-
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <ProcessRefundPage />
+          </ProtectedRoute>
         } />
 
         {/* Return History */}
         <Route path="/returns/history" element={
-
-          <ReturnHistoryPage />
-
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <ReturnHistoryPage />
+          </ProtectedRoute>
         } />
 
         {/* Manager's Pending Approvals List */}
         <Route path="/returns/approvals" element={
-          //<ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]}>
-          <ReturnApprovalsPage />
-          //</ProtectedRoute>
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]}>
+            <ReturnApprovalsPage />
+          </ProtectedRoute>
         } />
 
         {/* Manager's Detailed Review Page */}
         <Route path="/returns/approval/:returnId" element={
-          //<ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]}>
-          <ReviewReturnRequestPage />
-          //</ProtectedRoute>
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]}>
+            <ReviewReturnRequestPage />
+          </ProtectedRoute>
         } />
 
         <Route path="/returns/slip/:returnId" element={
-          
-          <ReturnSlipPage />
-          
+          <ProtectedRoute allowedRoles={SALES_ROLES}>
+            <ReturnSlipPage />
+          </ProtectedRoute>
         } />
 
         {/* Promotions & Discounts */}

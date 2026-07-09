@@ -30,7 +30,9 @@ const ReturnsRefundsPageSchema = new mongoose.Schema({
   },
   approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   refundMethod: { type: String, enum: ['cash', 'card', 'ezcash', 'mcash', 'frimi', null], default: null },
-  internalNotes: { type: String, default: '' }
+  internalNotes: { type: String, default: '' },
+
+  pointsDeducted: { type: Number, default: 0 }
 
 }, {
   timestamps: true

@@ -43,10 +43,23 @@ export default function ProcessRefundPage() {
     if (returnId) fetchRefundDetails();
   }, [returnId, navigate]);
 
-  const handleIssueRefund = async () => {
+const handleIssueRefund = async () => {
     if (!selectedMethod) {
       toast.warning('Please select a refund destination method to proceed.');
       return;
+    }
+
+    const pointsToDeduct = (requestData?.customerName && requestData.customerName !== 'Walk-in Customer') 
+      ? Math.floor(requestData.estimatedRefundTotal / 100) 
+      : 0;
+    
+    let loyaltyWarning = '';
+    if (pointsToDeduct > 0) {
+      loyaltyWarning = `
+        <div style="text-align: left; font-size: 13px; color: #991b1b; margin-bottom: 15px; background: #fee2e2; padding: 10px; border-radius: 8px; border: 1px solid #fca5a5;">
+          <strong>Loyalty Reversal:</strong> This customer will lose <b>${pointsToDeduct}</b> loyalty points due to this refund.
+        </div>
+      `;
     }
 
     const { value: formValues } = await Swal.fire({
@@ -56,6 +69,7 @@ export default function ProcessRefundPage() {
         <div style="text-align: left; font-size: 13px; color: #475569; margin-bottom: 15px; background: #fef2f2; padding: 10px; border-radius: 8px; border: 1px solid #fecaca;">
           <strong>Security Notice:</strong> Issuing refunds requires a branch manager's verification. Please ask the manager to enter their credentials below.
         </div>
+        ${loyaltyWarning}
         <input id="swal-email" type="email" class="swal2-input" placeholder="Manager Email" style="font-size: 14px;">
         <input id="swal-password" type="password" class="swal2-input" placeholder="Manager Password" style="font-size: 14px;">
       `,
@@ -82,7 +96,8 @@ export default function ProcessRefundPage() {
       await api.patch(`/returns-refunds/refund/${returnId}`, {
         refundMethod: selectedMethod,
         managerEmail: formValues.email,
-        managerPassword: formValues.password
+        managerPassword: formValues.password,
+        pointsDeducted: pointsToDeduct 
       });
 
       Swal.close(); 

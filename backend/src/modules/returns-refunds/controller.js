@@ -1,6 +1,7 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const service = require('./service');
 
+// 1. Verify Receipt
 const verifyReceiptHandler = asyncHandler(async (req, res) => {
   const { receiptId } = req.params;
   
@@ -20,6 +21,7 @@ const verifyReceiptHandler = asyncHandler(async (req, res) => {
   }
 });
 
+// 2. Create Return Request
 const createReturnHandler = asyncHandler(async (req, res) => {
   const returnRequest = await service.createReturnRequest(req.body);
   res.status(201).json({
@@ -29,6 +31,7 @@ const createReturnHandler = asyncHandler(async (req, res) => {
   });
 });
 
+// 3. Get Return Status
 const getReturnStatusHandler = asyncHandler(async (req, res) => {
   const { returnId } = req.params;
   const data = await service.getReturnByReturnId(returnId);
@@ -38,12 +41,7 @@ const getReturnStatusHandler = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = {
-  verifyReceiptHandler,
-  createReturnHandler,
-  getReturnStatusHandler
-};
-
+// 4. Get Return History
 const getHistoryHandler = asyncHandler(async (req, res) => {
   const data = await service.getReturnHistory();
   res.status(200).json({
@@ -52,13 +50,7 @@ const getHistoryHandler = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = {
-  verifyReceiptHandler,
-  createReturnHandler,
-  getReturnStatusHandler,
-  getHistoryHandler 
-};
-
+// 5. Review Return Request (Approve/Reject)
 const reviewReturnHandler = asyncHandler(async (req, res) => {
   const { returnId } = req.params;
   const { status, internalNotes, managerId } = req.body;
@@ -72,19 +64,13 @@ const reviewReturnHandler = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = {
-  verifyReceiptHandler,
-  createReturnHandler,
-  getReturnStatusHandler,
-  getHistoryHandler,
-  reviewReturnHandler 
-};
-
+// 6. Process Refund & Deduct Points 
 const processRefundHandler = asyncHandler(async (req, res) => {
   const { returnId } = req.params;
-  const { refundMethod, managerEmail, managerPassword } = req.body;
+  
+  const { refundMethod, managerEmail, managerPassword, pointsDeducted } = req.body;
 
-  const data = await service.processRefund(returnId, refundMethod, managerEmail, managerPassword);
+  const data = await service.processRefund(returnId, refundMethod, managerEmail, managerPassword, pointsDeducted);
 
   res.status(200).json({
     success: true,
