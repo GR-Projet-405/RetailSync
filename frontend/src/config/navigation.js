@@ -26,6 +26,20 @@ export const NAVIGATION_GROUPS = [
         allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]
       },
       {
+        id: 'system-events',
+        name: 'System Events',
+        path: '/system-events',
+        icon: 'Activity',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]
+      },
+      {
+        id: 'user-actions',
+        name: 'User Actions',
+        path: '/user-actions',
+        icon: 'Activity',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]
+      },
+      {
         id: 'help-support',
         name: 'Help & Support',
         icon: 'HelpCircle',
@@ -43,6 +57,20 @@ export const NAVIGATION_GROUPS = [
             name: 'Support Ticket System',
             path: '/help-support',
             icon: 'LifeBuoy',
+            allowedRoles: Object.values(ROLES)
+          },
+          {
+            id: 'contact-support',
+            name: 'Contact Support',
+            path: '/help-support/contact',
+            icon: 'MessageCircle',
+            allowedRoles: Object.values(ROLES)
+          },
+          {
+            id: 'faq',
+            name: 'FAQ',
+            path: '/faq',
+            icon: 'CircleHelp',
             allowedRoles: Object.values(ROLES)
           }
         ]
@@ -366,6 +394,13 @@ export const NAVIGATION_GROUPS = [
         path: '/ai-assistant',
         icon: 'MessageSquareCode',
         allowedRoles: Object.values(ROLES)
+      },
+      {
+        id: 'ai-alerts',
+        name: 'AI Anomalies & Alerts',
+        path: '/ai-alerts',
+        icon: 'BellRing',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]
       }
     ]
   }

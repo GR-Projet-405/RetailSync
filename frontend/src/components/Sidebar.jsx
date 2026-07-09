@@ -104,6 +104,7 @@ const SidebarNavItem = ({ item, renderIcon, isSidebarCollapsed }) => {
             <NavLink
               key={child.id}
               to={child.path}
+              end
               className={({ isActive }) =>
                 cn(
                   linkClassName({ isActive }),
@@ -131,6 +132,7 @@ export const Sidebar = () => {
     return IconComponent ? <IconComponent className="w-4 h-4 shrink-0" /> : null;
   };
 
+
   const isItemVisible = (item) =>
     !user || (item.allowedRoles && hasRole(...item.allowedRoles));
 
@@ -146,7 +148,7 @@ export const Sidebar = () => {
   return (
     <aside
       className={cn(
-        'fixed inset-y-0 left-0 z-30 w-[280px] h-screen bg-[#0F172A] border-r border-white/5 flex flex-col transition-all duration-300 ease-in-out',
+        'fixed inset-y-0 left-0 z-30 w-[280px] h-screen bg-[#0F172A] border-r border-white/5 flex flex-col transition-all duration-300 ease-in-out print:hidden',
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
         'lg:static lg:translate-x-0 lg:h-screen',
         isSidebarCollapsed ? 'lg:w-[80px]' : 'lg:w-[280px]'
