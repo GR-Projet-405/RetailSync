@@ -61,10 +61,16 @@ const getBranchDashboard = async (req, res) => {
       branchId = req.user.branchId;
     }
     
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(branchId)) {
+      return res.status(400).json({ success: false, message: 'Invalid branch ID format' });
+    }
+    
     const dashboardData = await branchService.getBranchDashboard(branchId);
     res.status(200).json({ success: true, data: dashboardData });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    const statusCode = error.message === 'Branch not found' ? 404 : 400;
+    res.status(statusCode).json({ success: false, message: error.message });
   }
 };
 
