@@ -1,0 +1,620 @@
+{
+  "info": {
+    "name": "RetailSync - AI Modules Backend",
+    "_postman_id": "35b588a7-4027-4c3d-bc4f-731d492a79cc",
+    "description": "Postman collection for testing RetailSync AI Reordering and AI Assistant backend endpoints. Run Login first. Create the sample analytics snapshot before generating reorder recommendations.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5001",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "loginEmail",
+      "value": "admin@retailsync.com",
+      "type": "string"
+    },
+    {
+      "key": "loginPassword",
+      "value": "Admin@123",
+      "type": "string"
+    },
+    {
+      "key": "snapshotId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "recommendationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "conversationId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login - Save JWT Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{loginEmail}}\",\n  \"password\": \"{{loginPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.token) {",
+                  "  pm.collectionVariables.set('token', json.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Seed Analytics Data",
+      "item": [
+        {
+          "name": "Create Sample Analytics Snapshot",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"snapshotDate\": \"2026-07-09T00:00:00.000Z\",\n  \"branchName\": \"Main Branch HQ\",\n  \"branchCode\": \"HQ-001\",\n  \"channel\": \"POS\",\n  \"sales\": {\n    \"orderCount\": 58,\n    \"itemCount\": 176,\n    \"grossRevenue\": 14250,\n    \"discounts\": 620,\n    \"tax\": 740,\n    \"refunds\": 90,\n    \"cogs\": 8600\n  },\n  \"inventory\": {\n    \"stockValue\": 51200\n  },\n  \"customers\": {\n    \"newCustomers\": 12,\n    \"returningCustomers\": 44,\n    \"loyaltyPointsIssued\": 1840\n  },\n  \"products\": [\n    {\n      \"sku\": \"SKU-COKE-1L\",\n      \"name\": \"Coca Cola 1L\",\n      \"category\": \"Beverages\",\n      \"quantitySold\": 52,\n      \"revenue\": 2600,\n      \"grossProfit\": 930,\n      \"currentStock\": 6,\n      \"reorderLevel\": 24,\n      \"daysOfSupply\": 2,\n      \"inventoryStatus\": \"LOW_STOCK\"\n    },\n    {\n      \"sku\": \"SKU-MILK-1L\",\n      \"name\": \"Fresh Milk 1L\",\n      \"category\": \"Dairy\",\n      \"quantitySold\": 34,\n      \"revenue\": 1700,\n      \"grossProfit\": 510,\n      \"currentStock\": 0,\n      \"reorderLevel\": 20,\n      \"daysOfSupply\": 0,\n      \"inventoryStatus\": \"OUT_OF_STOCK\"\n    },\n    {\n      \"sku\": \"SKU-RICE-5KG\",\n      \"name\": \"Premium Rice 5kg\",\n      \"category\": \"Grocery\",\n      \"quantitySold\": 18,\n      \"revenue\": 4500,\n      \"grossProfit\": 1350,\n      \"currentStock\": 42,\n      \"reorderLevel\": 15,\n      \"daysOfSupply\": 14,\n      \"inventoryStatus\": \"HEALTHY\"\n    }\n  ],\n  \"notes\": \"Sample snapshot for testing AI modules.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/business-analytics/snapshots",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "business-analytics",
+                "snapshots"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Snapshot created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data._id) {",
+                  "  pm.collectionVariables.set('snapshotId', json.data._id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "AI Reordering",
+      "item": [
+        {
+          "name": "Module Details",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai-reordering",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai-reordering"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Generate Reorder Recommendations",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchCode\": \"HQ-001\",\n  \"coverageDays\": 14,\n  \"leadTimeDays\": 7,\n  \"safetyStockDays\": 3,\n  \"minimumConfidence\": 0,\n  \"replacePending\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai-reordering/generate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai-reordering",
+                "generate"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Recommendations generated', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "const first = json && json.data && json.data.recommendations && json.data.recommendations[0];",
+                  "if (first && first._id) {",
+                  "  pm.collectionVariables.set('recommendationId', first._id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Pending Recommendations",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai-reordering/recommendations?status=PENDING&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai-reordering",
+                "recommendations"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "PENDING"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Recommendation By ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai-reordering/recommendations/{{recommendationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai-reordering",
+                "recommendations",
+                "{{recommendationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve Recommendation",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\",\n  \"decisionNote\": \"Approved from Postman test.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai-reordering/recommendations/{{recommendationId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai-reordering",
+                "recommendations",
+                "{{recommendationId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Convert Recommendation To PO Draft",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"supplierName\": \"Default Test Supplier\",\n  \"note\": \"Converted from AI recommendation during Postman test.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai-reordering/recommendations/{{recommendationId}}/convert-to-po",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai-reordering",
+                "recommendations",
+                "{{recommendationId}}",
+                "convert-to-po"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Assistant",
+      "item": [
+        {
+          "name": "Module Details",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai-assistant",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai-assistant"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Chat - Business Summary",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Show me the business performance summary for HQ branch\",\n  \"filters\": {\n    \"branchCode\": \"HQ-001\",\n    \"period\": \"daily\",\n    \"limit\": 5\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai-assistant/chat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai-assistant",
+                "chat"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Assistant answered', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.conversationId) {",
+                  "  pm.collectionVariables.set('conversationId', json.data.conversationId);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chat - Reorder Recommendations",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversationId\": \"{{conversationId}}\",\n  \"message\": \"What should I reorder right now?\",\n  \"filters\": {\n    \"branchCode\": \"HQ-001\",\n    \"limit\": 5\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai-assistant/chat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai-assistant",
+                "chat"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Conversation History",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai-assistant/history?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai-assistant",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Conversation By ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai-assistant/history/{{conversationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai-assistant",
+                "history",
+                "{{conversationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Conversation",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai-assistant/history/{{conversationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai-assistant",
+                "history",
+                "{{conversationId}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
