@@ -16,6 +16,26 @@ const seedRoles = async () => {
         permissions: ALL_PERMISSIONS, // Simplified for now, can be restricted later
         isSystemRole: true,
       },
+<<<<<<< HEAD:backend/src/seeders/roles.seeder.js
+     {
+  name: 'BRANCH_MANAGER',
+  description: 'Manager of a specific branch',
+  permissions: [
+    'users.view',
+    'users.create',
+    'users.edit',
+    'products.view',
+    'inventory.view',
+    'inventory.manage',
+    'sales.view',
+    'sales.manage',
+    'reports.view',
+    'roles.view',
+    'branches.view',
+  ],
+  isSystemRole: true,
+},
+=======
       {
         name: 'BRANCH_MANAGER',
         description: 'Manager of a specific branch',
@@ -24,6 +44,7 @@ const seedRoles = async () => {
         ],
         isSystemRole: true,
       },
+>>>>>>> origin/dev:backend/src/seeders/role.seeder.js
       {
         name: 'INVENTORY_MANAGER',
         description: 'Manager of warehouse and stock',

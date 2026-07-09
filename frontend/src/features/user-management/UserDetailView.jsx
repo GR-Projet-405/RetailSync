@@ -65,8 +65,8 @@ export default function UserDetailView({ user }) {
           </h3>
           <p className="text-sm text-slate-500">@{user.username}</p>
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-            <Badge variant={ROLE_COLORS[user.role] || 'primary'}>
-              {ROLE_LABELS[user.role] || user.role}
+            <Badge variant={ROLE_COLORS[user.roleId.name] || 'primary'}>
+              {ROLE_LABELS[user.roleId.name] || user.roleId.name}
             </Badge>
             <Badge variant={statusConfig.variant} className="flex items-center gap-1">
               <StatusIcon size={10} />
@@ -91,16 +91,16 @@ export default function UserDetailView({ user }) {
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Assignment</p>
           <div className="bg-white rounded-xl border border-slate-100 px-4 divide-y divide-slate-100">
             <InfoRow icon={Shield} label="Role">
-              <Badge variant={ROLE_COLORS[user.role] || 'primary'} className="mt-0.5">
-                {ROLE_LABELS[user.role] || user.role}
+              <Badge variant={ROLE_COLORS[user.roleId.name] || 'primary'} className="mt-0.5">
+                {ROLE_LABELS[user.roleId.name] || user.roleId.name}
               </Badge>
             </InfoRow>
             <InfoRow
               icon={Building2}
               label="Branch"
               value={
-                user.branch
-                  ? `${user.branch.name} (${user.branch.code})`
+                user.branchId
+                  ? `${user.branchId.name} (${user.branchId.code})`
                   : 'No branch assigned'
               }
             />

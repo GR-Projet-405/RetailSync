@@ -2,7 +2,14 @@ import { useState, useEffect } from 'react';
 import { User, Mail, Lock, Phone, Shield, Building2, ImageIcon, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../../components/Button';
+<<<<<<< HEAD
+import { useBranches } from '../../hooks/useBranches';
+import { useRoles } from '../../hooks/useRoles';
+
+
+=======
 import api from '../../services/api'; // Safe centralized Axios instance wrapper
+>>>>>>> origin/dev
 
 const STATUSES = [
   { value: 'ACTIVE', label: 'Active' },
@@ -105,18 +112,38 @@ const validate = (form, isEdit = false) => {
     }
   }
 
-  if (!form.role) errors.role = 'Role is required';
+  if (!form.roleId) errors.roleId = 'Role is required';
 
   return errors;
 };
 
 // ─── UserForm ─────────────────────────────────────────────
+<<<<<<< HEAD
+export default function UserForm({ initialData = null, onSubmit, onCancel, isLoading = false, currentUserRole }) {
+=======
 export default function UserForm({ initialData = null, onSubmit, onCancel, isLoading = false, branches = [] }) {
+>>>>>>> origin/dev
   const isEdit = Boolean(initialData);
+  const { data: branchesData } = useBranches();
+  const branches = branchesData || [];
 
+<<<<<<< HEAD
+  const { data: rolesData } = useRoles();
+  const allRoles = rolesData?.data || [];
+
+const BRANCH_MANAGER_ALLOWED_ROLES = ['CASHIER', 'INVENTORY_MANAGER'];
+const roles = currentUserRole === 'BRANCH_MANAGER'
+  ? allRoles.filter(r => BRANCH_MANAGER_ALLOWED_ROLES.includes(r.name))
+  : allRoles;
+// temporary debug - remove after fixing
+console.log('currentUserRole:', currentUserRole);
+console.log('allRoles:', allRoles);
+console.log('roles:', roles);
+=======
   // Dynamic storage state array container for database roles
   const [dbRoles, setDbRoles] = useState([]);
 
+>>>>>>> origin/dev
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -125,8 +152,14 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
     password: '',
     phoneNumber: '',
     profileImage: '',
+<<<<<<< HEAD
+    profileImageFile: null,
+    roleId: '',    
+    branchId: '',
+=======
     role: '', 
     branch: '',
+>>>>>>> origin/dev
     status: 'ACTIVE',
     ...initialData,
   });
@@ -152,6 +185,27 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
 
   // Sync initialData cleanly
   useEffect(() => {
+<<<<<<< HEAD
+  if (initialData) {
+    setForm({
+      firstName: '',
+      lastName: '',
+      username: '',
+      email: '',
+      password: '',
+      phoneNumber: '',
+      profileImage: '',
+      profileImageFile: null,
+      roleId: '',
+      branchId: '',
+      status: 'ACTIVE',
+      ...initialData,
+      roleId: initialData.roleId?._id || initialData.roleId || '',
+      branchId: initialData.branchId?._id || initialData.branchId || '',
+    });
+  }
+}, [initialData]);
+=======
     if (initialData) {
       setForm({
         firstName: '',
@@ -170,6 +224,7 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
       });
     }
   }, [initialData]);
+>>>>>>> origin/dev
 
   const set = (field) => (e) => {
     const value = e.target.value;
@@ -190,6 +245,28 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
       return;
     }
 
+<<<<<<< HEAD
+    // Build payload — strip password if empty in edit mode
+    const payload = new FormData();
+    const formCopy = { ...form };
+    if (isEdit && !formCopy.password) delete formCopy.password;
+    if (!formCopy.branchId) formCopy.branchId = '';
+    if (!formCopy.phoneNumber) formCopy.phoneNumber = '';
+
+    Object.keys(formCopy).forEach(key => {
+      if (key === 'profileImageFile' || key === 'profileImage') return;
+      if (formCopy[key] !== null && formCopy[key] !== undefined) {
+        payload.append(key, formCopy[key]);
+      }
+    });
+
+    if (form.profileImageFile) {
+      payload.append('profileImage', form.profileImageFile);
+    } else if (form.profileImage) {
+      payload.append('profileImage', form.profileImage);
+    }
+
+=======
     const payload = {
       firstName: form.firstName,
       lastName: form.lastName,
@@ -207,6 +284,7 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
     } else if (form.password) {
       payload.password = form.password;
     }
+>>>>>>> origin/dev
 
     onSubmit(payload);
   };
@@ -334,6 +412,41 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
           <Shield size={11} /> Role & Branch Assignment
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<<<<<<< HEAD
+          {currentUserRole !== 'BRANCH_MANAGER' && (
+            <Field label="Role" required error={touched.roleId && errors.roleId}>
+              <Select
+                icon={Shield}
+                value={form.roleId}
+                onChange={set('roleId')}
+                error={touched.roleId && errors.roleId}
+              >
+                <option value="">Select role...</option>
+                {roles.map((r) => (
+                  <option key={r._id} value={r._id}>
+                    {r.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+          {currentUserRole !== 'BRANCH_MANAGER' && (
+            <Field label="Assigned Branch">
+              <Select
+                icon={Building2}
+                value={form.branchId || ''}
+                onChange={set('branchId')}
+              >
+                <option value="">No branch assigned</option>
+                {branches.map((b) => (
+                  <option key={b._id} value={b._id}>
+                    {b.name} ({b.code})
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+=======
           <Field label="Role" required error={touched.role && errors.role}>
             <Select
               icon={Shield}
@@ -363,6 +476,7 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
               ))}
             </Select>
           </Field>
+>>>>>>> origin/dev
         </div>
 
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -375,13 +489,21 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
               ))}
             </Select>
           </Field>
-          <Field label="Profile Image URL">
-            <Input
-              icon={ImageIcon}
-              type="url"
-              placeholder="https://..."
-              value={form.profileImage || ''}
-              onChange={set('profileImage')}
+          <Field label="Profile Image">
+            <input
+              type="file"
+              accept="image/jpeg, image/png, image/webp"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file) {
+                  setForm((prev) => ({
+                    ...prev,
+                    profileImageFile: file,
+                    profileImage: URL.createObjectURL(file)
+                  }));
+                }
+              }}
+              className="w-full text-sm rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all duration-150 cursor-pointer"
             />
           </Field>
         </div>
@@ -396,7 +518,9 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
             className="w-10 h-10 rounded-full object-cover border-2 border-blue-200"
             onError={(e) => { e.target.style.display = 'none'; }}
           />
-          <span className="text-xs text-slate-500 truncate">{form.profileImage}</span>
+          <span className="text-xs text-slate-500 truncate">
+            {form.profileImageFile ? form.profileImageFile.name : form.profileImage}
+          </span>
         </div>
       )}
 

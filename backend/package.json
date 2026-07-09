@@ -20,8 +20,12 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.4.1",
     "morgan": "^1.10.0",
+<<<<<<< HEAD
+    "multer": "^2.2.0"
+=======
     "nodemailer": "^9.0.3",
     "pdfkit": "^0.19.1"
+>>>>>>> origin/dev
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
