@@ -2,16 +2,7 @@ import { useState, useEffect } from 'react';
 import { User, Mail, Lock, Phone, Shield, Building2, ImageIcon, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../../components/Button';
-import { ROLE_LABELS, ALL_ROLES } from '../../config/roles';
-
-// ─── Mock branch list (replace with real branch query in production) ──
-const MOCK_BRANCHES = [
-  { _id: 'b1', name: 'Main Branch', code: 'MAIN' },
-  { _id: 'b2', name: 'North Branch', code: 'NORTH' },
-  { _id: 'b3', name: 'South Branch', code: 'SOUTH' },
-  { _id: 'b4', name: 'East Branch', code: 'EAST' },
-  { _id: 'b5', name: 'West Branch', code: 'WEST' },
-];
+import api from '../../services/api'; // Safe centralized Axios instance wrapper
 
 const STATUSES = [
   { value: 'ACTIVE', label: 'Active' },
@@ -120,8 +111,11 @@ const validate = (form, isEdit = false) => {
 };
 
 // ─── UserForm ─────────────────────────────────────────────
-export default function UserForm({ initialData = null, onSubmit, onCancel, isLoading = false }) {
+export default function UserForm({ initialData = null, onSubmit, onCancel, isLoading = false, branches = [] }) {
   const isEdit = Boolean(initialData);
+
+  // Dynamic storage state array container for database roles
+  const [dbRoles, setDbRoles] = useState([]);
 
   const [form, setForm] = useState({
     firstName: '',
@@ -131,7 +125,7 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
     password: '',
     phoneNumber: '',
     profileImage: '',
-    role: 'EMPLOYEE',
+    role: '', 
     branch: '',
     status: 'ACTIVE',
     ...initialData,
@@ -141,7 +135,22 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
   const [showPassword, setShowPassword] = useState(false);
   const [touched, setTouched] = useState({});
 
-  // Sync on initialData change
+  // Dynamic fetch implementation looking at the live database route
+  useEffect(() => {
+    const fetchLiveRoles = async () => {
+      try {
+        const res = await api.get('/role-management/list');
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          setDbRoles(res.data.data);
+        }
+      } catch (err) {
+        console.error('Failed to load live database roles:', err.message);
+      }
+    };
+    fetchLiveRoles();
+  }, []);
+
+  // Sync initialData cleanly
   useEffect(() => {
     if (initialData) {
       setForm({
@@ -152,11 +161,12 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
         password: '',
         phoneNumber: '',
         profileImage: '',
-        role: 'EMPLOYEE',
+        role: '',
         branch: '',
         status: 'ACTIVE',
         ...initialData,
-        branch: initialData.branch?._id || initialData.branch || '',
+        branch: initialData.branchId?._id || initialData.branchId || initialData.branch?._id || initialData.branch || '',
+        role: initialData.roleId?._id || initialData.roleId || initialData.role || '',
       });
     }
   }, [initialData]);
@@ -175,18 +185,28 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
     const validationErrors = validate(form, isEdit);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      // Mark all fields as touched
       const allTouched = Object.keys(form).reduce((acc, k) => ({ ...acc, [k]: true }), {});
       setTouched(allTouched);
       return;
     }
 
-    // Build payload — strip password if empty in edit mode
-    const payload = { ...form };
-    if (isEdit && !payload.password) delete payload.password;
-    if (!payload.branch) payload.branch = null;
-    if (!payload.phoneNumber) payload.phoneNumber = null;
-    if (!payload.profileImage) payload.profileImage = null;
+    const payload = {
+      firstName: form.firstName,
+      lastName: form.lastName,
+      username: form.username,
+      email: form.email,
+      status: form.status,
+      roleId: form.role,               // Transmits the 24-character hex ID string cleanly
+      branchId: form.branch || null,   // Transmits the 24-character hex ID string cleanly
+      phoneNumber: form.phoneNumber || null,
+      profileImage: form.profileImage || null,
+    };
+
+    if (isEdit && !form.password) {
+      delete payload.password;
+    } else if (form.password) {
+      payload.password = form.password;
+    }
 
     onSubmit(payload);
   };
@@ -322,9 +342,9 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
               error={touched.role && errors.role}
             >
               <option value="">Select role...</option>
-              {ALL_ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {ROLE_LABELS[r]}
+              {dbRoles.map((r) => (
+                <option key={r._id} value={r._id}>
+                  {r.name.replace('_', ' ')}
                 </option>
               ))}
             </Select>
@@ -336,9 +356,9 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
               onChange={set('branch')}
             >
               <option value="">No branch assigned</option>
-              {MOCK_BRANCHES.map((b) => (
+              {branches.map((b) => (
                 <option key={b._id} value={b._id}>
-                  {b.name} ({b.code})
+                  {b.name} {b.code ? `(${b.code})` : ''}
                 </option>
               ))}
             </Select>
