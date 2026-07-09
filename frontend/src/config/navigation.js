@@ -325,7 +325,68 @@ export const NAVIGATION_GROUPS = [
         name: 'AI Reordering',
         path: '/ai-reordering',
         icon: 'Brain',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER],
+
+        children: [
+            {
+              id: 'recommendation',
+              name: 'Recommendation',
+              path: '/ai-reordering/recommendation',
+              icon: 'ClipboardList',
+              allowedRoles: [
+                ROLES.SUPER_ADMIN,
+                ROLES.ADMIN,
+                ROLES.BRANCH_MANAGER
+              ]
+            },
+            {
+              id: 'suggested-purchase-list',
+              name: 'Suggested Purchase List',
+              path: '/ai-reordering/purchase-list',
+              icon: 'ShoppingCart',
+              allowedRoles: [
+                ROLES.SUPER_ADMIN,
+                ROLES.ADMIN,
+                ROLES.BRANCH_MANAGER
+              ]
+            },
+            {
+              id: "approval-workflow",
+              name: "Approval Workflow",
+              path: "/ai-reordering/approval-workflow",
+              icon: "CheckCircle",
+              allowedRoles: [
+                ROLES.SUPER_ADMIN,
+                ROLES.ADMIN,
+                ROLES.BRANCH_MANAGER,
+              ],
+            },
+
+            {
+              id: "reorder-history",
+              name: "Reorder History",
+              path: "/ai-reordering/history",
+              icon: "History",
+              allowedRoles: [
+                ROLES.SUPER_ADMIN,
+                ROLES.ADMIN,
+                ROLES.BRANCH_MANAGER,
+              ],
+            },
+            
+            {
+                id: "inventory-prediction",
+                name: "Inventory Prediction",
+                path: "/ai-reordering/inventory-prediction",
+                icon: "TrendingUp",
+                allowedRoles: [
+                    ROLES.SUPER_ADMIN,
+                    ROLES.ADMIN,
+                    ROLES.BRANCH_MANAGER,
+                ],
+            },
+          ]
+
       },
       {
         id: 'ai-assistant',

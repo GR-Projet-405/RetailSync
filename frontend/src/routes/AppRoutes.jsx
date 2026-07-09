@@ -60,6 +60,10 @@ import AIAlertsPage from '../pages/AIAlertsPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import SystemEventsPage from '../features/system-events/SystemEventsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
+import SuggestedPurchaseListPage from '../pages/SuggestedPurchaseListPage';
+import AIApprovalWorkflowPage from "../pages/AIApprovalWorkflowPage";
+import ReorderHistoryPage from '../pages/ReorderHistoryPage';
+import InventoryPredictionPage from '../pages/InventoryPredictionPage';
 import ContactSupportPage from '../pages/ContactSupportPage';
 import CreatePurchaseOrderPage from "../pages/CreatePurchaseOrderPage";
 import ApprovalWorkflowPage from "../pages/ApprovalWorkflowPage";
@@ -454,11 +458,52 @@ export const AppRoutes = () => {
         } />
 
         {/* AI Reordering */}
-        <Route path="/ai-reordering" element={
-          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
-            <AIReorderingPage />
-          </ProtectedRoute>
-        } />
+        <Route
+            path="/ai-reordering/recommendation"
+            element={
+              <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+                <AIReorderingPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ai-reordering/purchase-list"
+            element={
+              <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+                <SuggestedPurchaseListPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ai-reordering/approval-workflow"
+            element={
+              <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+                <AIApprovalWorkflowPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ai-reordering/history"
+            element={
+              <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+                <ReorderHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ai-reordering/inventory-prediction"
+            element={
+              <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+                <InventoryPredictionPage />
+              </ProtectedRoute>
+            }
+          />
+
+          
 
         {/* AI Assistant */}
         <Route path="/ai-assistant" element={
