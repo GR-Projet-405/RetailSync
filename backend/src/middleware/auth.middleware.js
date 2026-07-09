@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const env = require('../config/env');
-const User = require('../modules/user-management/user.model');
+const User = require('../modules/user-management/user.model');  // ✅ Correct
+
+// Remove any line that has require('./controller')
 
 // Middleware to verify JWT token
 const verifyToken = async (req, res, next) => {
@@ -25,7 +27,9 @@ const verifyToken = async (req, res, next) => {
     const decoded = jwt.verify(token, env.JWT_SECRET);
 
     // Get user and attach to req
-    const user = await User.findById(decoded.id).populate('roleId').populate('branchId');
+    const user = await User.findById(decoded.id)
+      .populate('roleId')
+      .populate('branchId');
 
     if (!user) {
       return res.status(401).json({
@@ -45,7 +49,7 @@ const verifyToken = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Auth Middleware Error:', error.message);
-    res.status(401).json({
+    return res.status(401).json({
       success: false,
       message: 'Not authorized to access this route. Invalid token.',
     });
@@ -55,12 +59,22 @@ const verifyToken = async (req, res, next) => {
 // Middleware to check if user has required role(s)
 const hasRole = (...roles) => {
   return (req, res, next) => {
-    if (!req.user || !req.user.roleId || !roles.includes(req.user.roleId.name)) {
+    if (!req.user || !req.user.roleId) {
       return res.status(403).json({
         success: false,
-        message: `Role ${req.user?.roleId?.name || 'Unknown'} is not authorized to access this route`,
+        message: 'Not authorized. User role information missing.',
       });
     }
+
+    const userRoleName = req.user.roleId.name || req.user.roleId;
+    
+    if (!roles.includes(userRoleName)) {
+      return res.status(403).json({
+        success: false,
+        message: `Role ${userRoleName} is not authorized to access this route`,
+      });
+    }
+    
     next();
   };
 };
@@ -75,12 +89,14 @@ const hasPermission = (requiredPermission) => {
       });
     }
 
-    // Super Admin override (if SUPER_ADMIN role name convention is kept)
-    if (req.user.roleId.name === 'SUPER_ADMIN') {
+    // Super Admin override
+    const roleName = req.user.roleId.name || req.user.roleId;
+    if (roleName === 'SUPER_ADMIN') {
       return next();
     }
 
-    if (!req.user.roleId.permissions.includes(requiredPermission)) {
+    const permissions = req.user.roleId.permissions || [];
+    if (!permissions.includes(requiredPermission)) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to perform this action. Missing permission.',

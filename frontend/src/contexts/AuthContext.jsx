@@ -6,6 +6,30 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeBranch, setActiveBranch] = useState('Central WH');
+  const [branches, setBranches] = useState(['Central WH']);
+
+  const fetchBranches = async (userData) => {
+    try {
+      const res = await api.get('/branch-management/active');
+      if (res.data && res.data.data) {
+        const branchNames = res.data.data.map(b => b.name);
+        setBranches(branchNames);
+        
+        // Default to user's branch if it exists, otherwise Central WH
+        const userBranchName = userData?.branchId?.name;
+        if (userBranchName && branchNames.includes(userBranchName)) {
+          setActiveBranch(userBranchName);
+        } else if (branchNames.includes('Central WH')) {
+          setActiveBranch('Central WH');
+        } else if (branchNames.length > 0) {
+          setActiveBranch(branchNames[0]);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch branches in AuthContext:', err);
+    }
+  };
 
   useEffect(() => {
     // Check if token exists on load
@@ -16,7 +40,9 @@ export const AuthProvider = ({ children }) => {
           // Set token to default axios headers
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
           const res = await api.get('/auth/me');
-          setUser(res.data.data);
+          const userData = res.data.data;
+          setUser(userData);
+          await fetchBranches(userData);
         } catch (error) {
           console.error('Auth initialization error', error);
           localStorage.removeItem('retailsync_token');
@@ -37,6 +63,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('retailsync_token', token);
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setUser(userData);
+      await fetchBranches(userData);
       
       return { success: true };
     } catch (error) {
@@ -49,6 +76,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('retailsync_token');
     delete api.defaults.headers.common['Authorization'];
     setUser(null);
+    setActiveBranch('Central WH');
+    setBranches(['Central WH']);
   };
 
   const getCurrentUser = () => {
@@ -67,7 +96,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, getCurrentUser, hasRole, hasPermission }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      login, 
+      logout, 
+      getCurrentUser, 
+      hasRole, 
+      hasPermission,
+      activeBranch,
+      setActiveBranch,
+      branches
+    }}>
       {children}
     </AuthContext.Provider>
   );

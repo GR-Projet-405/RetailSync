@@ -14,6 +14,9 @@ router.get('/my-branch/dashboard', hasRole('BRANCH_MANAGER', 'SUPER_ADMIN'), asy
 // Admin specific dashboard
 router.get('/admin/comparison', hasPermission(PERMISSIONS.BRANCHES_VIEW), asyncHandler(controller.getAdminComparison));
 
+// Active branches list (must be before /:id)
+router.get('/active', asyncHandler(controller.getActiveBranches));
+
 // Collection routes
 router.route('/')
   .get(hasPermission(PERMISSIONS.BRANCHES_VIEW), asyncHandler(controller.getBranches))

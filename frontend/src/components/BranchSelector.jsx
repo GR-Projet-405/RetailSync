@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../utils/cn';
 
 export const BranchSelector = () => {
-  const { activeBranch, setActiveBranch, branches } = useAuth();
+  const { activeBranch, setActiveBranch, branches = [] } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
   return (

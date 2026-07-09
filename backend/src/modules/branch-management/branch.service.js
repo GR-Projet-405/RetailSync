@@ -257,6 +257,22 @@ const getBranchEmployees = async (branchId) => {
   return User.find({ branchId }).populate('roleId', 'name').select('-password');
 };
 
+const getActiveBranches = async () => {
+  const branches = await Branch.find({ status: 'ACTIVE' })
+    .sort({ branchName: 1 })
+    .lean();
+  
+  return branches.map(b => ({
+    _id: b._id,
+    name: b.branchName,
+    branchName: b.branchName,
+    code: b.branchCode,
+    branchCode: b.branchCode,
+    location: b.address ? b.address.city : '',
+    address: b.address
+  }));
+};
+
 module.exports = {
   getBranches,
   getBranchById,
@@ -266,5 +282,6 @@ module.exports = {
   assignManager,
   getBranchDashboard,
   getAdminDashboardSummary,
-  getBranchEmployees
+  getBranchEmployees,
+  getActiveBranches
 };
