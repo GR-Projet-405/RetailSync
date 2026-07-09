@@ -75,7 +75,33 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+<<<<<<< HEAD
+    department: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    isOnLeave: {
+      type: Boolean,
+      default: false,
+    },
+    leaveStartDate: {
+      type: Date,
+      default: null,
+    },
+    leaveEndDate: {
+      type: Date,
+      default: null,
+    },
+=======
+    isEmailVerified: {
+    type: Boolean,
+    default: false,
   },
+>>>>>>> origin/dev
+  },
+
+
   {
     timestamps: true,
     toJSON: {

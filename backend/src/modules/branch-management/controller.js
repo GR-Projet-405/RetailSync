@@ -1,17 +1,14 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const service = require('./service');
 
-// GET Boilerplate handler
-const getDetails = asyncHandler(async (req, res) => {
-  const data = await service.fetchDetails();
+const getBranches = asyncHandler(async (req, res) => {
+  const branches = await service.getBranches();
+
   res.status(200).json({
     success: true,
-    message: 'Branch Management module active. Under development.',
-    timestamp: new Date().toISOString(),
-    data
+    message: 'Branches retrieved successfully',
+    data: branches,
   });
 });
 
-module.exports = {
-  getDetails
-};
+module.exports = { getBranches };

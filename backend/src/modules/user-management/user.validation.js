@@ -35,7 +35,7 @@ const createUserSchema = Joi.object({
     'any.required': 'Password is required',
   }),
   phoneNumber: Joi.string().trim().allow('', null).optional(),
-  profileImage: Joi.string().uri().allow('', null).optional(),
+  profileImage: Joi.string().allow('', null).optional(),
   roleId: Joi.string().hex().length(24).required().messages({
     'any.required': 'Role ID is required',
     'string.length': 'Invalid Role ID format',
@@ -65,7 +65,7 @@ const updateUserSchema = Joi.object({
     }),
   email: Joi.string().trim().email({ tlds: { allow: false } }).optional(),
   phoneNumber: Joi.string().trim().allow('', null).optional(),
-  profileImage: Joi.string().uri().allow('', null).optional(),
+  profileImage: Joi.string().allow('', null).optional(),
   roleId: Joi.string().hex().length(24).optional(),
   branchId: Joi.string().hex().length(24).allow(null, '').optional(),
   status: Joi.string()
