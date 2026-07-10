@@ -116,9 +116,16 @@ export const NAVIGATION_GROUPS = [
       {
         id: 'branch-management',
         name: 'Branch Management',
-        path: '/branches',
+        path: '/admin/branches',
         icon: 'GitFork',
         allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN]
+      },
+      {
+        id: 'my-branch',
+        name: 'My Branch',
+        path: '/branch/dashboard',
+        icon: 'Store',
+        allowedRoles: [ROLES.BRANCH_MANAGER]
       },
       {
         id: 'warehouse-management',
