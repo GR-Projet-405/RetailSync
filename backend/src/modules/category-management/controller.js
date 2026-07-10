@@ -1,101 +1,80 @@
+const asyncHandler = require('../../utils/asyncHandler');
 const { validationResult } = require('express-validator');
-const categoryService = require('./service');
+const service = require('./service');
 
-// ── Validation Error Handler ───────────────────────────────────────────────────
+// ── Validation Error Helper ───────────────────────────────────────────────────
+// Returns true and sends a 400 response if validation failed.
 const handleValidationErrors = (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       message: 'Validation failed',
-      errors: errors.array().map((e) => ({ field: e.path, message: e.msg })),
+      errors: errors.array().map((e) => ({ field: e.path, message: e.msg }))
     });
+    return true;
   }
-  return null;
+  return false;
 };
 
-// GET /api/categories
-const getCategories = async (req, res) => {
-  try {
-    const result = await categoryService.fetchAll(req.query);
-    res.status(200).json({ success: true, ...result });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
+// GET /api/v1/category-management
+const getCategories = asyncHandler(async (req, res) => {
+  const { page, limit, status, search, isActive } = req.query;
+  const result = await service.getCategories({ page, limit, status, search, isActive });
 
-// GET /api/categories/tree
-const getCategoryTree = async (req, res) => {
-  try {
-    const tree = await categoryService.fetchTree();
-    res.status(200).json({ success: true, data: tree });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
+  res.status(200).json({
+    success: true,
+    message: 'Categories retrieved successfully.',
+    ...result
+  });
+});
 
-// GET /api/categories/:id
-const getCategoryById = async (req, res) => {
-  try {
-    const result = await categoryService.fetchDetails(req.params.id);
-    if (!result) {
-      return res.status(404).json({ success: false, message: 'Category not found' });
-    }
-    res.status(200).json({ success: true, data: result });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
+// GET /api/v1/category-management/tree
+// Cherry-picked: hierarchical tree view for the Category Hierarchy screen
+const getCategoryTree = asyncHandler(async (req, res) => {
+  const tree = await service.fetchTree();
+  res.status(200).json({ success: true, data: tree });
+});
 
-// POST /api/categories
-const createCategory = async (req, res) => {
-  try {
-    if (handleValidationErrors(req, res)) return;
-    const category = await categoryService.create({
-      ...req.body,
-      createdBy: req.user._id,
-    });
-    res.status(201).json({
-      success: true,
-      message: 'Category created successfully',
-      data: category,
-    });
-  } catch (err) {
-    const status = err.message.includes('already exists') ? 409 : 400;
-    res.status(status).json({ success: false, message: err.message });
-  }
-};
+// GET /api/v1/category-management/:id
+const getCategoryById = asyncHandler(async (req, res) => {
+  const result = await service.getCategoryById(req.params.id);
+  res.status(200).json({ success: true, data: result });
+});
 
-// PUT /api/categories/:id
-const updateCategory = async (req, res) => {
-  try {
-    if (handleValidationErrors(req, res)) return;
-    const updated = await categoryService.update(
-      req.params.id,
-      req.body,
-      req.user._id
-    );
-    res.status(200).json({
-      success: true,
-      message: 'Category updated successfully',
-      data: updated,
-    });
-  } catch (err) {
-    const status = err.message.includes('not found') ? 404 : 400;
-    res.status(status).json({ success: false, message: err.message });
-  }
-};
+// POST /api/v1/category-management
+const createCategory = asyncHandler(async (req, res) => {
+  if (handleValidationErrors(req, res)) return;
 
-// DELETE /api/categories/:id
-const deleteCategory = async (req, res) => {
-  try {
-    const result = await categoryService.softDelete(req.params.id, req.user._id);
-    res.status(200).json({ success: true, ...result });
-  } catch (err) {
-    const status = err.message.includes('not found') ? 404 : 400;
-    res.status(status).json({ success: false, message: err.message });
-  }
-};
+  const category = await service.createCategory(req.body, req.user._id);
+  res.status(201).json({
+    success: true,
+    message: 'Category created successfully.',
+    data: category
+  });
+});
+
+// PUT /api/v1/category-management/:id
+const updateCategory = asyncHandler(async (req, res) => {
+  if (handleValidationErrors(req, res)) return;
+
+  const category = await service.updateCategory(req.params.id, req.body, req.user._id);
+  res.status(200).json({
+    success: true,
+    message: 'Category updated successfully.',
+    data: category
+  });
+});
+
+// DELETE /api/v1/category-management/:id
+const deleteCategory = asyncHandler(async (req, res) => {
+  const result = await service.deleteCategory(req.params.id);
+  res.status(200).json({
+    success: true,
+    message: result.message || 'Category deleted successfully.',
+    data: result
+  });
+});
 
 module.exports = {
   getCategories,
@@ -103,5 +82,5 @@ module.exports = {
   getCategoryById,
   createCategory,
   updateCategory,
-  deleteCategory,
+  deleteCategory
 };
