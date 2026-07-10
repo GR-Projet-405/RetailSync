@@ -93,9 +93,9 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
     isEmailVerified: {
-    type: Boolean,
-    default: false,
-  },
+      type: Boolean,
+      default: false,
+    },
   },
 
 

@@ -37,6 +37,4 @@ router.get('/:id/inventory-summary', hasPermission(PERMISSIONS.BRANCHES_VIEW), a
 router.get('/:id/transfers', hasPermission(PERMISSIONS.BRANCHES_VIEW), asyncHandler(controller.getBranchTransfers));
 router.get('/:id/audit-logs', hasPermission(PERMISSIONS.AUDITLOGS_VIEW), asyncHandler(controller.getBranchAuditLogs));
 
-router.get('/', hasPermission('branches.view'), controller.getBranches);
-
 module.exports = router;
