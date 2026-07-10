@@ -46,6 +46,12 @@ import SalesDetails from '../pages/sales/SalesDetails';
 import FiltersSearch from '../pages/sales/FiltersSearch';
 import ExportReports from '../pages/sales/ExportReports';
 import ReturnsRefundsPage from '../pages/ReturnsRefundsPage';
+import ReturnStatusPage from '../pages/ReturnStatusPage';
+import ReturnHistoryPage from '../pages/ReturnHistoryPage';
+import ReviewReturnRequestPage from '../pages/ReviewReturnRequestPage';
+import ReturnApprovalsPage from '../pages/ReturnApprovalsPage';
+import ProcessRefundPage from '../pages/ProcessRefundPage';
+import ReturnSlipPage from '../pages/ReturnSlipPage'; 
 import PromotionsDiscountsPage from '../pages/promotions/PromotionsDashboard';
 import DiscountRulesPage from '../pages/promotions/DiscountRules';
 import CouponManagementPage from '../pages/promotions/CouponManagement';
@@ -382,9 +388,50 @@ export const AppRoutes = () => {
 
         {/* Returns & Refunds */}
         <Route path="/returns-refunds" element={
-          <ProtectedRoute allowedRoles={SALES_ROLES}>
+          //<ProtectedRoute allowedRoles={SALES_ROLES}>
             <ReturnsRefundsPage />
-          </ProtectedRoute>
+          //</ProtectedRoute>
+        } />
+
+        {/* Track Return Status */}
+        <Route path="/returns/status/:returnId" element={
+          //<ProtectedRoute allowedRoles={SALES_ROLES}>
+            <ReturnStatusPage />
+          //</ProtectedRoute>
+        } />
+
+        {/* Process Refund */}
+        <Route path="/returns/process-refund/:returnId" element={
+          //<ProtectedRoute allowedRoles={SALES_ROLES}>
+            <ProcessRefundPage />
+          //</ProtectedRoute>
+        } />
+
+        {/* Return History */}
+        <Route path="/returns/history" element={
+          //<ProtectedRoute allowedRoles={SALES_ROLES}>
+            <ReturnHistoryPage />
+          //</ProtectedRoute>
+        } />
+
+        {/* Manager's Pending Approvals List */}
+        <Route path="/returns/approvals" element={
+          //<ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]}>
+            <ReturnApprovalsPage />
+          //</ProtectedRoute>
+        } />
+
+        {/* Manager's Detailed Review Page */}
+        <Route path="/returns/approval/:returnId" element={
+          //<ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]}>
+            <ReviewReturnRequestPage />
+          //</ProtectedRoute>
+        } />
+
+        <Route path="/returns/slip/:returnId" element={
+          //<ProtectedRoute allowedRoles={SALES_ROLES}>
+            <ReturnSlipPage />
+          //</ProtectedRoute>
         } />
 
         {/* Promotions & Discounts */}
