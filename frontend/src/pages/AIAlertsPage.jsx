@@ -40,8 +40,24 @@ export default function AIAlertsPage() {
     fetchAlerts();
   }, [refreshKey, filter, severityFilter]);
 
-  const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
+  const [generating, setGenerating] = useState(false);
+
+  const handleRefresh = async () => {
+    setGenerating(true);
+    try {
+      const res = await api.post('/ai-alerts/generate');
+      const count = res.data.data?.generatedCount ?? 0;
+      if (count > 0) {
+        toast.success(`${count} new alert(s) generated from live data!`);
+      } else {
+        toast.info('No new alerts detected — all thresholds are within safe limits.');
+      }
+    } catch (err) {
+      toast.error('Failed to run alert scan: ' + (err.message || 'Unknown error'));
+    } finally {
+      setGenerating(false);
+      setRefreshKey(prev => prev + 1);
+    }
   };
 
   const handleAcknowledge = async (id, title) => {
@@ -227,10 +243,11 @@ export default function AIAlertsPage() {
               variant="outline"
               size="sm"
               onClick={handleRefresh}
-              className="flex items-center gap-2 border-slate-200 hover:bg-slate-50 font-bold bg-white text-slate-700 h-10 px-4 rounded-xl shadow-sm"
+              disabled={generating}
+              className="flex items-center gap-2 border-slate-200 hover:bg-slate-50 font-bold bg-white text-slate-700 h-10 px-4 rounded-xl shadow-sm disabled:opacity-60"
             >
-              <RefreshCw className="h-4 w-4 text-slate-500" />
-              Re-Scan Logs
+              <RefreshCw className={`h-4 w-4 text-slate-500 ${generating ? 'animate-spin' : ''}`} />
+              {generating ? 'Scanning...' : 'Re-Scan Logs'}
             </Button>
           </div>
         </div>

@@ -235,10 +235,79 @@ const buildAssistantAnswer = async (intent, filters) => {
   };
 };
 
+const { OpenAI } = require("openai");
+
+const openai = new OpenAI({
+  baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+  apiKey: process.env.GEMINI_API_KEY,
+});
+
 const chat = async ({ message, conversationId, filters = {} }, userId) => {
   const conversation = await getConversation({ conversationId, userId, firstMessage: message });
   const intent = classifyIntent(message);
   const assistantResult = await buildAssistantAnswer(intent, filters);
+
+  const systemPrompt = `You are the RetailSync AI Assistant, a professional business assistant for a retail platform.
+You answer user queries about sales, inventory, and business performance.
+We have retrieved the following business data based on the user's intent:
+${JSON.stringify(assistantResult.data)}
+
+Here is a basic summary:
+${assistantResult.answer}
+
+Provide a helpful, natural language response to the user's message using this data. Be concise and format nicely.`;
+
+  const messagesPayload = [
+    { role: 'system', content: systemPrompt },
+    ...conversation.messages.map(m => ({ role: m.role, content: m.content })),
+    { role: 'user', content: message }
+  ];
+
+  let finalAnswer = assistantResult.answer;
+
+  const MODELS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-2.5-flash'];
+  
+  const callLLM = async (modelName, retries = 2) => {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const completion = await openai.chat.completions.create({
+          messages: messagesPayload,
+          model: modelName,
+          stream: false,
+        });
+        return completion.choices[0].message.content;
+      } catch (err) {
+        const status = err?.status || err?.statusCode;
+        // Retry on rate limit (429) or server error (503, 502)
+        if ((status === 429 || status === 503 || status === 502) && attempt < retries) {
+          const delay = 3000 * (attempt + 1);
+          console.warn(`LLM ${modelName} returned ${status}, retrying in ${delay}ms...`);
+          await new Promise(r => setTimeout(r, delay));
+        } else {
+          throw err;
+        }
+      }
+    }
+  };
+
+  try {
+    let succeeded = false;
+    for (const model of MODELS) {
+      try {
+        finalAnswer = await callLLM(model);
+        succeeded = true;
+        break;
+      } catch (err) {
+        console.warn(`Model ${model} failed: ${err.message}`);
+      }
+    }
+    if (!succeeded) {
+      console.error('All LLM models failed, using rule-based fallback');
+    }
+  } catch (err) {
+    console.error('LLM API Error, falling back to rule-based answer:', err.message);
+    finalAnswer = `[AI Offline: ${err.message}]\n\n${assistantResult.answer}`;
+  }
 
   conversation.messages.push({
     role: 'user',
@@ -247,7 +316,7 @@ const chat = async ({ message, conversationId, filters = {} }, userId) => {
   });
   conversation.messages.push({
     role: 'assistant',
-    content: assistantResult.answer,
+    content: finalAnswer,
     intent,
     metadata: {
       contextUsed: assistantResult.contextUsed,
@@ -264,7 +333,7 @@ const chat = async ({ message, conversationId, filters = {} }, userId) => {
   return {
     conversationId: conversation._id,
     intent,
-    answer: assistantResult.answer,
+    answer: finalAnswer,
     contextUsed: assistantResult.contextUsed,
     conversation,
   };
