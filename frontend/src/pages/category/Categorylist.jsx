@@ -76,8 +76,11 @@ const handleDelete = async () => {
           { label: 'Total Categories', value: pagination.total, icon: '☰' },
           { label: 'Parent Categories', value: parentCount, icon: '🗂️' },
           { label: 'Sub-Categories', value: subCount, icon: '🗂️' },
-          { label: 'Total Products', value: '—', icon: '📦' },
-        ].map((s) => (
+{ 
+  label: 'Total Products', 
+  value: categories.reduce((sum, cat) => sum + (cat.productCount || 0), 0), 
+  icon: '📦' 
+},        ].map((s) => (
           <div key={s.label} className="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-4">
             <span className="text-2xl">{s.icon}</span>
             <div>
@@ -162,66 +165,75 @@ const handleDelete = async () => {
             ) : (
               categories.map((cat) => (
                 <tr key={cat._id} className={`border-b border-slate-50 hover:bg-slate-50 transition-colors ${!cat.isActive ? 'opacity-60' : ''}`}>
-                  <td className="px-4 py-3"><input type="checkbox" /></td>
+  <td className="px-4 py-3"><input type="checkbox" /></td>
 
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{cat.icon || '📦'}</span>
-                      <div>
-                        <p className="font-medium text-slate-800">{cat.name}</p>
-                        <p className="text-xs text-slate-400">
-                          {cat.description?.substring(0, 35)}{cat.description?.length > 35 ? '...' : ''}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
+  {/* 1. Category Name */}
+  <td className="px-4 py-3">
+    <div className="flex items-center gap-2">
+      <span className="text-lg">{cat.icon || '📦'}</span>
+      <div>
+        <p className="font-medium text-slate-800">{cat.name}</p>
+        <p className="text-xs text-slate-400">
+          {cat.description?.substring(0, 35)}{cat.description?.length > 35 ? '...' : ''}
+        </p>
+      </div>
+    </div>
+  </td>
 
-                  <td className="px-4 py-3">
-                    <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${cat.parentId ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                      {cat.parentId ? 'Sub' : 'Parent'}
-                    </span>
-                  </td>
+  {/* 2. Type */}
+  <td className="px-4 py-3">
+    <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${cat.parentId ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+      {cat.parentId ? 'Sub' : 'Parent'}
+    </span>
+  </td>
 
-                  <td className="px-4 py-3 text-slate-600 text-sm">
-                    {cat.parentId?.name || <span className="text-slate-300">—</span>}
-                  </td>
+  {/* 3. Parent */}
+  <td className="px-4 py-3 text-slate-600 text-sm">
+    {cat.parentId?.name || <span className="text-slate-300">—</span>}
+  </td>
 
-                  <td className="px-4 py-3 text-slate-500 text-sm">—</td>
+  {/* 4. Products ✅ */}
+  <td className="px-4 py-3 text-slate-700 text-sm font-medium">
+    {cat.productCount ?? '—'}
+  </td>
 
-                  <td className="px-4 py-3">
-                    <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${cat.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                      {cat.isActive ? '● Active' : '● Inactive'}
-                    </span>
-                  </td>
+  {/* 5. Status */}
+  <td className="px-4 py-3">
+    <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${cat.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+      {cat.isActive ? '● Active' : '● Inactive'}
+    </span>
+  </td>
 
-                  <td className="px-4 py-3 text-slate-500 text-xs">
-                    {new Date(cat.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </td>
+  {/* 6. Created */}
+  <td className="px-4 py-3 text-slate-500 text-xs">
+    {new Date(cat.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+  </td>
 
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5">
-                      <button onClick={() => onView(cat._id)} title="View"
-                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      </button>
-                      <button onClick={() => onEdit(cat._id)} title="Edit"
-                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-green-50 text-green-600 hover:bg-green-100">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button onClick={() => setDeleteModal(cat)} title="Delete"
-                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+  {/* 7. Actions */}
+  <td className="px-4 py-3">
+    <div className="flex items-center gap-1.5">
+      <button onClick={() => onView(cat._id)} title="View"
+        className="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100">
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        </svg>
+      </button>
+      <button onClick={() => onEdit(cat._id)} title="Edit"
+        className="w-7 h-7 flex items-center justify-center rounded-lg bg-green-50 text-green-600 hover:bg-green-100">
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      </button>
+      <button onClick={() => setDeleteModal(cat)} title="Delete"
+        className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100">
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      </button>
+    </div>
+  </td>
+</tr>
               ))
             )}
           </tbody>

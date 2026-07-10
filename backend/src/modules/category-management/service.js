@@ -1,4 +1,6 @@
 const Category = require('./model');
+// Top eke uncomment/add karanna:
+const Product = require('../product-management/model');
 
 // ── Fetch All (list + filters + pagination) ───────────────────────────────────
 const fetchAll = async (query = {}) => {
@@ -33,8 +35,19 @@ const fetchAll = async (query = {}) => {
     Category.countDocuments(filter),
   ]);
 
+  // Add product count per category
+  const categoriesWithCount = await Promise.all(
+    categories.map(async (cat) => {
+      const productCount = await Product.countDocuments({
+        categoryId: cat._id,
+        status: 'ACTIVE',
+      });
+      return { ...cat.toObject(), productCount };
+    })
+  );
+
   return {
-    data: categories,
+    data: categoriesWithCount,
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),
@@ -53,28 +66,29 @@ const fetchDetails = async (id) => {
 
   if (!category) return null;
 
-  // Children and siblings in parallel
-  const [children, siblings] = await Promise.all([
-    Category.find({ parentId: id, isActive: true })
-      .select('name code isActive sortOrder')
-      .sort({ sortOrder: 1 }),
+const [children, siblings, totalProducts] = await Promise.all([
+  Category.find({ parentId: id, isActive: true })
+    .select('name code isActive sortOrder icon')
+    .sort({ sortOrder: 1 }),
 
-    category.parentId
-      ? Category.find({
-          parentId: category.parentId,
-          _id: { $ne: id },
-          isActive: true,
-        }).select('name code isActive sortOrder')
-      : Promise.resolve([]),
-  ]);
+  category.parentId
+    ? Category.find({
+        parentId: category.parentId,
+        _id: { $ne: id },
+        isActive: true,
+      }).select('name code isActive sortOrder')
+    : Promise.resolve([]),
 
-  // Stats placeholders — wire to Inventory/Product aggregates when ready
-  const stats = {
-    totalProducts: 0,
-    stockUnits: 0,
-    inventoryValue: 0,
-    lowStockItems: 0,
-  };
+  // categoryId field + ACTIVE status
+  Product.countDocuments({ categoryId: id, status: 'ACTIVE' }),
+]);
+
+const stats = {
+  totalProducts,
+  stockUnits: 0,
+  inventoryValue: 0,
+  lowStockItems: 0,
+};
 
   return { category, children, siblings, stats };
 };
