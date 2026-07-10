@@ -1,22 +1,12 @@
-const Branch = require('./branch.model');
+const Branch = require('../branch-management/branch.model');
 
-class BranchPageService {
-  async fetchDetails() {
-    return {
-      module: 'Branch Management',
-      status: 'Under Development',
-    };
-  }
+const getBranches = async () => {
+  const branches = await Branch.find({ status: 'ACTIVE' })
+    .select('_id name code location status')
+    .sort({ name: 1 })
+    .lean();
 
-  async getAllBranches() {
-    return await Branch.find({ status: 'ACTIVE' }).sort({ name: 1 });
-  }
+  return branches;
+};
 
-  async fetchActiveBranches() {
-    return Branch.find({ status: 'ACTIVE' })
-      .select('_id name code location')
-      .sort({ name: 1 });
-  }
-}
-
-module.exports = new BranchPageService();
+module.exports = { getBranches };

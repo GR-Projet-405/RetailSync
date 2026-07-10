@@ -17,7 +17,9 @@ import ForgotPasswordPage from '../features/auth/ForgotPasswordPage';
 import ResetPasswordPage from '../features/auth/ResetPasswordPage';
 import NotificationsPage from '../pages/NotificationsPage';
 import ProfileSettingsPage from '../pages/ProfileSettingsPage';
-import BranchPage from '../pages/BranchPage';
+import BranchListPage from '../pages/admin/BranchListPage';
+import BranchDetailsPage from '../pages/admin/BranchDetailsPage';
+import BranchDashboard from '../pages/manager/BranchDashboard';
 import EmployeePage from '../pages/EmployeeDashboard';
 import CustomerPage from '../pages/CustomerPage';
 import SupplierPage from '../pages/SupplierPage';
@@ -100,8 +102,13 @@ const POS_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.C
 export const AppRoutes = () => {
   return (
     <Routes>
-      {/* Auth Routes */}
+      {/* Auth Routes — public, no layout wrapper */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/verify-otp" element={<VerifyOTPPage />} />
+      <Route path="/select-role" element={<SelectRolePage />} />
 
       <Route element={
         <ProtectedRoute allowedRoles={POS_ROLES}>
@@ -208,10 +215,23 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
-        {/* Branch Management */}
-        <Route path="/branches" element={
+        {/* Branch Management (Admin) */}
+        <Route path="/admin/branches" element={
           <ProtectedRoute allowedRoles={ADMIN_ROLES}>
-            <BranchPage />
+            <BranchListPage />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/admin/branches/:id" element={
+          <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+            <BranchDetailsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Branch Dashboard (Manager) */}
+        <Route path="/branch/dashboard" element={
+          <ProtectedRoute allowedRoles={[ROLES.BRANCH_MANAGER, ROLES.SUPER_ADMIN]}>
+            <BranchDashboard />
           </ProtectedRoute>
         } />
 
