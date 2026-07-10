@@ -1,10 +1,3 @@
-// const express = require('express');
-// const router = express.Router();
-// const controller = require('./controller');
-
-// router.get('/', controller.getDetails);
-
-// module.exports = router;
 const express = require('express');
 const router = express.Router();
 const controller = require('./controller');
@@ -18,11 +11,11 @@ router.use(verifyToken);
 // "search" as an :id param.
 router.get('/search', hasPermission(PERMISSIONS.PRODUCTS_VIEW), controller.searchProducts);
 
-router.get('/', hasPermission(PERMISSIONS.PRODUCTS_VIEW), controller.getProducts);
-router.get('/:id', hasPermission(PERMISSIONS.PRODUCTS_VIEW), controller.getProductById);
+router.get('/',     hasPermission(PERMISSIONS.PRODUCTS_VIEW),   controller.getProducts);
+router.get('/:id',  hasPermission(PERMISSIONS.PRODUCTS_VIEW),   controller.getProductById);
 
-router.post('/', hasPermission(PERMISSIONS.PRODUCTS_CREATE), controller.createProduct);
-router.put('/:id', hasPermission(PERMISSIONS.PRODUCTS_EDIT), controller.updateProduct);
+router.post('/',    hasPermission(PERMISSIONS.PRODUCTS_CREATE),  controller.createProduct);
+router.put('/:id',  hasPermission(PERMISSIONS.PRODUCTS_EDIT),    controller.updateProduct);
 router.delete('/:id', hasPermission(PERMISSIONS.PRODUCTS_DELETE), controller.deleteProduct);
 
 module.exports = router;

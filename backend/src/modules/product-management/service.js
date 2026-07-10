@@ -1,14 +1,3 @@
-// class ProductPageService {
-//   async fetchDetails() {
-//     // Skeletons to be populated by development teams
-//     return {
-//       module: 'Product Management',
-//       status: 'Under Development'
-//     };
-//   }
-// }
-
-// module.exports = new ProductPageService();
 const mongoose = require('mongoose');
 const Product = require('./model');
 
