@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+//const bcrypt = require('bcryptjs');
 const ReturnsRefundsPage = require('./model');
 
 const LocalTransaction = mongoose.models.LocalTransaction || mongoose.model('LocalTransaction', new mongoose.Schema({}, { strict: false }), 'transactions');
@@ -187,7 +187,7 @@ class ReturnsRefundsPageService {
     return await returnRequest.save();
   }
 
-  async processRefund(returnId, refundMethod, managerEmail, managerPassword, pointsDeducted = 0) {
+  /*async processRefund(returnId, refundMethod, managerEmail, managerPassword, pointsDeducted = 0) {
     if (!managerEmail || !managerPassword) {
       throw { statusCode: 400, message: 'Manager authorization credentials are required.' };
     }
@@ -230,7 +230,44 @@ class ReturnsRefundsPageService {
     returnRequest.pointsDeducted = pointsDeducted;
 
     return await returnRequest.save();
+  }*/
+
+  async processRefund(returnId, refundMethod, managerEmail, managerPassword, pointsDeducted = 0) {
+    // 1. Mock Manager Verification
+    if (!managerEmail || !managerPassword) {
+      throw { statusCode: 400, message: 'Manager authorization credentials are required.' };
+    }
+    if (managerEmail !== 'admin@retailsync.com' || managerPassword !== 'Admin@123') {
+      throw { statusCode: 401, message: 'Invalid Manager Credentials!' };
+    }
+
+    // 2. Return Request
+    const returnRequest = await ReturnsRefundsPage.findOne({ returnId: returnId });
+    if (!returnRequest) throw { statusCode: 404, message: 'Return request not found.' };
+
+    
+    if (pointsDeducted > 0 && returnRequest.transactionRef) {
+      const trans = await LocalTransaction.findById(returnRequest.transactionRef);
+      
+      if (trans && trans.get('customerId')) {
+        const customerId = trans.get('customerId');
+        
+       
+        await LocalCustomer.findByIdAndUpdate(customerId, {
+          $inc: { loyaltyPoints: -pointsDeducted }
+        });
+        console.log(`[SUCCESS] Deducted ${pointsDeducted} points from Customer ID: ${customerId}`);
+      }
+    }
+
+    // Update Return Request
+    returnRequest.status = 'Refund Issued';
+    returnRequest.refundMethod = refundMethod;
+    returnRequest.pointsDeducted = pointsDeducted;
+
+    return await returnRequest.save();
   }
+  
 }
 
 module.exports = new ReturnsRefundsPageService();

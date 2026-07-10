@@ -75,7 +75,6 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-<<<<<<< HEAD
     department: {
       type: String,
       trim: true,
@@ -93,12 +92,10 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-=======
     isEmailVerified: {
     type: Boolean,
     default: false,
   },
->>>>>>> origin/dev
   },
 
 

@@ -2,14 +2,11 @@ import { useState, useEffect } from 'react';
 import { User, Mail, Lock, Phone, Shield, Building2, ImageIcon, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../../components/Button';
-<<<<<<< HEAD
 import { useBranches } from '../../hooks/useBranches';
 import { useRoles } from '../../hooks/useRoles';
 
 
-=======
 import api from '../../services/api'; // Safe centralized Axios instance wrapper
->>>>>>> origin/dev
 
 const STATUSES = [
   { value: 'ACTIVE', label: 'Active' },
@@ -118,16 +115,11 @@ const validate = (form, isEdit = false) => {
 };
 
 // ─── UserForm ─────────────────────────────────────────────
-<<<<<<< HEAD
-export default function UserForm({ initialData = null, onSubmit, onCancel, isLoading = false, currentUserRole }) {
-=======
+//export default function UserForm({ initialData = null, onSubmit, onCancel, isLoading = false, currentUserRole }) {
 export default function UserForm({ initialData = null, onSubmit, onCancel, isLoading = false, branches = [] }) {
->>>>>>> origin/dev
   const isEdit = Boolean(initialData);
   const { data: branchesData } = useBranches();
-  const branches = branchesData || [];
 
-<<<<<<< HEAD
   const { data: rolesData } = useRoles();
   const allRoles = rolesData?.data || [];
 
@@ -139,11 +131,9 @@ const roles = currentUserRole === 'BRANCH_MANAGER'
 console.log('currentUserRole:', currentUserRole);
 console.log('allRoles:', allRoles);
 console.log('roles:', roles);
-=======
   // Dynamic storage state array container for database roles
   const [dbRoles, setDbRoles] = useState([]);
 
->>>>>>> origin/dev
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -152,14 +142,11 @@ console.log('roles:', roles);
     password: '',
     phoneNumber: '',
     profileImage: '',
-<<<<<<< HEAD
     profileImageFile: null,
     roleId: '',    
     branchId: '',
-=======
     role: '', 
     branch: '',
->>>>>>> origin/dev
     status: 'ACTIVE',
     ...initialData,
   });
@@ -185,27 +172,7 @@ console.log('roles:', roles);
 
   // Sync initialData cleanly
   useEffect(() => {
-<<<<<<< HEAD
-  if (initialData) {
-    setForm({
-      firstName: '',
-      lastName: '',
-      username: '',
-      email: '',
-      password: '',
-      phoneNumber: '',
-      profileImage: '',
-      profileImageFile: null,
-      roleId: '',
-      branchId: '',
-      status: 'ACTIVE',
-      ...initialData,
-      roleId: initialData.roleId?._id || initialData.roleId || '',
-      branchId: initialData.branchId?._id || initialData.branchId || '',
-    });
-  }
-}, [initialData]);
-=======
+
     if (initialData) {
       setForm({
         firstName: '',
@@ -224,7 +191,6 @@ console.log('roles:', roles);
       });
     }
   }, [initialData]);
->>>>>>> origin/dev
 
   const set = (field) => (e) => {
     const value = e.target.value;
@@ -245,9 +211,7 @@ console.log('roles:', roles);
       return;
     }
 
-<<<<<<< HEAD
     // Build payload — strip password if empty in edit mode
-    const payload = new FormData();
     const formCopy = { ...form };
     if (isEdit && !formCopy.password) delete formCopy.password;
     if (!formCopy.branchId) formCopy.branchId = '';
@@ -266,7 +230,6 @@ console.log('roles:', roles);
       payload.append('profileImage', form.profileImage);
     }
 
-=======
     const payload = {
       firstName: form.firstName,
       lastName: form.lastName,
@@ -284,7 +247,6 @@ console.log('roles:', roles);
     } else if (form.password) {
       payload.password = form.password;
     }
->>>>>>> origin/dev
 
     onSubmit(payload);
   };
@@ -412,7 +374,6 @@ console.log('roles:', roles);
           <Shield size={11} /> Role & Branch Assignment
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-<<<<<<< HEAD
           {currentUserRole !== 'BRANCH_MANAGER' && (
             <Field label="Role" required error={touched.roleId && errors.roleId}>
               <Select
@@ -446,7 +407,6 @@ console.log('roles:', roles);
               </Select>
             </Field>
           )}
-=======
           <Field label="Role" required error={touched.role && errors.role}>
             <Select
               icon={Shield}
@@ -476,7 +436,6 @@ console.log('roles:', roles);
               ))}
             </Select>
           </Field>
->>>>>>> origin/dev
         </div>
 
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">

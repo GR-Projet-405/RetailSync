@@ -1,11 +1,5 @@
 const express = require('express');
 const router = express.Router();
-<<<<<<< HEAD
-const controller = require('./controller');
-const { verifyToken, hasPermission } = require('../../middleware/auth.middleware');
-
-router.use(verifyToken);
-=======
 const controller = require('./branch.controller');
 const { verifyToken, hasRole, hasPermission } = require('../../middleware/auth.middleware');
 const { PERMISSIONS } = require('../../config/permissions');
@@ -42,7 +36,6 @@ router.get('/:id/employees', hasPermission(PERMISSIONS.BRANCHES_VIEW), asyncHand
 router.get('/:id/inventory-summary', hasPermission(PERMISSIONS.BRANCHES_VIEW), asyncHandler(controller.getBranchInventory));
 router.get('/:id/transfers', hasPermission(PERMISSIONS.BRANCHES_VIEW), asyncHandler(controller.getBranchTransfers));
 router.get('/:id/audit-logs', hasPermission(PERMISSIONS.AUDITLOGS_VIEW), asyncHandler(controller.getBranchAuditLogs));
->>>>>>> origin/dev
 
 router.get('/', hasPermission('branches.view'), controller.getBranches);
 

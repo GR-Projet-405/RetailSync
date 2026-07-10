@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import React from 'react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
@@ -36,7 +36,7 @@ export const MainLayout = ({ children }) => {
           */}
           
           {/* Temporary render to make the app work */}
-          {children}
+          {children || <Outlet/>}
           
         </main>
       </div>

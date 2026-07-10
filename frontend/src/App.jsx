@@ -79,6 +79,8 @@ function App() {
             
             {/* 4. CATCH-ALL ROUTE */}
             <Route path="/" element={<Navigate to="/dashboard" />} />
+            <Route path="/*" element={<AppRoutes/>} />
+
           </Routes>
         </BrowserRouter>
       </SidebarProvider>
