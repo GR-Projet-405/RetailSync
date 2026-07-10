@@ -24,8 +24,6 @@ const seedUsers = async () => {
     });
 
     const defaultPassword = 'Admin@123';
-    const salt = await bcrypt.genSalt(12);
-    const hashedPassword = await bcrypt.hash(defaultPassword, salt);
 
     const usersToSeed = [
       {

@@ -49,6 +49,14 @@ const seedBranches = async () => {
 
     console.log('Seeding branches...');
     
+    // Drop all existing indexes to clean up any legacy indexes (like branchCode_1)
+    try {
+      await Branch.collection.dropIndexes();
+      console.log('Cleaned old indexes on branches collection.');
+    } catch (err) {
+      // Ignore if collection does not exist or index drop fails
+    }
+    
     for (const branchData of branchesToSeed) {
       const existingBranch = await Branch.findOne({ code: branchData.code });
       if (!existingBranch) {
