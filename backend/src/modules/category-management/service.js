@@ -1,186 +1,196 @@
 const Category = require('./model');
 
-// ── Fetch All (list + filters + pagination) ───────────────────────────────────
-const fetchAll = async (query = {}) => {
-  const {
-    page = 1,
-    limit = 10,
-    search = '',
-    parentId,
-    isActive = true,
-  } = query;
-
-  const filter = { isActive: isActive === 'false' ? false : Boolean(isActive) };
-
-  if (parentId !== undefined) {
-    filter.parentId = parentId === 'null' ? null : parentId;
-  }
-
-  if (search) {
-    filter.name = { $regex: search, $options: 'i' };
-  }
-
-  const skip = (parseInt(page) - 1) * parseInt(limit);
-
-  const [categories, total] = await Promise.all([
-    Category.find(filter)
-      .populate('parentId', 'name code')
-      .populate('createdBy', 'firstName lastName email')
-      .populate('updatedBy', 'firstName lastName email')
-      .sort({ sortOrder: 1, name: 1 })
-      .skip(skip)
-      .limit(parseInt(limit)),
-    Category.countDocuments(filter),
-  ]);
-
-  return {
-    data: categories,
-    pagination: {
-      page: parseInt(page),
-      limit: parseInt(limit),
-      total,
-      pages: Math.ceil(total / parseInt(limit)),
-    },
-  };
-};
-
-// ── Fetch Single Category Detail ──────────────────────────────────────────────
-const fetchDetails = async (id) => {
-  const category = await Category.findById(id)
-    .populate('parentId', 'name code')
-    .populate('createdBy', 'firstName lastName email')
-    .populate('updatedBy', 'firstName lastName email');
-
-  if (!category) return null;
-
-  // Children and siblings in parallel
-  const [children, siblings] = await Promise.all([
-    Category.find({ parentId: id, isActive: true })
-      .select('name code isActive sortOrder')
-      .sort({ sortOrder: 1 }),
-
-    category.parentId
-      ? Category.find({
-          parentId: category.parentId,
-          _id: { $ne: id },
-          isActive: true,
-        }).select('name code isActive sortOrder')
-      : Promise.resolve([]),
-  ]);
-
-  // Stats placeholders — wire to Inventory/Product aggregates when ready
-  const stats = {
-    totalProducts: 0,
-    stockUnits: 0,
-    inventoryValue: 0,
-    lowStockItems: 0,
-  };
-
-  return { category, children, siblings, stats };
-};
-
-// ── Create ────────────────────────────────────────────────────────────────────
-const create = async (data) => {
-  // Duplicate name check under same parent
-  const existing = await Category.findOne({
-    name: { $regex: new RegExp(`^${data.name}$`, 'i') },
-    parentId: data.parentId || null,
-    isActive: true,
-  });
-
-  if (existing) {
-    throw new Error('Category with this name already exists under the same parent');
-  }
-
-  const category = await Category.create(data);
-
-  return Category.findById(category._id)
-    .populate('parentId', 'name code')
-    .populate('createdBy', 'firstName lastName email');
-};
-
-// ── Update ────────────────────────────────────────────────────────────────────
-const update = async (id, data, userId) => {
-  const category = await Category.findById(id);
-  if (!category) throw new Error('Category not found');
-
-  // Circular parent check
-  if (data.parentId && data.parentId.toString() === id.toString()) {
-    throw new Error('Category cannot be its own parent');
-  }
-
-  // Duplicate name check (excluding self)
-  if (data.name && data.name !== category.name) {
-    const existing = await Category.findOne({
-      name: { $regex: new RegExp(`^${data.name}$`, 'i') },
-      parentId: data.parentId !== undefined ? data.parentId : category.parentId,
-      isActive: true,
-      _id: { $ne: id },
-    });
-    if (existing) {
-      throw new Error('Category with this name already exists under the same parent');
+class CategoryService {
+  /**
+   * Returns categories. Supports both:
+   *  - unpaginated "give me everything" mode (used by dropdowns) when no
+   *    page/limit passed, or when limit is large (frontend passes limit=200)
+   *  - the standard paginated mode for the Category List screen
+   */
+  async getCategories({ page, limit, status, search, isActive } = {}) {
+    const query = {};
+    if (status && status !== 'All Status') query.status = status.toUpperCase();
+    if (search) query.name = { $regex: search, $options: 'i' };
+    // isActive filter (from Category List UI)
+    if (isActive !== undefined) {
+      query.isActive = isActive === 'false' ? false : Boolean(isActive);
     }
+
+    if (!page && !limit) {
+      const items = await Category.find(query).sort({ sortOrder: 1, name: 1 });
+      return { data: items };
+    }
+
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.max(1, Number(limit) || 20);
+    const skip = (pageNum - 1) * limitNum;
+
+    const [items, total] = await Promise.all([
+      Category.find(query)
+        .populate('parentCategory', 'name code')
+        .sort({ sortOrder: 1, name: 1 })
+        .skip(skip)
+        .limit(limitNum),
+      Category.countDocuments(query)
+    ]);
+
+    return {
+      data: items,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(total / limitNum) || 1,
+        totalPages: Math.ceil(total / limitNum) || 1
+      }
+    };
   }
 
-  const updated = await Category.findByIdAndUpdate(
-    id,
-    { ...data, updatedBy: userId },
-    { new: true, runValidators: true }
-  )
-    .populate('parentId', 'name code')
-    .populate('createdBy', 'firstName lastName email')
-    .populate('updatedBy', 'firstName lastName email');
+  async getCategoryById(id) {
+    const category = await Category.findById(id)
+      .populate('parentCategory', 'name code')
+      .populate('createdBy', 'firstName lastName')
+      .populate('updatedBy', 'firstName lastName');
 
-  return updated;
-};
+    if (!category) {
+      const err = new Error('Category not found.');
+      err.statusCode = 404;
+      throw err;
+    }
 
-// ── Soft Delete ───────────────────────────────────────────────────────────────
-const softDelete = async (id, userId) => {
-  const category = await Category.findById(id);
-  if (!category) throw new Error('Category not found');
+    // Cherry-picked: also return children and siblings for the detail view
+    const [children, siblings] = await Promise.all([
+      Category.find({ parentCategory: id, isActive: true })
+        .select('name code isActive sortOrder')
+        .sort({ sortOrder: 1 }),
+      category.parentCategory
+        ? Category.find({
+            parentCategory: category.parentCategory,
+            _id: { $ne: id },
+            isActive: true
+          }).select('name code isActive sortOrder')
+        : Promise.resolve([])
+    ]);
 
-  // Block if active children exist (BR-INV-005)
-  const children = await Category.find({ parentId: id, isActive: true });
-  if (children.length > 0) {
-    throw new Error(
-      `Cannot delete category with ${children.length} active sub-categories. Please deactivate them first.`
-    );
+    return { category, children, siblings };
   }
 
-  category.isActive = false;
-  category.updatedBy = userId;
-  await category.save();
+  async createCategory(payload, userId) {
+    const existing = await Category.findOne({ name: payload.name.trim() });
+    if (existing) {
+      const err = new Error(`Category '${payload.name}' already exists.`);
+      err.statusCode = 409;
+      throw err;
+    }
 
-  return { message: 'Category deleted successfully', id: category._id };
-};
+    const category = await Category.create({
+      ...payload,
+      createdBy: userId,
+      updatedBy: userId
+    });
 
-// ── Category Tree ─────────────────────────────────────────────────────────────
-const fetchTree = async () => {
-  const categories = await Category.find({ isActive: true })
-    .populate('createdBy', 'firstName lastName email')
-    .sort({ sortOrder: 1, name: 1 });
+    return Category.findById(category._id)
+      .populate('parentCategory', 'name code')
+      .populate('createdBy', 'firstName lastName');
+  }
 
-  const buildTree = (parentId = null) => {
-    return categories
-      .filter((c) => {
-        const cParent = c.parentId ? c.parentId.toString() : null;
-        const target = parentId ? parentId.toString() : null;
-        return cParent === target;
-      })
-      .map((c) => ({
-        ...c.toObject(),
-        children: buildTree(c._id),
-      }));
-  };
+  async updateCategory(id, payload, userId) {
+    const category = await Category.findById(id);
+    if (!category) {
+      const err = new Error('Category not found.');
+      err.statusCode = 404;
+      throw err;
+    }
 
-  return buildTree(null);
-};
+    // Circular parent check
+    if (payload.parentCategory && payload.parentCategory.toString() === id.toString()) {
+      const err = new Error('Category cannot be its own parent.');
+      err.statusCode = 400;
+      throw err;
+    }
 
-module.exports = {
-  fetchAll,
-  fetchDetails,
-  create,
-  update,
-  softDelete,
-  fetchTree,
-};
+    // Duplicate name check (excluding self)
+    if (payload.name && payload.name !== category.name) {
+      const existing = await Category.findOne({
+        name: { $regex: new RegExp(`^${payload.name}$`, 'i') },
+        _id: { $ne: id }
+      });
+      if (existing) {
+        const err = new Error(`Category '${payload.name}' already exists.`);
+        err.statusCode = 409;
+        throw err;
+      }
+    }
+
+    Object.assign(category, payload, { updatedBy: userId });
+    await category.save();
+    return category;
+  }
+
+  /**
+   * Soft-delete: deactivates the category instead of hard-deleting.
+   * Guards: cannot delete if active sub-categories exist.
+   * (Cherry-picked from Product Management branch — safer than hard delete)
+   */
+  async deleteCategory(id) {
+    const category = await Category.findById(id);
+    if (!category) {
+      const err = new Error('Category not found.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    // Guard: cannot delete if active sub-categories exist
+    const activeChildren = await Category.countDocuments({ parentCategory: id, isActive: true });
+    if (activeChildren > 0) {
+      const err = new Error(
+        `Cannot delete category with ${activeChildren} active sub-categories. Please deactivate them first.`
+      );
+      err.statusCode = 409;
+      throw err;
+    }
+
+    // Guard: don't delete a category that products still reference.
+    const Product = require('../product-management/model');
+    const inUse = await Product.exists({ category: id });
+    if (inUse) {
+      const err = new Error('This category is assigned to one or more products and cannot be deleted.');
+      err.statusCode = 409;
+      throw err;
+    }
+
+    // Soft-delete
+    category.isActive = false;
+    category.status = 'INACTIVE';
+    category.updatedBy = id; // will be overridden by caller context if userId passed
+    await category.save();
+
+    return { deleted: true, id, message: 'Category deactivated successfully.' };
+  }
+
+  /**
+   * Cherry-picked: recursive category tree for the hierarchy view.
+   */
+  async fetchTree() {
+    const categories = await Category.find({ isActive: true })
+      .populate('createdBy', 'firstName lastName')
+      .sort({ sortOrder: 1, name: 1 });
+
+    const buildTree = (parentId = null) => {
+      return categories
+        .filter((c) => {
+          const cParent = c.parentCategory ? c.parentCategory.toString() : null;
+          const target = parentId ? parentId.toString() : null;
+          return cParent === target;
+        })
+        .map((c) => ({
+          ...c.toObject(),
+          children: buildTree(c._id)
+        }));
+    };
+
+    return buildTree(null);
+  }
+}
+
+module.exports = new CategoryService();

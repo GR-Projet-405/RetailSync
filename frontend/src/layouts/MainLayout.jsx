@@ -1,18 +1,14 @@
-import { Outlet, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
+import React from 'react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import WorkspaceContainer from '../components/WorkspaceContainer';
-import { useSidebar } from '../contexts/SidebarContext';
 
-export const MainLayout = () => {
-  const { isSidebarOpen, closeMobileSidebar } = useSidebar();
-  const { pathname } = useLocation();
-  const fullBleedRoutes = ['/help-support', '/help-support/contact'];
-  const useContainer = !fullBleedRoutes.includes(pathname);
-
+// This file now accepts 'children' directly so we can use it in App.jsx
+export const MainLayout = ({ children }) => {
   return (
     <div
-      className="h-screen flex overflow-hidden relative"
+      className="relative flex h-screen overflow-hidden"
       style={{
         background: `
           radial-gradient(circle at top right, rgba(59,130,246,0.05), transparent 35%),
@@ -23,27 +19,25 @@ export const MainLayout = () => {
       {/* Sidebar navigation */}
       <Sidebar />
 
-      {/* Mobile backdrop overlay */}
-      {isSidebarOpen && (
-        <div
-          onClick={closeMobileSidebar}
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-20 lg:hidden transition-opacity duration-300"
-        />
-      )}
-
       {/* Main panel */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+      <div className="relative flex flex-col flex-1 min-w-0 overflow-hidden">
         <Navbar />
-
-        {/* Workspace Wrapper — scrollable outer area */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden relative p-4 sm:p-5 md:p-6">
+        {/* Workspace Wrapper */}
+        <main className="relative flex-1 p-4 overflow-x-hidden overflow-y-auto sm:p-5 md:p-6">
           {/* Workspace Container — frosted glass surface */}
+          {/* Commented out useContainer logic for now
           {useContainer ? (
-          <WorkspaceContainer>
+            <WorkspaceContainer>
+              {children} 
+            </WorkspaceContainer>
+          ) : (
             <Outlet />
-          </WorkspaceContainer>
-          ) : (<Outlet />
           )}
+          */}
+
+          {/* Temporary render to make the app work */}
+          {children || <Outlet />}
+
         </main>
       </div>
     </div>

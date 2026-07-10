@@ -58,6 +58,13 @@ class SupplierService {
     return { deleted: true, supplierId: supplier.supplierId };
   }
 
+  // ─── Deactivate supplier (soft delete for Goods Receiving) ──────────────────
+  async deactivateSupplier(id) {
+    const supplier = await Supplier.findByIdAndUpdate(id, { status: 'Inactive' }, { new: true });
+    if (!supplier) throw Object.assign(new Error('Supplier not found'), { statusCode: 404 });
+    return supplier;
+  }
+
   // ─── Contacts ─────────────────────────────────────────────────────────────
   async getContacts(supplierId) {
     const supplier = await Supplier.findById(supplierId).select('contacts name supplierId');

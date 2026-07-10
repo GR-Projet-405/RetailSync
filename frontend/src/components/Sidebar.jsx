@@ -20,7 +20,8 @@ const SidebarNavItem = ({ item, renderIcon, isSidebarCollapsed }) => {
   const hasChildren = visibleChildren.length > 0;
   const isChildActive = visibleChildren.some(
     (child) =>
-      location.pathname === child.path
+      location.pathname === child.path ||
+      location.pathname.startsWith(`${child.path}/`)
   );
   const [expanded, setExpanded] = useState(isChildActive);
 
@@ -126,7 +127,6 @@ export const Sidebar = () => {
   const { isSidebarCollapsed, isSidebarOpen, toggleSidebar } = useSidebar();
   const location = useLocation();
 
-  // Helper to render Lucide Icons by name dynamically
   const renderIcon = (iconName) => {
     const IconComponent = Icons[iconName];
     return IconComponent ? <IconComponent className="w-4 h-4 shrink-0" /> : null;
