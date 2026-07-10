@@ -68,6 +68,7 @@ import AIAlertsPage from '../pages/AIAlertsPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import SystemEventsPage from '../features/system-events/SystemEventsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
+import HelpCenterDashboard from '../pages/help-center/HelpCenterDashboard';
 import GoodsReceiptForm from '../features/Goods-receiving/GoodsReceiptForm';
 import ReceivingItemsHistory from '../features/Goods-receiving/ReceivedItemsHistory';
 import VerificationScreen from '../features/Goods-receiving/VerificationScreen';
@@ -149,6 +150,13 @@ export const AppRoutes = () => {
         <Route path="/notifications" element={
           <ProtectedRoute allowedRoles={ALL_ROLES}>
             <NotificationsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Help Center Dashboard */}
+        <Route path="/help-center/dashboard" element={
+          <ProtectedRoute allowedRoles={ALL_ROLES}>
+            <HelpCenterDashboard />
           </ProtectedRoute>
         } />
 
