@@ -1,35 +1,16 @@
 const express = require('express');
+const authController = require('./controller');
+const { verifyToken } = require('../../middleware/auth.middleware');
+
 const router = express.Router();
-const jwt = require('jsonwebtoken');
 
-// Hardcoded mock users
-const USERS = [
-  { email: 'admin@retailsync.com', password: 'Admin@123', role: 'ADMIN' },
-  { email: 'manager@retailsync.com', password: 'Admin@123', role: 'BRANCH_MANAGER' },
-  { email: 'employee@retailsync.com', password: 'Admin@123', role: 'EMPLOYEE' },
-];
-
-// LOGIN ROUTE
-router.post('/login', (req, res) => {
-  console.log("========== LOGIN ATTEMPT RECEIVED ==========");
-  console.log("1. Headers:", req.headers);
-  console.log("2. Body received:", req.body);
-
-  const { email, password } = req.body;
-
-  // Check if body is empty
-  if (!email || !password) {
-    console.log("3. ERROR: Email or Password missing!");
-    return res.status(400).json({ message: 'Email and password are required' });
-  }
-
-  console.log("4. Looking for user:", email);
-  const user = USERS.find(u => u.email === email && u.password === password);
-
-  if (!user) {
-    console.log("5. FAILED: User not found or password mismatch");
-    return res.status(401).json({ message: 'Invalid email or password' });
-  }
+// Public routes
+router.post('/register', authController.register);
+router.post('/verify-otp', authController.verifyOTP);
+router.post('/resend-otp', authController.resendOTP);
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
+router.post('/login', authController.login);
 
   console.log("6. SUCCESS: User found!");
   const token = jwt.sign(
@@ -45,5 +26,11 @@ router.post('/login', (req, res) => {
     user: { email: user.email, role: user.role }
   });
 });
+router.get('/available-roles', authController.getAvailableRoles);
+router.post('/select-role', authController.selectRole);
+
+// Protected routes
+router.post('/logout', authController.logout);
+router.get('/me', verifyToken, authController.getMe);
 
 module.exports = router;

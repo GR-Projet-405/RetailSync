@@ -2,6 +2,10 @@ const Branch = require('./branch.model');
 const User = require('../user-management/user.model');
 const { createLog } = require('../audit-logs/auditLog.service');
 const mongoose = require('mongoose');
+const inventoryService = require('../inventory-management/service');
+const StockTransfer = require('../stock-transfers/model');
+const Sale = require('../../../models/Sale');
+const Inventory = require('../inventory-management/model');
 
 const getBranches = async (query = {}) => {
   const { page = 1, limit = 10, search, status, manager, city } = query;
@@ -213,19 +217,190 @@ const assignManager = async (branchId, newManagerId, performedBy) => {
 };
 
 const getBranchDashboard = async (branchId) => {
-  // Mock data for dashboard as per SRS
+  // First verify branch exists
+  await getBranchById(branchId);
+
+  const now = new Date();
+  
+  // 1. Today's range
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
+  // 2. Current Month's range
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  // 3. Last 6 Months' range
+  const months = [];
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      year: d.getFullYear(),
+      monthNum: d.getMonth() + 1,
+      monthName: monthNames[d.getMonth()],
+      revenue: 0
+    });
+  }
+
+  const sixMonthsAgoStart = new Date(months[0].year, months[0].monthNum - 1, 1, 0, 0, 0, 0);
+
+  // Concurrency using Promise.all()
+  const [todayResult, monthResult, trendData, inventoryValResult, lowStockCount, transfersCount, staffResult] = await Promise.all([
+    Sale.aggregate([
+      {
+        $match: {
+          branch: new mongoose.Types.ObjectId(branchId),
+          status: 'completed',
+          createdAt: { $gte: todayStart, $lte: todayEnd }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$totalAmount' }
+        }
+      }
+    ]),
+    Sale.aggregate([
+      {
+        $match: {
+          branch: new mongoose.Types.ObjectId(branchId),
+          status: 'completed',
+          createdAt: { $gte: startOfMonth, $lte: endOfMonth }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$totalAmount' }
+        }
+      }
+    ]),
+    Sale.aggregate([
+      {
+        $match: {
+          branch: new mongoose.Types.ObjectId(branchId),
+          status: 'completed',
+          createdAt: { $gte: sixMonthsAgoStart }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' }
+          },
+          revenue: { $sum: '$totalAmount' }
+        }
+      }
+    ]),
+    Inventory.aggregate([
+      {
+        $match: {
+          branchId: new mongoose.Types.ObjectId(branchId)
+        }
+      },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'productId',
+          foreignField: '_id',
+          as: 'product'
+        }
+      },
+      {
+        $unwind: {
+          path: '$product',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalValue: {
+            $sum: {
+              $multiply: [
+                '$quantity',
+                { $ifNull: ['$product.costPrice', 0] }
+              ]
+            }
+          }
+        }
+      }
+    ]),
+    Inventory.countDocuments({
+      branchId: new mongoose.Types.ObjectId(branchId),
+      $expr: { $lte: ['$quantity', '$reorderLevel'] }
+    }),
+    StockTransfer.countDocuments({
+      $or: [
+        { sourceBranch: new mongoose.Types.ObjectId(branchId) },
+        { destinationBranch: new mongoose.Types.ObjectId(branchId) }
+      ],
+      status: 'PENDING'
+    }),
+    User.countDocuments({
+      branchId: new mongoose.Types.ObjectId(branchId),
+      status: 'ACTIVE'
+    })
+  ]);
+
+  const todaySales = todayResult[0]?.total || 0;
+  const monthlySales = monthResult[0]?.total || 0;
+  const currentStockValue = inventoryValResult[0]?.totalValue || 0;
+  const lowStockItemsCount = lowStockCount || 0;
+  const pendingTransfers = transfersCount || 0;
+  const staffCount = staffResult || 0;
+
+  // Populate actual revenue into last 6 months list, filling missing months with 0
+  trendData.forEach(item => {
+    const matched = months.find(m => m.year === item._id.year && m.monthNum === item._id.month);
+    if (matched) {
+      matched.revenue = item.revenue;
+    }
+  });
+
+  const salesTrend = months.map(m => ({
+    month: m.monthName,
+    revenue: m.revenue
+  }));
+
+  // Return real calculated metrics for all branch KPIs
   return {
-    todaySales: Math.floor(Math.random() * 100000) + 10000,
-    monthlySales: Math.floor(Math.random() * 3000000) + 500000,
-    currentStockValue: Math.floor(Math.random() * 5000000) + 1000000,
-    lowStockItemsCount: Math.floor(Math.random() * 50),
-    staffCount: Math.floor(Math.random() * 30) + 5,
-    pendingTransfers: Math.floor(Math.random() * 10),
-    salesTrend: Array.from({ length: 6 }, (_, i) => ({
-      month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'][i],
-      revenue: Math.floor(Math.random() * 10000000) + 15000000
-    }))
+    todaySales,
+    monthlySales,
+    monthlyRevenue: monthlySales, // alias support
+    currentStockValue,
+    lowStockItemsCount,
+    staffCount,
+    pendingTransfers,
+    salesTrend
   };
+};
+
+const getBranchInventory = async (branchId) => {
+  await getBranchById(branchId);
+  return await inventoryService.getBranchInventory(branchId);
+};
+
+const getBranchTransfers = async (branchId) => {
+  await getBranchById(branchId);
+  return await StockTransfer.find({
+    $or: [
+      { sourceBranch: branchId },
+      { destinationBranch: branchId }
+    ]
+  })
+  .populate('sourceBranch')
+  .populate('destinationBranch')
+  .populate('items.productId')
+  .populate('createdBy', 'firstName lastName username email')
+  .populate('updatedBy', 'firstName lastName username email')
+  .sort({ createdAt: -1 });
 };
 
 const getAdminDashboardSummary = async () => {
@@ -283,5 +458,7 @@ module.exports = {
   getBranchDashboard,
   getAdminDashboardSummary,
   getBranchEmployees,
-  getActiveBranches
+  getActiveBranches,
+  getBranchInventory,
+  getBranchTransfers
 };

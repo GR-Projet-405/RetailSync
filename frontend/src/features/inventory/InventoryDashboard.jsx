@@ -7,10 +7,11 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useDashboardKPIs, useCategoryBreakdown, useDashboardRecentMovements } from '../../hooks/useInventory';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Static 
 
-const BRANCHES = ['Colombo', 'Kandy', 'Galle'];
+const FALLBACK_BRANCHES = ['Colombo', 'Kandy', 'Galle'];
 
 // Colour palette cycled over dynamic categories from the API
 const CAT_COLORS = ['#22C55E','#14B8A6','#8B5CF6','#F97316','#3B82F6','#EC4899','#F59E0B','#EF4444'];
@@ -243,9 +244,9 @@ function ForecastLineChart({ data }) {
 
 //  Branch Dropdown 
 
-function BranchDropdown({ activeBranch, onChange }) {
+function BranchDropdown({ activeBranch, onChange, options = [] }) {
   const [open, setOpen] = useState(false);
-  const options = ['All Branches', ...BRANCHES];
+  const dropdownOptions = ['All Branches', ...(options.length > 0 ? options : FALLBACK_BRANCHES)];
 
   return (
     <div className="relative">
@@ -261,7 +262,7 @@ function BranchDropdown({ activeBranch, onChange }) {
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 fade-in overflow-hidden">
-            {options.map(b => (
+            {dropdownOptions.map(b => (
               <button
                 key={b}
                 onClick={() => { onChange(b); setOpen(false); }}
@@ -317,6 +318,7 @@ function KPICard({ label, value, trend, up, badWhenUp, onClick, linkLabel }) {
 
 export default function InventoryDashboard() {
   const navigate = useNavigate();
+  const { branches = [] } = useAuth();
   const [activeBranch, setActiveBranch] = useState('All Branches');
 
   const { data: apiKPIs,       isLoading: kpiLoading  } = useDashboardKPIs();
@@ -355,7 +357,7 @@ export default function InventoryDashboard() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Inventory Dashboard</h1>
         </div>
-        <BranchDropdown activeBranch={activeBranch} onChange={setActiveBranch} />
+        <BranchDropdown activeBranch={activeBranch} onChange={setActiveBranch} options={branches} />
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">

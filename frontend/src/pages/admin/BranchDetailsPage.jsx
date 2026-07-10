@@ -10,11 +10,14 @@ import { BranchStatusBadge } from '../../components/branch/BranchStatusBadge';
 import { BranchKpiCard } from '../../components/branch/BranchKpiCard';
 import { RecentActivityTimeline } from '../../components/branch/RecentActivityTimeline';
 import DataTable from '../../components/DataTable';
+import Badge from '../../components/Badge';
+import { BranchForm } from '../../components/branch/BranchForm';
 
 const BranchDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   const { data: response, isLoading } = useQuery({
     queryKey: ['branch', id],
@@ -36,6 +39,94 @@ const BranchDetailsPage = () => {
     queryFn: () => branchApi.getBranchAuditLogs(id),
   });
 
+  const { data: inventoryResponse, isLoading: isInventoryLoading, isError: isInventoryError } = useQuery({
+    queryKey: ['branch', id, 'inventory-summary'],
+    queryFn: () => branchApi.getBranchInventory(id),
+    enabled: activeTab === 'inventory',
+  });
+
+  const { data: transfersResponse, isLoading: isTransfersLoading, isError: isTransfersError } = useQuery({
+    queryKey: ['branch', id, 'transfers'],
+    queryFn: () => branchApi.getBranchTransfers(id),
+    enabled: activeTab === 'transfers',
+  });
+
+  const inventoryColumns = [
+    {
+      header: 'Product',
+      key: 'productId',
+      render: (row) => row.productId?.name || '-',
+    },
+    {
+      header: 'SKU',
+      key: 'sku',
+      render: (row) => row.productId?.sku || '-',
+    },
+    {
+      header: 'Quantity',
+      key: 'quantity',
+      render: (row) => row.quantity ?? 0,
+    },
+    {
+      header: 'Reorder Level',
+      key: 'reorderLevel',
+      render: (row) => row.reorderLevel ?? 0,
+    },
+    {
+      header: 'Status',
+      key: 'status',
+      render: (row) => {
+        const isLow = (row.quantity ?? 0) <= (row.reorderLevel ?? 10);
+        const statusVal = row.quantity === 0 ? 'OUT OF STOCK' : (isLow ? 'LOW STOCK' : 'IN STOCK');
+        return <BranchStatusBadge status={statusVal} />;
+      }
+    }
+  ];
+
+  const transferColumns = [
+    {
+      header: 'Transfer Number',
+      key: 'transferNumber',
+      render: (row) => <span className="font-semibold text-blue-600">{row.transferNumber}</span>,
+    },
+    {
+      header: 'Source Branch',
+      key: 'sourceBranch',
+      render: (row) => row.sourceBranch?.branchName || row.sourceBranch?.name || '-',
+    },
+    {
+      header: 'Destination Branch',
+      key: 'destinationBranch',
+      render: (row) => row.destinationBranch?.branchName || row.destinationBranch?.name || '-',
+    },
+    {
+      header: 'Status',
+      key: 'status',
+      render: (row) => {
+        let variant = 'primary';
+        if (row.status === 'DELIVERED') variant = 'success';
+        if (row.status === 'PENDING') variant = 'warning';
+        if (row.status === 'CANCELLED' || row.status === 'REJECTED') variant = 'danger';
+        return <Badge variant={variant}>{row.status}</Badge>;
+      },
+    },
+    {
+      header: 'Total Items',
+      key: 'items',
+      render: (row) => row.items?.length || 0,
+    },
+    {
+      header: 'Created Date',
+      key: 'createdAt',
+      render: (row) => new Date(row.createdAt).toLocaleDateString(),
+    },
+    {
+      header: 'Created By',
+      key: 'createdBy',
+      render: (row) => row.createdBy ? `${row.createdBy.firstName} ${row.createdBy.lastName}` : '-',
+    }
+  ];
+
   if (isLoading) {
     return <div className="flex h-[400px] items-center justify-center"><Spinner size="lg" /></div>;
   }
@@ -51,6 +142,7 @@ const BranchDetailsPage = () => {
     { id: 'overview', label: 'Overview', icon: Icons.LayoutDashboard },
     { id: 'employees', label: 'Employees', icon: Icons.Users },
     { id: 'inventory', label: 'Inventory', icon: Icons.Package },
+    { id: 'transfers', label: 'Transfers', icon: Icons.ArrowLeftRight },
   ];
 
   return (
@@ -80,7 +172,7 @@ const BranchDetailsPage = () => {
           </div>
           <p className="text-sm text-slate-500">{branch.address?.district}</p>
         </div>
-        <Button variant="outline" icon={Icons.Edit}>Edit</Button>
+        <Button variant="outline" icon={Icons.Edit} onClick={() => setIsFormOpen(true)}>Edit</Button>
       </div>
 
       {/* Info Cards */}
@@ -123,29 +215,41 @@ const BranchDetailsPage = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <BranchKpiCard 
-          title="Monthly Revenue"
-          value={`Rs. ${(kpis.monthlySales / 1000000).toFixed(1)}M`}
-          icon={Icons.Coins}
-          variant="primary"
-        />
-        <BranchKpiCard 
-          title="Total Employees"
-          value={kpis.staffCount?.toString()}
-          icon={Icons.Users}
+          title="Today's Sales"
+          value={`Rs. ${kpis.todaySales?.toLocaleString() || '0'}`}
+          icon={Icons.Banknote}
           variant="success"
         />
         <BranchKpiCard 
-          title="Total Orders"
-          value="9,840"
-          icon={Icons.ShoppingCart}
+          title="Monthly Sales"
+          value={`Rs. ${(kpis.monthlySales / 1000000).toFixed(2)}M`}
+          icon={Icons.TrendingUp}
+          variant="primary"
+        />
+        <BranchKpiCard 
+          title="Stock Value"
+          value={`Rs. ${(kpis.currentStockValue / 1000000).toFixed(2)}M`}
+          icon={Icons.Coins}
           variant="warning"
         />
         <BranchKpiCard 
-          title="Inventory Items"
-          value="240"
-          icon={Icons.Package}
+          title="Low Stock Items"
+          value={kpis.lowStockItemsCount?.toString() || '0'}
+          icon={Icons.AlertOctagon}
+          variant="danger"
+        />
+        <BranchKpiCard 
+          title="Pending Transfers"
+          value={kpis.pendingTransfers?.toString() || '0'}
+          icon={Icons.ArrowLeftRight}
+          variant="info"
+        />
+        <BranchKpiCard 
+          title="Staff Count"
+          value={kpis.staffCount?.toString() || '0'}
+          icon={Icons.Users}
         />
       </div>
 
@@ -192,16 +296,18 @@ const BranchDetailsPage = () => {
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-800 mb-4">Performance Summary</h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between border-b border-slate-100 pb-2">
-                      <span className="text-sm text-slate-500">Monthly Revenue</span>
-                      <span className="text-sm font-medium text-slate-800">Rs. {(kpis.monthlySales / 1000000).toFixed(2)}M</span>
-                    </div>
-                    <div className="flex justify-between border-b border-slate-100 pb-2">
-                      <span className="text-sm text-slate-500">Growth Rate</span>
-                      <span className="text-sm font-medium text-emerald-600">+12.4%</span>
-                    </div>
+                  <h3 className="text-sm font-bold text-slate-800 mb-4">Sales Trend (Last 6 Months)</h3>
+                  <div className="space-y-2 max-h-[140px] overflow-y-auto">
+                    {kpis.salesTrend && kpis.salesTrend.length > 0 ? (
+                      kpis.salesTrend.map((trend, idx) => (
+                        <div key={idx} className="flex justify-between border-b border-slate-100 pb-1 text-xs">
+                          <span className="text-slate-500">{trend.month}</span>
+                          <span className="font-semibold text-slate-800">Rs. {trend.revenue?.toLocaleString()}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-xs text-slate-400 italic">No trend data available</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -211,9 +317,9 @@ const BranchDetailsPage = () => {
               <div>
                 <DataTable 
                   columns={[
-                    { header: 'Name', accessorKey: 'firstName', cell: (_, row) => `${row.firstName} ${row.lastName}` },
-                    { header: 'Role', accessorKey: 'roleId', cell: (val) => val?.name?.replace('_', ' ') },
-                    { header: 'Status', accessorKey: 'status', cell: (val) => <BranchStatusBadge status={val} /> },
+                    { header: 'Name', key: 'firstName', render: (row) => `${row.firstName} ${row.lastName}` },
+                    { header: 'Role', key: 'roleId', render: (row) => row.roleId?.name?.replace('_', ' ') || '-' },
+                    { header: 'Status', key: 'status', render: (row) => <BranchStatusBadge status={row.status} /> },
                   ]}
                   data={employeesResponse?.data || []}
                   pagination={{ currentPage: 1, totalPages: 1 }}
@@ -223,9 +329,47 @@ const BranchDetailsPage = () => {
 
             {activeTab === 'inventory' && (
               <div>
-                <div className="text-center text-slate-500 py-8">
-                  Inventory details will load here from the Inventory module.
-                </div>
+                {isInventoryLoading ? (
+                  <div className="flex justify-center items-center py-12">
+                    <Spinner size="md" />
+                  </div>
+                ) : isInventoryError ? (
+                  <div className="text-center text-rose-600 py-8 border border-rose-100 bg-rose-50/50 rounded-xl">
+                    Failed to load inventory details. Please try again.
+                  </div>
+                ) : !inventoryResponse?.data || inventoryResponse.data.length === 0 ? (
+                  <div className="text-center text-slate-500 py-12 border border-dashed border-slate-200 rounded-xl">
+                    No inventory records found for this branch.
+                  </div>
+                ) : (
+                  <DataTable 
+                    columns={inventoryColumns}
+                    data={inventoryResponse.data}
+                  />
+                )}
+              </div>
+            )}
+
+            {activeTab === 'transfers' && (
+              <div>
+                {isTransfersLoading ? (
+                  <div className="flex justify-center items-center py-12">
+                    <Spinner size="md" />
+                  </div>
+                ) : isTransfersError ? (
+                  <div className="text-center text-rose-600 py-8 border border-rose-100 bg-rose-50/50 rounded-xl">
+                    Failed to load stock transfers. Please try again.
+                  </div>
+                ) : !transfersResponse?.data || transfersResponse.data.length === 0 ? (
+                  <div className="text-center text-slate-500 py-12 border border-dashed border-slate-200 rounded-xl">
+                    No stock transfers found for this branch.
+                  </div>
+                ) : (
+                  <DataTable 
+                    columns={transferColumns}
+                    data={transfersResponse.data}
+                  />
+                )}
               </div>
             )}
           </div>
@@ -243,6 +387,11 @@ const BranchDetailsPage = () => {
         </div>
       </div>
 
+      <BranchForm 
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        initialData={branch}
+      />
     </div>
   );
 };
