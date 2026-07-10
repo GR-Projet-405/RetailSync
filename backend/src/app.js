@@ -27,7 +27,6 @@ app.get('/health', (req, res) => {
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-
 app.use('/api/sales', require('../routes/salesRoutes'));
 
 // Pre-load core models to avoid MissingSchemaError during population

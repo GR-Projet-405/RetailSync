@@ -4,6 +4,7 @@ import { cn } from '../../utils/cn';
 import Button from '../../components/Button';
 import { useBranches } from '../../hooks/useBranches';
 import { useRoles } from '../../hooks/useRoles';
+
 import api from '../../services/api'; // Safe centralized Axios instance wrapper
 
 const STATUSES = [
@@ -164,6 +165,7 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
 
   // Sync initialData cleanly
   useEffect(() => {
+
     if (initialData) {
       setForm({
         firstName: '',
@@ -213,7 +215,6 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
       roleId: resolvedRoleId,
       branchId: resolvedBranchId
     };
-
     if (isEdit && !formCopy.password) delete formCopy.password;
     if (!formCopy.branchId) formCopy.branchId = '';
     if (!formCopy.phoneNumber) formCopy.phoneNumber = '';
@@ -230,6 +231,7 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
     } else if (form.profileImage) {
       payload.append('profileImage', form.profileImage);
     }
+
 
     onSubmit(payload);
   };
