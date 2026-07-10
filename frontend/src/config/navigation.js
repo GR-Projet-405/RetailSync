@@ -26,6 +26,13 @@ export const NAVIGATION_GROUPS = [
         allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]
       },
       {
+        id: 'system-events',
+        name: 'System Events',
+        path: '/system-events',
+        icon: 'Activity',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]
+      },
+      {
         id: 'user-actions',
         name: 'User Actions',
         path: '/user-actions',
@@ -50,6 +57,20 @@ export const NAVIGATION_GROUPS = [
             name: 'Support Ticket System',
             path: '/help-support',
             icon: 'LifeBuoy',
+            allowedRoles: Object.values(ROLES)
+          },
+          {
+            id: 'contact-support',
+            name: 'Contact Support',
+            path: '/help-support/contact',
+            icon: 'MessageCircle',
+            allowedRoles: Object.values(ROLES)
+          },
+          {
+            id: 'faq',
+            name: 'FAQ',
+            path: '/faq',
+            icon: 'CircleHelp',
             allowedRoles: Object.values(ROLES)
           }
         ]
@@ -95,9 +116,16 @@ export const NAVIGATION_GROUPS = [
       {
         id: 'branch-management',
         name: 'Branch Management',
-        path: '/branches',
+        path: '/admin/branches',
         icon: 'GitFork',
         allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN]
+      },
+      {
+        id: 'my-branch',
+        name: 'My Branch',
+        path: '/branch/dashboard',
+        icon: 'Store',
+        allowedRoles: [ROLES.BRANCH_MANAGER]
       },
       {
         id: 'warehouse-management',
@@ -213,6 +241,13 @@ export const NAVIGATION_GROUPS = [
         allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
       },
       {
+        id: 'payment-history',
+        name: 'Payment History',
+        path: '/payment-history',
+        icon: 'FileText',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
+      },
+      {
         id: 'sales-history',
         name: 'Sales History',
         path: '/sales-history',
@@ -304,7 +339,68 @@ export const NAVIGATION_GROUPS = [
         name: 'AI Reordering',
         path: '/ai-reordering',
         icon: 'Brain',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER],
+
+        children: [
+          {
+            id: 'recommendation',
+            name: 'Recommendation',
+            path: '/ai-reordering/recommendation',
+            icon: 'ClipboardList',
+            allowedRoles: [
+              ROLES.SUPER_ADMIN,
+              ROLES.ADMIN,
+              ROLES.BRANCH_MANAGER
+            ]
+          },
+          {
+            id: 'suggested-purchase-list',
+            name: 'Suggested Purchase List',
+            path: '/ai-reordering/purchase-list',
+            icon: 'ShoppingCart',
+            allowedRoles: [
+              ROLES.SUPER_ADMIN,
+              ROLES.ADMIN,
+              ROLES.BRANCH_MANAGER
+            ]
+          },
+          {
+            id: "approval-workflow",
+            name: "Approval Workflow",
+            path: "/ai-reordering/approval-workflow",
+            icon: "CheckCircle",
+            allowedRoles: [
+              ROLES.SUPER_ADMIN,
+              ROLES.ADMIN,
+              ROLES.BRANCH_MANAGER,
+            ],
+          },
+
+          {
+            id: "reorder-history",
+            name: "Reorder History",
+            path: "/ai-reordering/history",
+            icon: "History",
+            allowedRoles: [
+              ROLES.SUPER_ADMIN,
+              ROLES.ADMIN,
+              ROLES.BRANCH_MANAGER,
+            ],
+          },
+
+          {
+            id: "inventory-prediction",
+            name: "Inventory Prediction",
+            path: "/ai-reordering/inventory-prediction",
+            icon: "TrendingUp",
+            allowedRoles: [
+              ROLES.SUPER_ADMIN,
+              ROLES.ADMIN,
+              ROLES.BRANCH_MANAGER,
+            ],
+          },
+        ]
+
       },
       {
         id: 'ai-assistant',
@@ -312,6 +408,13 @@ export const NAVIGATION_GROUPS = [
         path: '/ai-assistant',
         icon: 'MessageSquareCode',
         allowedRoles: Object.values(ROLES)
+      },
+      {
+        id: 'ai-alerts',
+        name: 'AI Anomalies & Alerts',
+        path: '/ai-alerts',
+        icon: 'BellRing',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]
       }
     ]
   }

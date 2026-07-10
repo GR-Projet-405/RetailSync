@@ -6,6 +6,7 @@ import Badge from '../../components/Badge';
 import Modal from '../../components/Modal';
 import { Ticket, Plus, Copy, Check, Users, Calendar, Info, MapPin, ChevronDown, Edit2, Trash2, Play, Pause } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import api from '../../services/api';
 
 export default function CouponManagementPage() {
   const { user, hasRole } = useAuth();
@@ -30,11 +31,58 @@ export default function CouponManagementPage() {
     discountValue: '',
     usageLimit: 'Unlimited',
     perCustomerLimit: '1',
-    startDate: '01 Jun 2026',
-    endDate: '30 Jun 2026',
+    startDate: '2026-06-01',
+    endDate: '2026-06-30',
     minPurchase: '',
     branch: 'All Branches'
   });
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchCoupons = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get('/promotions-discounts/coupons');
+      const fetchedData = response.data?.data?.coupons || [];
+      const mappedData = fetchedData.map(c => {
+        let discountLabel = '';
+        if (c.discountType === 'Percentage') {
+          discountLabel = `${c.discountValue}% OFF`;
+        } else if (c.discountType === 'Fixed Amount') {
+          discountLabel = `Rs. ${c.discountValue} OFF`;
+        } else {
+          discountLabel = 'Free Shipping';
+        }
+
+        return {
+          ...c,
+          id: c._id,
+          code: c.code,
+          discount: discountLabel,
+          type: c.discountType,
+          limit: c.usageLimit !== null && c.usageLimit !== undefined ? `${c.usageLimit} Usages` : 'Unlimited',
+          perCustomer: c.perCustomerLimit !== null && c.perCustomerLimit !== undefined ? c.perCustomerLimit.toString() : 'Unlimited',
+          minPurchase: c.minPurchaseAmount ? `Rs. ${c.minPurchaseAmount}` : 'Rs. 0',
+          used: c.usageCount || 0,
+          branch: c.branchId ? c.branchId.name : 'All Branches',
+          startDate: c.startDate ? new Date(c.startDate).toISOString().split('T')[0] : '',
+          endDate: c.endDate ? new Date(c.endDate).toISOString().split('T')[0] : ''
+        };
+      });
+      setCoupons(mappedData);
+    } catch (err) {
+      console.error('Failed to fetch coupons:', err);
+      setError(err.message || 'Failed to fetch coupons');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchCoupons();
+  }, []);
 
   // BR-SALE-002: Coupon threshold warning memo
   const showThresholdWarning = useMemo(() => {
@@ -70,8 +118,8 @@ export default function CouponManagementPage() {
       discountValue: '20',
       usageLimit: '500 Usages',
       perCustomerLimit: '1',
-      startDate: '01 Jun 2026',
-      endDate: '30 Jun 2026',
+      startDate: '2026-06-01',
+      endDate: '2026-06-30',
       minPurchase: 'Rs. 500',
       branch: 'All Branches'
     });
@@ -82,7 +130,6 @@ export default function CouponManagementPage() {
     setEditMode(true);
     setCurrentCoupon(coupon);
     
-    // Parse discount label to numeric value
     let discountVal = '20';
     if (coupon.discount.includes('%')) {
       discountVal = coupon.discount.replace('% OFF', '').trim();
@@ -96,70 +143,109 @@ export default function CouponManagementPage() {
       discountValue: discountVal,
       usageLimit: coupon.limit,
       perCustomerLimit: coupon.perCustomer,
-      startDate: '01 Jun 2026',
-      endDate: '30 Jun 2026',
+      startDate: coupon.startDate || '2026-06-01',
+      endDate: coupon.endDate || '2026-06-30',
       minPurchase: coupon.minPurchase,
       branch: coupon.branch
     });
     setIsCreateModalOpen(true);
   };
 
-  const toggleStatus = (id) => {
-    setCoupons(coupons.map(c => 
-      c.id === id ? { ...c, status: c.status === 'Active' ? 'Expired' : 'Active' } : c
-    ));
-  };
-
-  const handleDeleteCoupon = (id) => {
-    if (window.confirm("Are you sure you want to delete this coupon?")) {
-      setCoupons(coupons.filter(c => c.id !== id));
+  const toggleStatus = async (coupon) => {
+    const nextStatus = coupon.status === 'Active' ? 'Paused' : 'Active';
+    try {
+      setLoading(true);
+      await api.put(`/promotions-discounts/coupons/${coupon.id}`, { status: nextStatus });
+      await fetchCoupons();
+    } catch (err) {
+      console.error('Failed to update status:', err);
+      alert(err.message || 'Failed to update status');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSaveCoupon = (e) => {
+  const handleDeleteCoupon = async (id) => {
+    if (window.confirm("Are you sure you want to delete this coupon?")) {
+      try {
+        setLoading(true);
+        await api.delete(`/promotions-discounts/coupons/${id}`);
+        alert("Coupon deleted successfully");
+        await fetchCoupons();
+      } catch (err) {
+        console.error('Failed to delete coupon:', err);
+        alert(err.message || 'Failed to delete coupon');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleSaveCoupon = async (e) => {
     e.preventDefault();
     if (!formData.code) {
       alert("Please enter a coupon code");
       return;
     }
 
-    // Determine discount label
-    let discountLabel = '';
-    if (formData.discountType === 'Percentage') {
-      discountLabel = `${formData.discountValue}% OFF`;
-    } else if (formData.discountType === 'Fixed Amount') {
-      discountLabel = `Rs. ${formData.discountValue} OFF`;
-    } else {
-      discountLabel = 'Free Shipping';
+    // Build branch lookup map
+    const map = {};
+    if (user?.branchId) {
+      map[user.branchId.name] = user.branchId._id;
+    }
+    coupons.forEach(c => {
+      if (c.branchId) {
+        map[c.branchId.name] = c.branchId._id;
+      }
+    });
+
+    const targetBranchId = formData.branch === 'All Branches' ? null : map[formData.branch];
+
+    // Convert values
+    const discValue = formData.discountType === 'Free Shipping' ? 0 : Number(formData.discountValue.toString().replace(/[^0-9]/g, '')) || 0;
+    
+    let usageLimitNum = null;
+    if (formData.usageLimit && formData.usageLimit !== 'Unlimited') {
+      usageLimitNum = Number(formData.usageLimit.toString().replace(/[^0-9]/g, ''));
     }
 
-    if (editMode) {
-      setCoupons(coupons.map(c => c.id === currentCoupon.id ? {
-        ...c,
-        code: formData.code.toUpperCase().replace(/\s+/g, ''),
-        discount: discountLabel,
-        type: formData.discountType,
-        limit: formData.usageLimit || 'Unlimited',
-        perCustomer: formData.perCustomerLimit || 'Unlimited',
-        minPurchase: formData.minPurchase || 'Rs. 0',
-        branch: formData.branch
-      } : c));
-    } else {
-      const newCoupon = {
-        id: coupons.length > 0 ? Math.max(...coupons.map(c => c.id)) + 1 : 1,
-        code: formData.code.toUpperCase().replace(/\s+/g, ''),
-        discount: discountLabel,
-        type: formData.discountType,
-        limit: formData.usageLimit || 'Unlimited',
-        perCustomer: formData.perCustomerLimit || 'Unlimited',
-        minPurchase: formData.minPurchase || 'Rs. 0',
-        used: 0,
-        status: 'Active',
-        branch: formData.branch
-      };
-      setCoupons([newCoupon, ...coupons]);
+    let perCustLimitNum = 1;
+    if (formData.perCustomerLimit && formData.perCustomerLimit !== 'Unlimited') {
+      perCustLimitNum = Number(formData.perCustomerLimit.toString().replace(/[^0-9]/g, '')) || 1;
+    } else if (formData.perCustomerLimit === 'Unlimited') {
+      perCustLimitNum = 999999;
     }
-    setIsCreateModalOpen(false);
+
+    const minPurchAmount = Number(formData.minPurchase.toString().replace(/[^0-9]/g, '')) || 0;
+
+    const payload = {
+      name: `Coupon ${formData.code.toUpperCase().replace(/\s+/g, '')}`,
+      code: formData.code.toUpperCase().replace(/\s+/g, ''),
+      discountType: formData.discountType,
+      discountValue: discValue,
+      usageLimit: usageLimitNum,
+      perCustomerLimit: perCustLimitNum,
+      minPurchaseAmount: minPurchAmount,
+      branchId: targetBranchId,
+      startDate: new Date(formData.startDate),
+      endDate: new Date(formData.endDate)
+    };
+
+    try {
+      setLoading(true);
+      if (editMode) {
+        await api.put(`/promotions-discounts/coupons/${currentCoupon.id}`, payload);
+      } else {
+        await api.post('/promotions-discounts/coupons', payload);
+      }
+      setIsCreateModalOpen(false);
+      await fetchCoupons();
+    } catch (err) {
+      console.error('Failed to save coupon:', err);
+      alert(err.message || 'Failed to save coupon');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -238,7 +324,7 @@ export default function CouponManagementPage() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => toggleStatus(coupon.id)}
+                  onClick={() => toggleStatus(coupon)}
                   className="text-slate-600 hover:text-blue-600"
                   title={coupon.status === 'Active' ? 'Deactivate/Pause Coupon' : 'Activate Coupon'}
                 >
@@ -377,11 +463,10 @@ export default function CouponManagementPage() {
               <label className="block text-slate-500 select-none">Start Date</label>
               <div className="relative">
                 <input
-                  type="text"
+                  type="date"
                   value={formData.startDate}
                   onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/75 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 focus:ring-blue-500 transition-all"
-                  placeholder="01 Jun 2026"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/75 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer"
                 />
                 <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500" />
               </div>
@@ -391,11 +476,10 @@ export default function CouponManagementPage() {
               <label className="block text-slate-500 select-none">End Date</label>
               <div className="relative">
                 <input
-                  type="text"
+                  type="date"
                   value={formData.endDate}
                   onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/75 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 focus:ring-blue-500 transition-all"
-                  placeholder="30 Jun 2026"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/75 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer"
                 />
                 <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500" />
               </div>

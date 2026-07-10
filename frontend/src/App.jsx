@@ -7,12 +7,13 @@ import AppRoutes from './routes/AppRoutes';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-// Create a client for React Query
+// Single shared QueryClient instance for the entire application
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      retry: 1,
+      staleTime: 1000 * 60 * 5, // 5 minutes
       refetchOnWindowFocus: false,
-      retry: false,
     },
   },
 });
@@ -20,22 +21,23 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <SidebarProvider>
+      <AuthProvider>
+        <SidebarProvider>
+          <BrowserRouter>
             <AppRoutes />
-          </SidebarProvider>
-        </AuthProvider>
-      </BrowserRouter>
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        pauseOnHover
-        theme="light"
-      />
+            <ToastContainer
+              position="top-right"
+              autoClose={4000}
+              hideProgressBar={false}
+              newestOnTop
+              closeOnClick
+              pauseOnHover
+              draggable
+              theme="light"
+            />
+          </BrowserRouter>
+        </SidebarProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
