@@ -11,7 +11,7 @@ import DashboardPage from '../pages/DashboardPage';
 import AuthPage from '../pages/AuthPage';
 import VerifyOTPPage from '../features/auth/VerifyOTPPage';
 import LoginPage from '../features/auth/LoginPage';
-import RegisterPage from '../features/auth/RegisterPage'; 
+import RegisterPage from '../features/auth/RegisterPage';
 import SelectRolePage from '../features/auth/SelectRolePage';
 import ForgotPasswordPage from '../features/auth/ForgotPasswordPage';
 import ResetPasswordPage from '../features/auth/ResetPasswordPage';
@@ -68,6 +68,10 @@ import AIAlertsPage from '../pages/AIAlertsPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import SystemEventsPage from '../features/system-events/SystemEventsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
+import PaymentSuccessPage from '../pages/PaymentSuccessPage';
+import TransactionDetailsPage from '../pages/TransactionDetailsPage';
+import ReceiptPage from '../pages/ReceiptPage';
+import PaymentHistoryPage from '../pages/PaymentHistoryPage';
 import SuggestedPurchaseListPage from '../pages/SuggestedPurchaseListPage';
 import AIApprovalWorkflowPage from "../pages/AIApprovalWorkflowPage";
 import ReorderHistoryPage from '../pages/ReorderHistoryPage';
@@ -227,7 +231,7 @@ export const AppRoutes = () => {
             <BranchListPage />
           </ProtectedRoute>
         } />
-        
+
         <Route path="/admin/branches/:id" element={
           <ProtectedRoute allowedRoles={ADMIN_ROLES}>
             <BranchDetailsPage />
@@ -363,10 +367,33 @@ export const AppRoutes = () => {
 
         {/* Payment Processing */}
         <Route path="/payment-processing" element={
-          <ProtectedRoute allowedRoles={SALES_ROLES}>
-            <PaymentProcessingPage />
-          </ProtectedRoute>
+
+          <PaymentProcessingPage />
+
         } />
+
+        {/* Payment Success */}
+        <Route path="/payment-success" element={
+          <PaymentSuccessPage />
+        } />
+
+        {/* Transaction Details */}
+        <Route path="/transaction-details" element={
+          <TransactionDetailsPage />
+        } />
+
+        {/* Receipt */}
+        <Route path="/receipt" element={
+          <ReceiptPage />
+        } />
+
+        {/* Payment History */}
+        <Route path="/payment-history" element={
+          //<ProtectedRoute allowedRoles={SALES_ROLES}>
+          <PaymentHistoryPage />
+          //</ProtectedRoute>
+        } />
+
 
         {/* Sales History Module */}
         <Route
@@ -526,51 +553,51 @@ export const AppRoutes = () => {
 
         {/* AI Reordering */}
         <Route
-            path="/ai-reordering/recommendation"
-            element={
-              <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
-                <AIReorderingPage />
-              </ProtectedRoute>
-            }
-          />
+          path="/ai-reordering/recommendation"
+          element={
+            <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+              <AIReorderingPage />
+            </ProtectedRoute>
+          }
+        />
 
-          <Route
-            path="/ai-reordering/purchase-list"
-            element={
-              <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
-                <SuggestedPurchaseListPage />
-              </ProtectedRoute>
-            }
-          />
+        <Route
+          path="/ai-reordering/purchase-list"
+          element={
+            <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+              <SuggestedPurchaseListPage />
+            </ProtectedRoute>
+          }
+        />
 
-          <Route
-            path="/ai-reordering/approval-workflow"
-            element={
-              <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
-                <AIApprovalWorkflowPage />
-              </ProtectedRoute>
-            }
-          />
+        <Route
+          path="/ai-reordering/approval-workflow"
+          element={
+            <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+              <AIApprovalWorkflowPage />
+            </ProtectedRoute>
+          }
+        />
 
-          <Route
-            path="/ai-reordering/history"
-            element={
-              <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
-                <ReorderHistoryPage />
-              </ProtectedRoute>
-            }
-          />
+        <Route
+          path="/ai-reordering/history"
+          element={
+            <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+              <ReorderHistoryPage />
+            </ProtectedRoute>
+          }
+        />
 
-          <Route
-            path="/ai-reordering/inventory-prediction"
-            element={
-              <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
-                <InventoryPredictionPage />
-              </ProtectedRoute>
-            }
-          />
+        <Route
+          path="/ai-reordering/inventory-prediction"
+          element={
+            <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+              <InventoryPredictionPage />
+            </ProtectedRoute>
+          }
+        />
 
-          
+
 
         {/* AI Assistant */}
         <Route path="/ai-assistant" element={
