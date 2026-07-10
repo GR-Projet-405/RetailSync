@@ -1,11 +1,21 @@
-const fs = require('fs');
-const path = require('path');
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const connectDB = require('./config/db');
-const errorHandler = require('./middleware/errorHandler');
+// 1. PLACE THE FIX AT THE VERY TOP OF THE FILE
+const mongoose = require("mongoose");
+const originalModel = mongoose.model.bind(mongoose);
+mongoose.model = function (name, schema, collection, skipInit) {
+  if (schema && mongoose.models[name]) {
+    return mongoose.models[name];
+  }
+  return originalModel(name, schema, collection, skipInit);
+};
+
+const fs = require("fs");
+const path = require("path");
+const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+const morgan = require("morgan");
+const connectDB = require("./config/db");
+const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
 
@@ -13,38 +23,38 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
-app.use(morgan('dev'));
+app.use(morgan("dev"));
 
 // Initialize MongoDB Connection
 connectDB();
 
 // Global health check router
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', service: 'RetailSync API Server' });
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", service: "RetailSync API Server" });
 });
 
-app.use('/api/sales', require('../routes/salesRoutes'));
+app.use("/api/sales", require("../routes/salesRoutes"));
 
 // Pre-load core models to avoid MissingSchemaError during population
-require('./modules/branch-management/branch.model');
-require('./modules/role-management/role.model');
-require('./modules/user-management/user.model');
-require('./modules/category-management/model');
-require('./modules/supplier-management/model');
-require('./modules/warehouse-management/model');
-require('./modules/product-management/model');
-require('./modules/inventory-management/model');
+require("./modules/branch-management/branch.model");
+require("./modules/role-management/role.model");
+require("./modules/user-management/user.model");
+require("./modules/category-management/model");
+require("./modules/supplier-management/model");
+require("./modules/warehouse-management/model");
+require("./modules/product-management/model");
+require("./modules/inventory-management/model");
 
-const customerRoutes = require('./modules/customer-management/route');
-app.use('/api/v1/customers', customerRoutes);
+const customerRoutes = require("./modules/customer-management/route");
+app.use("/api/v1/customers", customerRoutes);
 
 // Dynamically register routes for all 28 modular folders
-const modulesPath = path.join(__dirname, 'modules');
+const modulesPath = path.join(__dirname, "modules");
 if (fs.existsSync(modulesPath)) {
   fs.readdirSync(modulesPath).forEach((folderName) => {
-    if (folderName === 'customer-management') return;
+    if (folderName === "customer-management") return;
 
-    const routePath = path.join(modulesPath, folderName, 'route.js');
+    const routePath = path.join(modulesPath, folderName, "route.js");
     if (fs.existsSync(routePath)) {
       const router = require(routePath);
       app.use(`/api/v1/${folderName}`, router);
