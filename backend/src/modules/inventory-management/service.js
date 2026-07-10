@@ -522,9 +522,9 @@ const getLowStockAlerts = async ({
     { $lookup: { from: 'products',   localField: 'productId',          foreignField: '_id', as: 'product'   } },
     { $unwind: '$product' },
     { $lookup: { from: 'categories', localField: 'product.categoryId', foreignField: '_id', as: 'category' } },
-    { $unwind: { path: '$category', preserveNullAndEmpty: true } },
+    { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
     { $lookup: { from: 'suppliers',  localField: 'product.supplierId', foreignField: '_id', as: 'supplier' } },
-    { $unwind: { path: '$supplier', preserveNullAndEmpty: true } },
+    { $unwind: { path: '$supplier', preserveNullAndEmptyArrays: true } },
     { $lookup: { from: 'warehouses', localField: 'warehouseId',        foreignField: '_id', as: 'warehouse' } },
     { $unwind: '$warehouse' },
 
