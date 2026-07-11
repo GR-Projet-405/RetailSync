@@ -3,8 +3,10 @@ require('../modules/role-management/role.model');
 const Category = require('../modules/category-management/model');
 require('../modules/supplier-management/model');
 const Branch = require('../modules/branch-management/branch.model');
+const Warehouse = require('../modules/warehouse-management/model');
 const Product = require('../modules/product-management/model');
 const Inventory = require('../modules/inventory-management/model');
+const InventoryItem = require('../modules/inventory-management/inventoryItem.model');
 const StockTransfer = require('../modules/stock-transfers/model');
 
 const seedProductsAndInventory = async () => {
@@ -36,7 +38,13 @@ const seedProductsAndInventory = async () => {
       { name: 'Retail 14', code: 'R-014', location: { city: 'Metropolis', country: 'USA' }, status: 'ACTIVE' },
     ];
 
+    // Clear existing warehouses and inventory items
+    console.log('Clearing old warehouses and inventory items...');
+    await Warehouse.deleteMany({});
+    await InventoryItem.deleteMany({});
+
     const branchMap = {};
+    const warehouseMap = {};
     for (const bData of branchesToSeed) {
       let branch = await Branch.findOne({ branchName: bData.name });
       if (!branch) {
@@ -55,6 +63,21 @@ const seedProductsAndInventory = async () => {
         console.log(`Created branch: ${bData.name}`);
       }
       branchMap[bData.name] = branch._id;
+
+      // Seed corresponding Warehouse for each branch
+      const warehouse = await Warehouse.create({
+        name: bData.name,
+        code: bData.code,
+        branchId: branch._id,
+        status: 'ACTIVE',
+        location: {
+          address: 'No. 1, Main Street',
+          city: bData.location?.city || 'Metropolis',
+          country: 'Sri Lanka'
+        }
+      });
+      console.log(`Created warehouse mapping: ${bData.name} (${bData.code})`);
+      warehouseMap[bData.name] = warehouse._id;
     }
 
     // Get categories to map string name to ObjectId
@@ -65,7 +88,7 @@ const seedProductsAndInventory = async () => {
     }
 
     // Clear existing products and inventory to make seed clean
-    console.log('Clearing old products and inventory records...');
+    console.log('Clearing old products and legacy inventory records...');
     await Product.deleteMany({});
     await Inventory.deleteMany({});
 
@@ -145,16 +168,38 @@ const seedProductsAndInventory = async () => {
 
     for (const [branchName, items] of Object.entries(inventoryToSeed)) {
       const branchId = branchMap[branchName];
-      if (!branchId) continue;
+      const warehouseId = warehouseMap[branchName];
+      if (!branchId || !warehouseId) continue;
 
       for (const [sku, quantity] of Object.entries(items)) {
         const productId = productMap[sku];
         if (!productId) continue;
 
-        // Upsert inventory record
+        // Seed legacy Inventory model
         await Inventory.findOneAndUpdate(
           { productId, branchId },
           { quantity, reorderLevel: 5 },
+          { upsert: true, new: true }
+        );
+
+        // Seed modern InventoryItem model (used by low-stock-alerts and stock-levels endpoints)
+        // Ensure some items have very low stock to trigger low-stock alerts
+        // Set reorderLevel dynamically based on quantity to trigger low stock alerts for some items
+        let reorderLevel = 10;
+        if (quantity < 10) {
+          reorderLevel = 15; // quantity < reorderLevel => alert triggered!
+        } else if (quantity > 30) {
+          reorderLevel = 5; // healthy stock
+        }
+
+        await InventoryItem.findOneAndUpdate(
+          { productId, warehouseId },
+          {
+            currentStock: quantity,
+            reservedStock: Math.floor(quantity * 0.1), // 10% reserved
+            reorderLevel,
+            lastMovementAt: new Date()
+          },
           { upsert: true, new: true }
         );
       }
@@ -475,7 +520,7 @@ const seedProductsAndInventory = async () => {
         statusHistory: [
           { status: 'PENDING', updatedBy: admin._id, updatedAt: new Date('2026-06-04T13:20:00Z'), notes: 'Stock transfer request created.' },
           { status: 'APPROVED', updatedBy: admin._id, updatedAt: new Date('2026-06-04T13:50:00Z'), notes: 'Request approved by manager.' },
-          { status: 'PICKED_UP', updatedBy: admin._id, updatedAt: new Date('2026-06-04+14:20:00Z'), notes: 'Stock picked up by driver.' },
+          { status: 'PICKED_UP', updatedBy: admin._id, updatedAt: new Date('2026-06-04T14:20:00Z'), notes: 'Stock picked up by driver.' },
           { status: 'IN_TRANSIT', updatedBy: admin._id, updatedAt: new Date('2026-06-04T14:40:00Z'), notes: 'Shipment is in transit.' },
           { status: 'DELIVERED', updatedBy: admin._id, updatedAt: new Date('2026-05-10T14:00:00Z'), notes: 'Stock delivered successfully.' }
         ]
