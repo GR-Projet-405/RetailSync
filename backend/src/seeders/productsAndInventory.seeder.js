@@ -1,6 +1,6 @@
 const User = require('../modules/user-management/user.model');
 require('../modules/role-management/role.model');
-require('../modules/category-management/model');
+const Category = require('../modules/category-management/model');
 require('../modules/supplier-management/model');
 const Branch = require('../modules/branch-management/branch.model');
 const Product = require('../modules/product-management/model');
@@ -38,12 +38,30 @@ const seedProductsAndInventory = async () => {
 
     const branchMap = {};
     for (const bData of branchesToSeed) {
-      let branch = await Branch.findOne({ name: bData.name });
+      let branch = await Branch.findOne({ branchName: bData.name });
       if (!branch) {
-        branch = await Branch.create(bData);
+        branch = await Branch.create({
+          branchName: bData.name,
+          branchCode: bData.code,
+          address: {
+            line1: 'No. 1, Main Street',
+            city: bData.location?.city || 'Metropolis',
+            district: 'Western'
+          },
+          phone: '+94 77 123 4567',
+          openingDate: new Date('2020-01-01'),
+          status: bData.status || 'ACTIVE'
+        });
         console.log(`Created branch: ${bData.name}`);
       }
       branchMap[bData.name] = branch._id;
+    }
+
+    // Get categories to map string name to ObjectId
+    const categoriesList = await Category.find({});
+    const categoryMap = {};
+    for (const cat of categoriesList) {
+      categoryMap[cat.name] = cat._id;
     }
 
     const productsToSeed = [
@@ -58,7 +76,20 @@ const seedProductsAndInventory = async () => {
     for (const pData of productsToSeed) {
       let product = await Product.findOne({ sku: pData.sku });
       if (!product) {
-        product = await Product.create(pData);
+        product = await Product.create({
+          sku: pData.sku,
+          name: pData.name,
+          description: pData.name,
+          category: categoryMap[pData.category] || categoriesList[0]?._id,
+          pricing: {
+            sellingPrice: pData.price,
+            costPrice: pData.costPrice || 0
+          },
+          branch: branchMap['Central WH'],
+          status: pData.status || 'ACTIVE',
+          barcode: pData.barcode || null,
+          createdBy: admin._id
+        });
         console.log(`Created product: ${pData.sku} - ${pData.name}`);
       }
       productMap[pData.sku] = product._id;
@@ -90,12 +121,10 @@ const seedProductsAndInventory = async () => {
     }
     console.log('Inventory levels seeded.');
 
-    
     await StockTransfer.deleteMany({});
     console.log('Cleared existing stock transfers.');
 
     const transfersToSeed = [
-      
       {
         transferNumber: '#1',
         sourceBranch: branchMap['Central WH'],
@@ -147,8 +176,6 @@ const seedProductsAndInventory = async () => {
           { status: 'PENDING', updatedBy: admin._id, updatedAt: new Date('2026-06-08T09:15:00Z'), notes: 'Stock transfer request created.' }
         ]
       },
-
-      // Active / In-progress tracks 
       {
         transferNumber: '#TR-001',
         sourceBranch: branchMap['Central WH'],
@@ -264,8 +291,6 @@ const seedProductsAndInventory = async () => {
           { status: 'PICKED_UP', updatedBy: admin._id, updatedAt: new Date('2026-06-23T12:30:00Z'), notes: 'Stock picked up by driver.' }
         ]
       },
-
-      
       {
         transferNumber: '#TR-HIST-001',
         sourceBranch: branchMap['Central WH'],
@@ -412,13 +437,12 @@ const seedProductsAndInventory = async () => {
           { status: 'APPROVED', updatedBy: admin._id, updatedAt: new Date('2026-06-04T13:50:00Z'), notes: 'Request approved by manager.' },
           { status: 'PICKED_UP', updatedBy: admin._id, updatedAt: new Date('2026-06-04T14:20:00Z'), notes: 'Stock picked up by driver.' },
           { status: 'IN_TRANSIT', updatedBy: admin._id, updatedAt: new Date('2026-06-04T14:40:00Z'), notes: 'Shipment is in transit.' },
-          { status: 'DELIVERED', updatedBy: admin._id, updatedAt: new Date('2026-06-04T15:30:00Z'), notes: 'Stock delivered successfully.' }
+          { status: 'DELIVERED', updatedBy: admin._id, updatedAt: new Date('2026-05-10T14:00:00Z'), notes: 'Stock delivered successfully.' }
         ]
       },
     ];
 
     for (const tData of transfersToSeed) {
-      // Create transfer
       await StockTransfer.create(tData);
     }
 
