@@ -82,6 +82,22 @@ const reorderRules = asyncHandler(async (req, res) => {
   });
 });
 
+// ─── POST /api/v1/promotions-discounts/discount-rules/evaluate ─
+const evaluateDiscountRules = asyncHandler(async (req, res) => {
+  const result = await service.evaluateRules(req.body);
+
+  res.status(200).json({
+    success: true,
+    message: 'Discount rules evaluated successfully',
+    matchedRules: result.matchedRules,
+    summary: result.summary,
+    data: {
+      matchedRules: result.matchedRules,
+      summary: result.summary,
+    },
+  });
+});
+
 module.exports = {
   getDiscountRules,
   getDiscountRuleById,
@@ -89,4 +105,5 @@ module.exports = {
   updateDiscountRule,
   deleteDiscountRule,
   reorderRules,
+  evaluateDiscountRules,
 };

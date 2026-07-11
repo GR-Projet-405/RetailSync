@@ -12,6 +12,7 @@ router.route('/')
   .post(controller.createDiscountRule);
 
 router.put('/reorder', controller.reorderRules);
+router.post('/evaluate', controller.evaluateDiscountRules);
 
 // ─── Single Resource Actions ───────────────────────────────
 router.route('/:id')
