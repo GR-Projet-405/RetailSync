@@ -1,6 +1,16 @@
 const Category = require('./model');
-// Top eke uncomment/add karanna:
 const Product = require('../product-management/model');
+
+// ── Helper: product count (handles both old string category and new categoryId) ──
+const getProductCount = async (categoryId, categoryName) => {
+  return Product.countDocuments({
+    $or: [
+      { categoryId: categoryId, status: 'ACTIVE' },
+      { category: categoryName, status: 'ACTIVE' },
+      { category: categoryId.toString(), status: 'ACTIVE' },
+    ],
+  });
+};
 
 // ── Fetch All (list + filters + pagination) ───────────────────────────────────
 const fetchAll = async (query = {}) => {
@@ -35,13 +45,10 @@ const fetchAll = async (query = {}) => {
     Category.countDocuments(filter),
   ]);
 
-  // Add product count per category
+  // Add product count per category — handles both old (string) and new (ObjectId) schemas
   const categoriesWithCount = await Promise.all(
     categories.map(async (cat) => {
-      const productCount = await Product.countDocuments({
-        categoryId: cat._id,
-        status: 'ACTIVE',
-      });
+      const productCount = await getProductCount(cat._id, cat.name);
       return { ...cat.toObject(), productCount };
     })
   );
@@ -66,29 +73,31 @@ const fetchDetails = async (id) => {
 
   if (!category) return null;
 
-const [children, siblings, totalProducts] = await Promise.all([
-  Category.find({ parentId: id, isActive: true })
-    .select('name code isActive sortOrder icon')
-    .sort({ sortOrder: 1 }),
+  const [children, siblings, totalProducts] = await Promise.all([
+    // Direct sub-categories under this category
+    Category.find({ parentId: id, isActive: true })
+      .select('name code isActive sortOrder icon')
+      .sort({ sortOrder: 1 }),
 
-  category.parentId
-    ? Category.find({
-        parentId: category.parentId,
-        _id: { $ne: id },
-        isActive: true,
-      }).select('name code isActive sortOrder')
-    : Promise.resolve([]),
+    // Sibling sub-categories sharing the same parent
+    category.parentId
+      ? Category.find({
+          parentId: category.parentId,
+          _id: { $ne: id },
+          isActive: true,
+        }).select('name code isActive sortOrder')
+      : Promise.resolve([]),
 
-  // categoryId field + ACTIVE status
-  Product.countDocuments({ categoryId: id, status: 'ACTIVE' }),
-]);
+    // Product count — handles both old (string) and new (ObjectId) schemas
+    getProductCount(id, category.name),
+  ]);
 
-const stats = {
-  totalProducts,
-  stockUnits: 0,
-  inventoryValue: 0,
-  lowStockItems: 0,
-};
+  const stats = {
+    totalProducts,
+    stockUnits: 0,       // Wire to Inventory module when available
+    inventoryValue: 0,   // Wire to Inventory module when available
+    lowStockItems: 0,    // Wire to Inventory module when available
+  };
 
   return { category, children, siblings, stats };
 };
