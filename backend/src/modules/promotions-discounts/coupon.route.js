@@ -6,6 +6,10 @@ const { verifyToken } = require('../../middleware/auth.middleware');
 // Protect all coupon routes
 router.use(verifyToken);
 
+// ─── Integration Routes ───────────────────────────────────
+router.post('/validate', controller.validateCoupon);
+router.post('/use', controller.recordCouponUsage);
+
 // ─── Collection Routes ─────────────────────────────────────
 router.route('/')
   .get(controller.getCoupons)
