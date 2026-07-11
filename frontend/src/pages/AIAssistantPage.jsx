@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
 import Button from '../components/Button';
 import Spinner from '../components/Spinner';
 import { toast } from '../utils/toast';
+import api from '../services/api';
 
 // Suggested Quick Prompts
 const QUICK_PROMPTS = [
@@ -14,64 +15,6 @@ const QUICK_PROMPTS = [
   { text: "What is the category performance?", icon: BarChart2 }
 ];
 
-// Mock Conversational Replies
-const PRESET_ANSWERS = {
-  "show today's sales summary": {
-    text: "Here is the sales performance summary for today (July 7, 2026):",
-    table: {
-      headers: ["Metric", "Value", "Trend"],
-      rows: [
-        ["Total Sales", "$12,450.00", "+8.2% vs yesterday"],
-        ["Completed Orders", "342", "+4.5% vs yesterday"],
-        ["Avg. Ticket Value", "$36.40", "+3.5% vs yesterday"]
-      ]
-    }
-  },
-  "which products are low on stock?": {
-    text: "I found 3 products that are currently below their minimum safety stock threshold:",
-    table: {
-      headers: ["Product Name", "Current Stock", "Min threshold", "Status"],
-      rows: [
-        ["Whole Wheat Bread", "12 units", "30 units", "Critical"],
-        ["Chocolate Chip Cookie", "8 units", "25 units", "Critical"],
-        ["Organic Bananas (kg)", "120 units", "150 units", "Low"]
-      ]
-    }
-  },
-  "show ai reorder recommendations": {
-    text: "Here are the top active AI reorder recommendations based on demand velocity:",
-    table: {
-      headers: ["Product", "Suggested Reorder Qty", "Est. Cost", "Priority"],
-      rows: [
-        ["Whole Wheat Bread", "+50 units", "$150.00", "High"],
-        ["Chocolate Chip Cookie", "+100 units", "$200.00", "High"],
-        ["Organic Bananas (kg)", "+200 units", "$400.00", "Medium"]
-      ]
-    }
-  },
-  "who is the top sales representative?": {
-    text: "According to today's checkout logs, the top cashier by sales volume is:",
-    table: {
-      headers: ["Representative", "Transactions", "Revenue Generated", "Efficiency Rating"],
-      rows: [
-        ["Jane Smith", "112 orders", "$4,820.00", "98.5%"],
-        ["John Doe", "98 orders", "$3,240.00", "94.2%"]
-      ]
-    }
-  },
-  "what is the category performance?": {
-    text: "Here is the categorical breakdown of revenue shares today:",
-    table: {
-      headers: ["Category", "Sales Value", "Volume Share"],
-      rows: [
-        ["Beverages", "$38,400.00", "31%"],
-        ["Snacks & Sweets", "$28,800.00", "23%"],
-        ["Bakery Items", "$22,100.00", "18%"]
-      ]
-    }
-  }
-};
-
 const INITIAL_GREETING = {
   id: 1,
   sender: 'bot',
@@ -80,11 +23,47 @@ const INITIAL_GREETING = {
   feedback: null // null, 'up', or 'down'
 };
 
+const mapBackendMessages = (backendMessages) =>
+  backendMessages.map((m, i) => ({
+    id: `${m._id || i}-${m.role}`,
+    sender: m.role === 'user' ? 'user' : 'bot',
+    text: m.content,
+    time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    feedback: null,
+  }));
+
 export default function AIAssistantPage() {
   const [messages, setMessages] = useState([INITIAL_GREETING]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [conversationId, setConversationId] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const messagesEndRef = useRef(null);
+
+  // Load most recent conversation from backend on mount
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const res = await api.get('/ai-assistant/history', { params: { limit: 1 } });
+        const conversations = res.data.data?.conversations || [];
+        if (conversations.length > 0) {
+          const latest = conversations[0];
+          const convRes = await api.get(`/ai-assistant/history/${latest._id}`);
+          const conv = convRes.data.data;
+          if (conv.messages && conv.messages.length > 0) {
+            setConversationId(conv._id);
+            setMessages([INITIAL_GREETING, ...mapBackendMessages(conv.messages)]);
+          }
+        }
+      } catch (err) {
+        // Silently fail — just start fresh
+        console.warn('Could not restore chat history:', err.message);
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+    loadHistory();
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -94,7 +73,7 @@ export default function AIAssistantPage() {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  const handleSend = (textToSend) => {
+  const handleSend = async (textToSend) => {
     const text = textToSend || input;
     if (!text.trim()) return;
 
@@ -108,32 +87,40 @@ export default function AIAssistantPage() {
     setMessages(prev => [...prev, userMsg]);
     if (!textToSend) setInput('');
 
-    // Trigger bot typing simulation
     setIsTyping(true);
 
-    setTimeout(() => {
-      setIsTyping(false);
-      const query = text.toLowerCase().trim();
-      let botResponse = null;
-
-      // Check presets
-      if (PRESET_ANSWERS[query]) {
-        botResponse = PRESET_ANSWERS[query];
-      } else {
-        botResponse = {
-          text: `I've analyzed your query: "${text}". Currently, my live backend query processor is under development. However, based on our local dataset, I can confirm that sales are on track, and no urgent billing anomalies were detected. Let me know if you would like me to retrieve general inventory statuses or sales records!`
-        };
-      }
+    try {
+      const res = await api.post('/ai-assistant/chat', { 
+        message: text,
+        conversationId 
+      }, { timeout: 120000 });
+      
+      const { answer, conversationId: newConvId } = res.data.data;
+      if (newConvId) setConversationId(newConvId);
 
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
         sender: 'bot',
-        text: botResponse.text,
-        table: botResponse.table,
+        text: answer,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         feedback: null
       }]);
-    }, 1000);
+    } catch (error) {
+      const errorMsg = error?.response?.data?.message || error?.message || 'Unknown error';
+      console.error('Chat error:', errorMsg, error);
+      const isTimeout = error?.code === 'ECONNABORTED' || errorMsg.includes('timeout');
+      setMessages(prev => [...prev, {
+        id: Date.now() + 1,
+        sender: 'bot',
+        text: isTimeout
+          ? "The AI is taking longer than expected. Please try again — it may respond faster on a retry."
+          : `Error: ${errorMsg}`,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        feedback: null
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handleFeedback = (id, direction) => {
@@ -150,8 +137,16 @@ export default function AIAssistantPage() {
     }));
   };
 
-  const handleClearHistory = () => {
+  const handleClearHistory = async () => {
+    try {
+      if (conversationId) {
+        await api.delete(`/ai-assistant/history/${conversationId}`);
+      }
+    } catch (err) {
+      console.warn('Could not delete conversation from backend:', err.message);
+    }
     setMessages([INITIAL_GREETING]);
+    setConversationId(null);
     toast.info('Chat history cleared.');
   };
 
