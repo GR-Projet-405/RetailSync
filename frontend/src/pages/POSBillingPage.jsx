@@ -11,6 +11,7 @@ import SearchInput from '../components/SearchInput';
 import Button from '../components/Button';
 import Card, { CardContent, CardDescription, CardHeader, CardTitle } from '../components/Card';
 import Modal from '../components/Modal';
+import { useProductsList } from '../hooks/useProducts';
 
 /* Currency formatter */
 const currency = new Intl.NumberFormat('en-LK', {
@@ -36,62 +37,7 @@ const defaultCat = { bg: 'bg-slate-50', text: 'text-slate-700', dot: 'bg-slate-4
 
 const normalizeLookupValue = (value) => String(value ?? '').trim().toLowerCase().replace(/[\s-]/g, '');
 
-// Local Mock Product Data
-const MOCK_PRODUCTS = [
-  {
-    id: 'p1',
-    barcode: '885100100001',
-    name: 'Classic White Bread',
-    price: 250,
-    currency: 'LKR',
-    unit: 'loaf',
-    stock: 24,
-    sku: 'BRD-001',
-    category: 'Bakery'
-  },
-  {
-    id: 'p2',
-    barcode: '885100100002',
-    name: 'Fresh Milk 1L',
-    price: 320,
-    currency: 'LKR',
-    unit: 'bottle',
-    stock: 18,
-    sku: 'MLK-001',
-    category: 'Dairy'
-  },
-  {
-    id: 'p3',
-    barcode: '885100100003',
-    name: 'Jasmine Rice 5kg',
-    price: 3250,
-    currency: 'LKR',
-    unit: 'bag',
-    stock: 12,
-    sku: 'RCE-001',
-    category: 'Grocery'
-  },
-  {
-    id: 'p4', barcode: '885100100004', name: 'Farm Eggs 12 Pack', price: 650,
-    stock: 15, sku: 'EGG-001', category: 'Dairy', currency: 'LKR', unit: 'pack'
-  },
-  {
-    id: 'p5', barcode: '885100100005', name: 'Spaghetti Pasta 500g', price: 450,
-    stock: 30, sku: 'PST-001', category: 'Grocery', currency: 'LKR', unit: 'pack'
-  },
-  {
-    id: 'p6', barcode: '885100100006', name: 'Spring Water 600ml', price: 100,
-    stock: 50, sku: 'WTR-001', category: 'Beverage', currency: 'LKR', unit: 'bottle'
-  },
-  {
-    id: 'p7', barcode: '885100100007', name: 'Premium Tea Bags 100s', price: 850,
-    stock: 20, sku: 'TEA-001', category: 'Beverage', currency: 'LKR', unit: 'box'
-  },
-  {
-    id: 'p8', barcode: '885100100008', name: 'Chocolate Cookies', price: 300,
-    stock: 40, sku: 'CKY-001', category: 'Snacks', currency: 'LKR', unit: 'pack'
-  }
-];
+
 
 // Inline quantity editor
 function QuantityEditor({ value, stock, onConfirm }) {
@@ -431,22 +377,41 @@ export default function POSBillingPage() {
   const [barcodeValue, setBarcodeValue] = useState('');
   const [manualCode, setManualCode] = useState('');
   const [cart, setCart] = useState(() => (Array.isArray(restoredState.cart) ? restoredState.cart : []));
-  const [inventoryProducts, setInventoryProducts] = useState([]);
-  const [inventoryLoading, setInventoryLoading] = useState(true);
+  const { data: productsData, isLoading: inventoryLoading, error: productsError } = useProductsList({
+    limit: 1000,
+    status: 'ACTIVE',
+  });
+
   const [statusMessage, setStatusMessage] = useState('Loading inventory products...');
   const [statusType, setStatusType] = useState('info'); // info | success | error
 
-  // Simulate async load of local mock products to match the UX load indicators
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setInventoryProducts(MOCK_PRODUCTS);
-      setStatusMessage(`Loaded ${MOCK_PRODUCTS.length} mock inventory products.`);
-      setStatusType('success');
-      setInventoryLoading(false);
-    }, 400);
+  const inventoryProducts = useMemo(() => {
+    if (!productsData?.data) return [];
+    return productsData.data.map(p => ({
+      id: p.id || p._id,
+      barcode: p.barcode || '',
+      name: p.name || 'Unnamed Product',
+      price: p.pricing?.sellingPrice ?? p.sellingPrice ?? p.price ?? 0,
+      currency: 'LKR',
+      unit: p.unit || 'pcs',
+      stock: p.totalStock ?? p.stock ?? 0,
+      sku: p.sku || 'N/A',
+      category: p.category?.name ?? (typeof p.category === 'string' ? p.category : 'Uncategorised')
+    }));
+  }, [productsData]);
 
-    return () => clearTimeout(timer);
-  }, []);
+  useEffect(() => {
+    if (productsError) {
+      setStatusMessage(`Failed to load inventory: ${productsError.message || 'Unknown error'}`);
+      setStatusType('error');
+    } else if (!inventoryLoading) {
+      setStatusMessage(`Loaded ${inventoryProducts.length} inventory products.`);
+      setStatusType('success');
+    } else {
+      setStatusMessage('Loading inventory products...');
+      setStatusType('info');
+    }
+  }, [inventoryLoading, productsError, inventoryProducts.length]);
 
   // Restore state from navigation
   useEffect(() => {
@@ -553,7 +518,7 @@ export default function POSBillingPage() {
 
     const product = findProduct(scanValue);
     if (!product) {
-      notify('No product matched that mock barcode. Try another sample barcode.', 'error');
+      notify('No product matched that barcode. Try another sample barcode.', 'error');
       return;
     }
 
@@ -565,7 +530,7 @@ export default function POSBillingPage() {
     e.preventDefault();
     const scanValue = barcodeValue.trim();
     if (!scanValue) {
-      notify('Enter a mock barcode value or pick one of the sample barcodes below.', 'info');
+      notify('Enter a barcode value or pick one of the sample barcodes below.', 'info');
       return;
     }
 
@@ -737,7 +702,7 @@ export default function POSBillingPage() {
 
               {mockBarcodeSamples.length > 0 && (
                 <div className="flex flex-wrap gap-2">
-                  <span className="text-[11px] uppercase tracking-wider text-slate-400 self-center mr-1">Mock barcodes</span>
+                  <span className="text-[11px] uppercase tracking-wider text-slate-400 self-center mr-1">Sample barcodes</span>
                   {mockBarcodeSamples.map((product) => (
                     <button
                       key={product.id}
@@ -788,7 +753,7 @@ export default function POSBillingPage() {
             <CardHeader className="border-b border-[#E2E8F0]">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <CardTitle className="text-slate-900">Mock inventory</CardTitle>
+                  <CardTitle className="text-slate-900">Branch Inventory</CardTitle>
                   <CardDescription className="text-slate-500">Click a product card to add it to the cart.</CardDescription>
                 </div>
                 <span className="text-xs text-[#2563EB] uppercase tracking-wider bg-[#EFF6FF] px-3 py-1.5 rounded-full font-semibold">
@@ -800,7 +765,7 @@ export default function POSBillingPage() {
               {inventoryLoading ? (
                 <div className="rounded-2xl border border-dashed border-[#BFDBFE] bg-[#EFF6FF] p-8 text-center text-slate-500">
                   <PackageSearch className="w-8 h-8 mx-auto mb-2 text-[#2563EB] animate-pulse" />
-                  <p className="text-sm font-medium text-slate-700">Loading mock inventory products...</p>
+                  <p className="text-sm font-medium text-slate-700">Loading inventory products...</p>
                   <p className="text-xs mt-1 text-slate-400">The POS grid will populate once the backend responds.</p>
                 </div>
               ) : filteredProducts.length === 0 ? (

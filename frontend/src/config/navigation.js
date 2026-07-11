@@ -46,6 +46,13 @@ export const NAVIGATION_GROUPS = [
         allowedRoles: Object.values(ROLES),
         children: [
           {
+            id: 'help-center-dashboard',
+            name: 'Help Center Dashboard',
+            path: '/help-center/dashboard',
+            icon: 'LayoutDashboard',
+            allowedRoles: Object.values(ROLES)
+          },
+          {
             id: 'knowledge-base',
             name: 'Knowledge Base',
             path: '/knowledge-base',

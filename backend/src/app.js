@@ -33,6 +33,7 @@ app.use('/api/sales', require('../routes/salesRoutes'));
 require('./modules/branch-management/branch.model');
 require('./modules/role-management/role.model');
 require('./modules/user-management/user.model');
+require('./modules/goods-receiving/model');
 require('./modules/promotions-discounts/promotion.model');
 require('./modules/promotions-discounts/coupon.model');
 require('./modules/promotions-discounts/discountRule.model');

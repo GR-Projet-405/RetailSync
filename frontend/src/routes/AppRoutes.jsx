@@ -68,6 +68,10 @@ import AIAlertsPage from '../pages/AIAlertsPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
 import SystemEventsPage from '../features/system-events/SystemEventsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
+import HelpCenterDashboard from '../pages/help-center/HelpCenterDashboard';
+import GoodsReceiptForm from '../features/Goods-receiving/GoodsReceiptForm';
+import ReceivingItemsHistory from '../features/Goods-receiving/ReceivedItemsHistory';
+import VerificationScreen from '../features/Goods-receiving/VerificationScreen';
 import PaymentSuccessPage from '../pages/PaymentSuccessPage';
 import TransactionDetailsPage from '../pages/TransactionDetailsPage';
 import ReceiptPage from '../pages/ReceiptPage';
@@ -146,6 +150,13 @@ export const AppRoutes = () => {
         <Route path="/notifications" element={
           <ProtectedRoute allowedRoles={ALL_ROLES}>
             <NotificationsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Help Center Dashboard */}
+        <Route path="/help-center/dashboard" element={
+          <ProtectedRoute allowedRoles={ALL_ROLES}>
+            <HelpCenterDashboard />
           </ProtectedRoute>
         } />
 
@@ -355,6 +366,25 @@ export const AppRoutes = () => {
         <Route path="/goods-receiving" element={
           <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
             <GoodsReceivingPage />
+          </ProtectedRoute>
+        } />
+        {/* Goods Receipt Form */}
+        <Route path="/GoodsReceiptForm" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <GoodsReceiptForm />
+          </ProtectedRoute>
+        } />
+        {/* Goods Received Items History */}
+        <Route path="/ReceivingItemsHistory" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <ReceivingItemsHistory />
+          </ProtectedRoute>
+        } />
+
+        {/* Verification Screen */}
+        <Route path="/goods-receiving/verify/:id" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <VerificationScreen />
           </ProtectedRoute>
         } />
 
