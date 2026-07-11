@@ -25,12 +25,12 @@ const DISCOUNT_MODES = { NONE: 'none', PERCENT: 'percent', FLAT: 'flat' };
 
 /* Category colour map */
 const CATEGORY_COLORS = {
-  Bakery:    { bg: 'bg-amber-50',   text: 'text-amber-700',  dot: 'bg-amber-400'  },
-  Dairy:     { bg: 'bg-sky-50',     text: 'text-sky-700',    dot: 'bg-sky-400'    },
-  Grocery:   { bg: 'bg-emerald-50', text: 'text-emerald-700',dot: 'bg-emerald-400'},
-  Beverage:  { bg: 'bg-violet-50',  text: 'text-violet-700', dot: 'bg-violet-400' },
-  Snacks:    { bg: 'bg-orange-50',  text: 'text-orange-700', dot: 'bg-orange-400' },
-  'Home Care':{ bg: 'bg-pink-50',   text: 'text-pink-700',   dot: 'bg-pink-400'  },
+  Bakery: { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
+  Dairy: { bg: 'bg-sky-50', text: 'text-sky-700', dot: 'bg-sky-400' },
+  Grocery: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-400' },
+  Beverage: { bg: 'bg-violet-50', text: 'text-violet-700', dot: 'bg-violet-400' },
+  Snacks: { bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-400' },
+  'Home Care': { bg: 'bg-pink-50', text: 'text-pink-700', dot: 'bg-pink-400' },
 };
 const defaultCat = { bg: 'bg-slate-50', text: 'text-slate-700', dot: 'bg-slate-400' };
 
@@ -38,58 +38,58 @@ const normalizeLookupValue = (value) => String(value ?? '').trim().toLowerCase()
 
 // Local Mock Product Data
 const MOCK_PRODUCTS = [
-  { 
-    id: 'p1', 
-    barcode: '885100100001', 
-    name: 'Classic White Bread', 
-    price: 250, 
+  {
+    id: 'p1',
+    barcode: '885100100001',
+    name: 'Classic White Bread',
+    price: 250,
     currency: 'LKR',
     unit: 'loaf',
-    stock: 24, 
+    stock: 24,
     sku: 'BRD-001',
     category: 'Bakery'
   },
-  { 
-    id: 'p2', 
-    barcode: '885100100002', 
-    name: 'Fresh Milk 1L', 
-    price: 320, 
+  {
+    id: 'p2',
+    barcode: '885100100002',
+    name: 'Fresh Milk 1L',
+    price: 320,
     currency: 'LKR',
     unit: 'bottle',
-    stock: 18, 
+    stock: 18,
     sku: 'MLK-001',
     category: 'Dairy'
   },
-  { 
-    id: 'p3', 
-    barcode: '885100100003', 
-    name: 'Jasmine Rice 5kg', 
-    price: 3250, 
+  {
+    id: 'p3',
+    barcode: '885100100003',
+    name: 'Jasmine Rice 5kg',
+    price: 3250,
     currency: 'LKR',
     unit: 'bag',
-    stock: 12, 
+    stock: 12,
     sku: 'RCE-001',
     category: 'Grocery'
   },
-  { 
-    id: 'p4', barcode: '885100100004', name: 'Farm Eggs 12 Pack', price: 650, 
-    stock: 15, sku: 'EGG-001', category: 'Dairy', currency: 'LKR', unit: 'pack' 
+  {
+    id: 'p4', barcode: '885100100004', name: 'Farm Eggs 12 Pack', price: 650,
+    stock: 15, sku: 'EGG-001', category: 'Dairy', currency: 'LKR', unit: 'pack'
   },
-  { 
-    id: 'p5', barcode: '885100100005', name: 'Spaghetti Pasta 500g', price: 450, 
-    stock: 30, sku: 'PST-001', category: 'Grocery', currency: 'LKR', unit: 'pack' 
+  {
+    id: 'p5', barcode: '885100100005', name: 'Spaghetti Pasta 500g', price: 450,
+    stock: 30, sku: 'PST-001', category: 'Grocery', currency: 'LKR', unit: 'pack'
   },
-  { 
-    id: 'p6', barcode: '885100100006', name: 'Spring Water 600ml', price: 100, 
-    stock: 50, sku: 'WTR-001', category: 'Beverage', currency: 'LKR', unit: 'bottle' 
+  {
+    id: 'p6', barcode: '885100100006', name: 'Spring Water 600ml', price: 100,
+    stock: 50, sku: 'WTR-001', category: 'Beverage', currency: 'LKR', unit: 'bottle'
   },
-  { 
-    id: 'p7', barcode: '885100100007', name: 'Premium Tea Bags 100s', price: 850, 
-    stock: 20, sku: 'TEA-001', category: 'Beverage', currency: 'LKR', unit: 'box' 
+  {
+    id: 'p7', barcode: '885100100007', name: 'Premium Tea Bags 100s', price: 850,
+    stock: 20, sku: 'TEA-001', category: 'Beverage', currency: 'LKR', unit: 'box'
   },
-  { 
-    id: 'p8', barcode: '885100100008', name: 'Chocolate Cookies', price: 300, 
-    stock: 40, sku: 'CKY-001', category: 'Snacks', currency: 'LKR', unit: 'pack' 
+  {
+    id: 'p8', barcode: '885100100008', name: 'Chocolate Cookies', price: 300,
+    stock: 40, sku: 'CKY-001', category: 'Snacks', currency: 'LKR', unit: 'pack'
   }
 ];
 
@@ -149,7 +149,7 @@ function QuantityEditor({ value, stock, onConfirm }) {
 
 // Item-level discount — inline panel (no overlap)
 function ItemDiscountPanel({ item, onApply, onClose }) {
-  const [mode, setMode]   = useState(item.itemDiscountMode === DISCOUNT_MODES.NONE ? DISCOUNT_MODES.PERCENT : item.itemDiscountMode);
+  const [mode, setMode] = useState(item.itemDiscountMode === DISCOUNT_MODES.NONE ? DISCOUNT_MODES.PERCENT : item.itemDiscountMode);
   const [value, setValue] = useState(item.itemDiscount > 0 ? String(item.itemDiscount) : '');
 
   const apply = () => {
@@ -159,8 +159,8 @@ function ItemDiscountPanel({ item, onApply, onClose }) {
     onApply(capped, mode);
   };
 
-  const lineTotal    = item.price * item.quantity;
-  const discountAmt  = mode === DISCOUNT_MODES.PERCENT
+  const lineTotal = item.price * item.quantity;
+  const discountAmt = mode === DISCOUNT_MODES.PERCENT
     ? lineTotal * (parseFloat(value) || 0) / 100
     : Math.min(parseFloat(value) || 0, lineTotal);
   const afterDiscount = Math.max(lineTotal - discountAmt, 0);
@@ -186,18 +186,16 @@ function ItemDiscountPanel({ item, onApply, onClose }) {
         <button
           type="button"
           onClick={() => setMode(DISCOUNT_MODES.PERCENT)}
-          className={`flex-1 rounded-lg py-1.5 text-[11px] font-semibold transition-colors ${
-            mode === DISCOUNT_MODES.PERCENT ? 'bg-[#2563EB] text-white' : 'bg-white text-slate-600 border border-[#E2E8F0] hover:bg-slate-50'
-          }`}
+          className={`flex-1 rounded-lg py-1.5 text-[11px] font-semibold transition-colors ${mode === DISCOUNT_MODES.PERCENT ? 'bg-[#2563EB] text-white' : 'bg-white text-slate-600 border border-[#E2E8F0] hover:bg-slate-50'
+            }`}
         >
           <Percent className="w-3 h-3 inline mr-0.5" /> %
         </button>
         <button
           type="button"
           onClick={() => setMode(DISCOUNT_MODES.FLAT)}
-          className={`flex-1 rounded-lg py-1.5 text-[11px] font-semibold transition-colors ${
-            mode === DISCOUNT_MODES.FLAT ? 'bg-[#2563EB] text-white' : 'bg-white text-slate-600 border border-[#E2E8F0] hover:bg-slate-50'
-          }`}
+          className={`flex-1 rounded-lg py-1.5 text-[11px] font-semibold transition-colors ${mode === DISCOUNT_MODES.FLAT ? 'bg-[#2563EB] text-white' : 'bg-white text-slate-600 border border-[#E2E8F0] hover:bg-slate-50'
+            }`}
         >
           <DollarSign className="w-3 h-3 inline mr-0.5" /> Flat
         </button>
@@ -257,13 +255,13 @@ function ItemDiscountPanel({ item, onApply, onClose }) {
 /* Cart item row */
 function CartItem({ item, onQuantitySet, onDelta, onRemove, onItemDiscount }) {
   const [showDiscount, setShowDiscount] = useState(false);
-  const lineTotal     = item.price * item.quantity;
-  const discountAmt   = item.itemDiscountMode === DISCOUNT_MODES.PERCENT
+  const lineTotal = item.price * item.quantity;
+  const discountAmt = item.itemDiscountMode === DISCOUNT_MODES.PERCENT
     ? lineTotal * item.itemDiscount / 100
     : item.itemDiscount;
-  const lineFinal     = Math.max(lineTotal - discountAmt, 0);
-  const hasDiscount   = item.itemDiscount > 0 && item.itemDiscountMode !== DISCOUNT_MODES.NONE;
-  const catStyle      = CATEGORY_COLORS[item.category] || defaultCat;
+  const lineFinal = Math.max(lineTotal - discountAmt, 0);
+  const hasDiscount = item.itemDiscount > 0 && item.itemDiscountMode !== DISCOUNT_MODES.NONE;
+  const catStyle = CATEGORY_COLORS[item.category] || defaultCat;
 
   return (
     <div className="rounded-2xl border border-[#E2E8F0] bg-white p-3 shadow-sm hover:border-[#BFDBFE] hover:shadow-md transition-all duration-200 fade-up">
@@ -429,14 +427,14 @@ export default function POSBillingPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const restoredState = location.state || {};
-  const [searchQuery,    setSearchQuery]    = useState('');
-  const [barcodeValue,   setBarcodeValue]   = useState('');
-  const [manualCode,     setManualCode]     = useState('');
-  const [cart,           setCart]           = useState(() => (Array.isArray(restoredState.cart) ? restoredState.cart : []));
+  const [searchQuery, setSearchQuery] = useState('');
+  const [barcodeValue, setBarcodeValue] = useState('');
+  const [manualCode, setManualCode] = useState('');
+  const [cart, setCart] = useState(() => (Array.isArray(restoredState.cart) ? restoredState.cart : []));
   const [inventoryProducts, setInventoryProducts] = useState([]);
   const [inventoryLoading, setInventoryLoading] = useState(true);
-  const [statusMessage,  setStatusMessage]  = useState('Loading inventory products...');
-  const [statusType,     setStatusType]     = useState('info'); // info | success | error
+  const [statusMessage, setStatusMessage] = useState('Loading inventory products...');
+  const [statusType, setStatusType] = useState('info'); // info | success | error
 
   // Simulate async load of local mock products to match the UX load indicators
   useEffect(() => {
@@ -469,21 +467,21 @@ export default function POSBillingPage() {
   const mockBarcodeSamples = useMemo(() => inventoryProducts.slice(0, 6), [inventoryProducts]);
 
   /* Order-level discount */
-  const [orderDiscount,     setOrderDiscount]     = useState('');
+  const [orderDiscount, setOrderDiscount] = useState('');
   const [orderDiscountMode, setOrderDiscountMode] = useState(DISCOUNT_MODES.NONE);
   const [showOrderDiscount, setShowOrderDiscount] = useState(false);
 
   /* Tax rate */
-  const [taxRate,        setTaxRate]        = useState(8);
+  const [taxRate, setTaxRate] = useState(8);
   const [editingTaxRate, setEditingTaxRate] = useState(false);
-  const [draftTaxRate,   setDraftTaxRate]   = useState('8');
+  const [draftTaxRate, setDraftTaxRate] = useState('8');
 
   /* Derived totals */
   const {
     subtotal, itemSavings, taxableAmount,
     orderDiscountAmount, tax, total,
   } = useMemo(() => {
-    const subtotal    = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+    const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
     const itemSavings = cart.reduce((s, i) => {
       const lineTotal = i.price * i.quantity;
       if (!i.itemDiscount || i.itemDiscountMode === DISCOUNT_MODES.NONE) return s;
@@ -493,8 +491,8 @@ export default function POSBillingPage() {
       return s + disc;
     }, 0);
 
-    const afterItems  = subtotal - itemSavings;
-    const orderVal    = parseFloat(orderDiscount) || 0;
+    const afterItems = subtotal - itemSavings;
+    const orderVal = parseFloat(orderDiscount) || 0;
     const orderDiscountAmount = orderDiscountMode === DISCOUNT_MODES.PERCENT
       ? afterItems * orderVal / 100
       : orderDiscountMode === DISCOUNT_MODES.FLAT
@@ -502,8 +500,8 @@ export default function POSBillingPage() {
         : 0;
 
     const taxableAmount = Math.max(afterItems - orderDiscountAmount, 0);
-    const tax           = taxableAmount * taxRate / 100;
-    const total         = taxableAmount + tax;
+    const tax = taxableAmount * taxRate / 100;
+    const total = taxableAmount + tax;
 
     return { subtotal, itemSavings, taxableAmount, orderDiscountAmount, tax, total };
   }, [cart, orderDiscount, orderDiscountMode, taxRate]);
@@ -629,7 +627,7 @@ export default function POSBillingPage() {
   /* Order discount */
   const applyOrderDiscount = () => {
     const v = parseFloat(orderDiscount) || 0;
-    if (v <= 0) { 
+    if (v <= 0) {
       setOrderDiscountMode(DISCOUNT_MODES.NONE);
     }
     setShowOrderDiscount(false);
@@ -639,14 +637,14 @@ export default function POSBillingPage() {
   /* Status icon */
   const StatusIcon = statusType === 'error' ? AlertCircle : statusType === 'success' ? Check : CircleAlert;
   const statusStyle = {
-    error:   'border-red-200 bg-red-50 text-red-700',
+    error: 'border-red-200 bg-red-50 text-red-700',
     success: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    info:    'border-[#BFDBFE] bg-[#EFF6FF] text-slate-700',
+    info: 'border-[#BFDBFE] bg-[#EFF6FF] text-slate-700',
   }[statusType];
   const statusIconStyle = {
-    error:   'text-red-500',
+    error: 'text-red-500',
     success: 'text-emerald-500',
-    info:    'text-[#2563EB]',
+    info: 'text-[#2563EB]',
   }[statusType];
 
   /* Render */
@@ -685,14 +683,12 @@ export default function POSBillingPage() {
         ].map(({ icon, label, value, primary, accent }) => (
           <Card
             key={label}
-            className={`border-[#E2E8F0] shadow-[0_8px_30px_rgba(37,99,235,0.08)] transition-all duration-300 ${
-              primary ? 'bg-[#2563EB] text-white border-[#2563EB]' : 'bg-white text-slate-900'
-            }`}
+            className={`border-[#E2E8F0] shadow-[0_8px_30px_rgba(37,99,235,0.08)] transition-all duration-300 ${primary ? 'bg-[#2563EB] text-white border-[#2563EB]' : 'bg-white text-slate-900'
+              }`}
           >
             <CardContent className="p-4 flex items-center gap-3">
-              <div className={`h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                primary ? 'bg-white/20 text-white' : accent ? 'bg-emerald-50 text-emerald-600' : 'bg-[#EFF6FF] text-[#2563EB]'
-              }`}>
+              <div className={`h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 ${primary ? 'bg-white/20 text-white' : accent ? 'bg-emerald-50 text-emerald-600' : 'bg-[#EFF6FF] text-[#2563EB]'
+                }`}>
                 {icon}
               </div>
               <div>
@@ -815,16 +811,15 @@ export default function POSBillingPage() {
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {filteredProducts.map((product) => {
-                    const inCart   = cart.find((i) => i.id === product.id);
+                    const inCart = cart.find((i) => i.id === product.id);
                     const catStyle = CATEGORY_COLORS[product.category] || defaultCat;
                     return (
                       <div
                         key={product.id}
-                        className={`rounded-2xl border p-4 space-y-3 transition-all duration-200 ${
-                          inCart
+                        className={`rounded-2xl border p-4 space-y-3 transition-all duration-200 ${inCart
                             ? 'border-[#2563EB] bg-[#EFF6FF] shadow-md'
                             : 'border-[#E2E8F0] bg-white shadow-sm hover:border-[#BFDBFE] hover:shadow-md'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
@@ -855,11 +850,10 @@ export default function POSBillingPage() {
 
                         <Button
                           type="button"
-                          className={`w-full rounded-xl text-sm h-9 transition-all ${
-                            inCart
+                          className={`w-full rounded-xl text-sm h-9 transition-all ${inCart
                               ? 'bg-[#1E40AF] hover:bg-[#1E3A8A] shadow-md shadow-blue-300/30'
                               : 'bg-[#2563EB] hover:bg-[#1E40AF]'
-                          }`}
+                            }`}
                           onClick={() => addProductToCart(product)}
                         >
                           {inCart ? (
