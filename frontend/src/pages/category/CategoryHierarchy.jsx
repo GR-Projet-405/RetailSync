@@ -6,6 +6,7 @@ export default function CategoryHierarchy({ onBack, onCreate, onEdit }) {
   const [tree, setTree] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [selectedChildren, setSelectedChildren] = useState([]);
   const [expanded, setExpanded] = useState({});
   const [search, setSearch] = useState('');
   const [activeView, setActiveView] = useState('tree');
@@ -16,7 +17,7 @@ export default function CategoryHierarchy({ onBack, onCreate, onEdit }) {
         setTree(res.data.data);
         if (res.data.data.length > 0) {
           setExpanded({ [res.data.data[0]._id]: true });
-          setSelected(res.data.data[0]);
+          handleSelect(res.data.data[0]);
         }
       })
       .catch(console.error)
@@ -29,8 +30,10 @@ export default function CategoryHierarchy({ onBack, onCreate, onEdit }) {
     try {
       const res = await categoryService.getById(node._id);
       setSelected(res.data.data.category);
+      setSelectedChildren(res.data.data.children || []);
     } catch {
       setSelected(node);
+      setSelectedChildren(node.children || []);
     }
   };
 
@@ -56,7 +59,9 @@ export default function CategoryHierarchy({ onBack, onCreate, onEdit }) {
               <span className="text-slate-400 text-xs w-3 flex-shrink-0">{isExpanded ? '▼' : '►'}</span>
             ) : <span className="w-3 flex-shrink-0" />}
             <span className="text-base flex-shrink-0">{node.icon || '📦'}</span>
-            <span className={`text-sm truncate ${isSelected ? 'font-semibold text-blue-700' : 'text-slate-700'}`}>{node.name}</span>
+            <span className={`text-sm truncate ${isSelected ? 'font-semibold text-blue-700' : 'text-slate-700'}`}>
+              {node.name}
+            </span>
           </div>
           <span className="text-xs text-slate-400 flex-shrink-0 ml-2">
             {node.children?.length > 0 ? `${node.children.length} sub` : '—'}
@@ -84,7 +89,10 @@ export default function CategoryHierarchy({ onBack, onCreate, onEdit }) {
           <h1 className="text-2xl font-bold text-slate-800">Category Hierarchy</h1>
           <p className="text-sm text-slate-500 mt-0.5">View and manage nested category structure</p>
         </div>
-        <button onClick={onCreate} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">
+        <button
+          onClick={onCreate}
+          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
+        >
           + Add Category
         </button>
       </div>
@@ -99,34 +107,44 @@ export default function CategoryHierarchy({ onBack, onCreate, onEdit }) {
           <button
             key={tab.key}
             onClick={() => tab.key === 'list' ? onBack() : setActiveView(tab.key)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeView === tab.key ? 'bg-blue-600 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeView === tab.key
+                ? 'bg-blue-600 text-white'
+                : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
           >
             {tab.icon} {tab.label}
           </button>
         ))}
       </div>
 
-      {/* ── Analytics View ── */}
+      {/* Analytics View */}
       {activeView === 'analytics' && (
         <CategoryDashboard onBack={onBack} onCreate={onCreate} />
       )}
 
-      {/* ── Tree View ── */}
+      {/* Tree View */}
       {activeView === 'tree' && (
         <div className="grid grid-cols-5 gap-4" style={{ minHeight: 500 }}>
-          {/* Left: Tree */}
+
+          {/* Left: Tree Panel */}
           <div className="col-span-2 bg-white rounded-xl border border-slate-200 p-4">
             <h3 className="text-sm font-semibold text-slate-700 mb-3">Category Tree</h3>
             <div className="relative mb-3">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
-              <input type="text" placeholder="Search..." value={search}
+              <input
+                type="text"
+                placeholder="Search..."
+                value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
             <div className="overflow-y-auto" style={{ maxHeight: 440 }}>
               {loading ? (
                 <div className="flex items-center justify-center py-12 text-slate-400 text-sm">
-                  <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-2" />Loading...
+                  <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-2" />
+                  Loading...
                 </div>
               ) : tree.length === 0 ? (
                 <p className="text-center py-8 text-slate-400 text-sm">No categories found</p>
@@ -136,7 +154,7 @@ export default function CategoryHierarchy({ onBack, onCreate, onEdit }) {
             </div>
           </div>
 
-          {/* Right: Detail */}
+          {/* Right: Detail Panel */}
           <div className="col-span-3 bg-white rounded-xl border border-slate-200 p-5">
             {!selected ? (
               <div className="flex items-center justify-center h-full text-slate-400 text-sm">
@@ -144,7 +162,8 @@ export default function CategoryHierarchy({ onBack, onCreate, onEdit }) {
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between mb-1">
+                {/* Detail Header */}
+                <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold text-slate-600">Category Details</h3>
                   {selected.parentId && (
                     <span className="text-xs text-slate-400">
@@ -153,12 +172,16 @@ export default function CategoryHierarchy({ onBack, onCreate, onEdit }) {
                   )}
                 </div>
 
+                {/* Category Card */}
                 <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl mb-4">
                   <div className="w-14 h-14 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-3xl shadow-sm">
                     {selected.icon || '📦'}
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-slate-800">{selected.name}</h2>
+                    {selected.description && (
+                      <p className="text-xs text-slate-500 mt-0.5 mb-1">{selected.description}</p>
+                    )}
                     <div className="flex items-center gap-2 mt-1">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${selected.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         ● {selected.isActive ? 'Active' : 'Inactive'}
@@ -170,29 +193,75 @@ export default function CategoryHierarchy({ onBack, onCreate, onEdit }) {
                   </div>
                 </div>
 
+                {/* Stats Cards */}
                 <div className="grid grid-cols-3 gap-3 mb-4">
-                  {[{ label: 'Products', value: '—' }, { label: 'Stock Units', value: '—' }, { label: 'Total Value', value: '—' }].map((s) => (
+                  {[
+                    {
+                      label: 'Sub-Categories',
+                      value: selectedChildren.length > 0 ? selectedChildren.length : (selected.parentId ? '—' : 0),
+                      color: 'text-blue-600',
+                    },
+                    {
+                      label: 'Category Code',
+                      value: `#${selected.code || '—'}`,
+                      color: 'text-purple-600',
+                    },
+                    {
+                      label: 'Sort Order',
+                      value: String(selected.sortOrder || 1).padStart(2, '0'),
+                      color: 'text-slate-700',
+                    },
+                  ].map((s) => (
                     <div key={s.label} className="bg-slate-50 rounded-lg p-3 text-center">
-                      <p className="text-xl font-bold text-slate-700">{s.value}</p>
+                      <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
                       <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
                     </div>
                   ))}
                 </div>
 
+                {/* Parent Category */}
                 {selected.parentId && (
                   <div className="mb-4">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Parent Category</p>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                      Parent Category
+                    </p>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-700 rounded-lg text-sm font-medium border border-orange-100">
                       🗂️ {typeof selected.parentId === 'object' ? selected.parentId.name : selected.parentId}
                     </span>
                   </div>
                 )}
 
-                <div className="grid grid-cols-3 gap-4 mb-5 text-sm">
+                {/* Sub-categories list (if parent) */}
+                {selectedChildren.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                      Sub-Categories ({selectedChildren.length})
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedChildren.map((c) => (
+                        <span
+                          key={c._id}
+                          onClick={() => handleSelect(c)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium cursor-pointer hover:bg-blue-100 border border-blue-100"
+                        >
+                          {c.icon || '📦'} {c.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Meta Info */}
+                <div className="grid grid-cols-2 gap-4 mb-5 text-sm">
                   {[
-                    { label: 'Created', value: new Date(selected.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) },
-                    { label: 'Last Updated', value: new Date(selected.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) },
-                    { label: 'Sort Order', value: String(selected.sortOrder || 1).padStart(2, '0') },
+                    {
+                      label: 'Created',
+                      value: new Date(selected.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                    },
+                    {
+                      label: 'Last Updated',
+                      value: new Date(selected.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                    },
                   ].map((m) => (
                     <div key={m.label}>
                       <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">{m.label}</p>
@@ -201,11 +270,18 @@ export default function CategoryHierarchy({ onBack, onCreate, onEdit }) {
                   ))}
                 </div>
 
+                {/* Action Buttons */}
                 <div className="flex items-center gap-2 pt-4 border-t border-slate-100">
-                  <button onClick={() => onEdit(selected._id)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                  <button
+                    onClick={() => onEdit(selected._id)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                  >
                     ✏️ Edit Category
                   </button>
-                  <button onClick={() => onCreate(selected._id)} className="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-sm hover:bg-slate-50">
+                  <button
+                    onClick={() => onCreate(selected._id)}
+                    className="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-sm hover:bg-slate-50"
+                  >
                     + Add Sub-Category
                   </button>
                   <button className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-500 rounded-lg text-sm hover:bg-red-50 ml-auto">

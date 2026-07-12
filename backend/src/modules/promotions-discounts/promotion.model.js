@@ -60,7 +60,7 @@ const promotionSchema = new mongoose.Schema(
     categories: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'CategoryPage',
+        ref: 'Category',
       },
     ],
     createdBy: {

@@ -102,4 +102,14 @@ CategorySchema.index({ status: 1 });
 CategorySchema.index({ name: 'text', description: 'text' });
 CategorySchema.index({ sortOrder: 1 });
 
+// Virtual for parentId to support frontend integration
+CategorySchema.virtual('parentId')
+  .get(function () {
+    return this.parentCategory;
+  })
+  .set(function (val) {
+    this.parentCategory = val;
+  });
+
 module.exports = mongoose.model('Category', CategorySchema);
+

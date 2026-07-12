@@ -4,139 +4,80 @@ import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
 import Button from '../components/Button';
 import Spinner from '../components/Spinner';
 import { toast } from '../utils/toast';
-
-const MOCK_ALERTS = [
-  // Low Stock Projections (AI driven days remaining)
-  {
-    id: 'AL-101',
-    category: 'low_stock',
-    title: 'Critical Stock Exhaustion Projected',
-    description: 'Whole Wheat Bread is selling 45% faster than average weekly velocity. Projected to run out in 2 days.',
-    impact: 'Potential $420.00 weekly revenue loss',
-    severity: 'critical',
-    source: 'AI Inventory Forecaster',
-    date: 'Today, 10:15 AM',
-    timeGroup: 'Today',
-    metadata: {
-      product: 'Whole Wheat Bread',
-      sku: 'BAK-WWB-002',
-      currentStock: 12,
-      daysRemaining: 2,
-      velocity: '24 units/day (Avg: 16 units/day)',
-      recommendedReorder: 50
-    },
-    acknowledged: false
-  },
-  {
-    id: 'AL-102',
-    category: 'low_stock',
-    title: 'Stock Depletion Warning',
-    description: 'Chocolate Chip Cookies are trending. Projected to run out in 3 days.',
-    impact: 'Medium revenue impact',
-    severity: 'warning',
-    source: 'AI Inventory Forecaster',
-    date: 'Today, 09:30 AM',
-    timeGroup: 'Today',
-    metadata: {
-      product: 'Chocolate Chip Cookie',
-      sku: 'BAK-CCC-005',
-      currentStock: 8,
-      daysRemaining: 3,
-      velocity: '12 units/day (Avg: 8 units/day)',
-      recommendedReorder: 100
-    },
-    acknowledged: false
-  },
-  // Sales Targets Off-Track
-  {
-    id: 'AL-201',
-    category: 'sales_target',
-    title: 'Monthly Branch Sales Target Off-Track',
-    description: 'Suburban Mall Branch sales velocity is currently 22% below the required run-rate to meet its $45,000 monthly goal.',
-    impact: 'Projected monthly shortfall: $8,800.00',
-    severity: 'warning',
-    source: 'Target Analyzer',
-    date: 'Yesterday, 06:00 PM',
-    timeGroup: 'Yesterday',
-    metadata: {
-      branch: 'Suburban Mall',
-      currentSales: 16200,
-      targetSales: 45000,
-      completionPct: 36,
-      daysRemaining: 15,
-      requiredRunRate: '$1,920/day',
-      actualRunRate: '$1,080/day'
-    },
-    acknowledged: false
-  },
-  // Anomalies
-  {
-    id: 'AL-301',
-    category: 'anomaly',
-    title: 'Anomalous Transaction Discount Detected',
-    description: 'Cashier "John Doe" applied an atypical 75% custom discount on transaction TXN-10492.',
-    impact: 'Exceeds standard maximum authorization rules by 55%',
-    severity: 'critical',
-    source: 'AI Anomaly & Fraud Guard',
-    date: 'Today, 11:42 AM',
-    timeGroup: 'Today',
-    metadata: {
-      transactionId: 'TXN-10492',
-      cashier: 'John Doe (ID: EMP-8822)',
-      discount: '75% (Std Limit: 20%)',
-      standardMax: '20%',
-      itemsOrdered: '3x Premium Espresso Maker',
-      terminal: 'POS-Terminal-04'
-    },
-    acknowledged: false
-  },
-  {
-    id: 'AL-302',
-    category: 'anomaly',
-    title: 'Out-of-Hours Activity Anomaly',
-    description: 'A cash drawer opening and refund operation was registered at 03:15 AM (Standard hours are 08:00 AM - 10:00 PM).',
-    impact: 'Potential unauthorized store entry / security breach',
-    severity: 'critical',
-    source: 'AI Anomaly & Fraud Guard',
-    date: 'Today, 03:15 AM',
-    timeGroup: 'Today',
-    metadata: {
-      operation: 'No-Sale Drawer Open & Refund',
-      timestamp: '03:15:22 AM',
-      terminalID: 'POS-Terminal-02',
-      securityCheck: 'Flagged: Motion Sensor Activated'
-    },
-    acknowledged: false
-  }
-];
+import api from '../services/api';
 
 export default function AIAlertsPage() {
   const [loading, setLoading] = useState(true);
-  const [alerts, setAlerts] = useState(MOCK_ALERTS);
+  const [alerts, setAlerts] = useState([]);
+  const [overview, setOverview] = useState({ activeAlerts: 0, lowStockCount: 0, anomalyCount: 0, salesTargetCount: 0 });
   const [filter, setFilter] = useState('all');
   const [severityFilter, setSeverityFilter] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    setLoading(true);
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 600);
-    return () => clearTimeout(timer);
-  }, [refreshKey]);
+    const fetchAlerts = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = {};
+        if (filter && filter !== 'all') params.category = filter;
+        if (severityFilter && severityFilter !== 'all') params.severity = severityFilter;
 
-  const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
+        const res = await api.get('/ai-alerts/list', { params });
+        const data = res.data.data;
+        setAlerts(data.alerts || []);
+        setOverview(data.overview || { activeAlerts: 0, lowStockCount: 0, anomalyCount: 0, salesTargetCount: 0 });
+      } catch (err) {
+        console.error('AI Alerts fetch error:', err);
+        setError(err.message || 'Failed to load alerts');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAlerts();
+  }, [refreshKey, filter, severityFilter]);
+
+  const [generating, setGenerating] = useState(false);
+
+  const handleRefresh = async () => {
+    setGenerating(true);
+    try {
+      const res = await api.post('/ai-alerts/generate');
+      const count = res.data.data?.generatedCount ?? 0;
+      if (count > 0) {
+        toast.success(`${count} new alert(s) generated from live data!`);
+      } else {
+        toast.info('No new alerts detected — all thresholds are within safe limits.');
+      }
+    } catch (err) {
+      toast.error('Failed to run alert scan: ' + (err.message || 'Unknown error'));
+    } finally {
+      setGenerating(false);
+      setRefreshKey(prev => prev + 1);
+    }
   };
 
-  const handleAcknowledge = (id, title) => {
-    setAlerts(prev => prev.map(a => a.id === id ? { ...a, acknowledged: true } : a));
-    toast.success(`Alert "${title}" marked as resolved!`);
+  const handleAcknowledge = async (id, title) => {
+    try {
+      await api.patch(`/ai-alerts/${id}/acknowledge`);
+      setAlerts(prev => prev.map(a => a._id === id ? { ...a, acknowledged: true } : a));
+      setOverview(prev => ({ ...prev, activeAlerts: Math.max(0, prev.activeAlerts - 1) }));
+      toast.success(`Alert "${title}" marked as resolved!`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to acknowledge alert');
+    }
   };
 
-  const handleClear = (id) => {
-    setAlerts(prev => prev.filter(a => a.id !== id));
+  const handleClear = async (id) => {
+    try {
+      await api.delete(`/ai-alerts/${id}`);
+      setAlerts(prev => prev.filter(a => a._id !== id));
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete alert');
+    }
   };
 
   const toggleExpand = (id) => {
@@ -159,6 +100,7 @@ export default function AIAlertsPage() {
 
   const getSeverityStyles = (severity) => {
     if (severity === 'critical') return 'bg-red-50 text-red-700 border-red-200';
+    if (severity === 'info') return 'bg-blue-50 text-blue-700 border-blue-200';
     return 'bg-amber-50 text-amber-700 border-amber-200';
   };
 
@@ -189,9 +131,9 @@ export default function AIAlertsPage() {
   const historyAlerts = filteredAlerts.filter(a => a.timeGroup !== 'Today');
 
   const renderAlertCard = (alert) => {
-    const isExpanded = expandedId === alert.id;
+    const isExpanded = expandedId === alert._id;
     return (
-      <Card key={alert.id} className="border-slate-200 bg-white rounded-2xl p-5 hover:shadow-md transition">
+      <Card key={alert._id} className="border-slate-200 bg-white rounded-2xl p-5 hover:shadow-md transition">
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           {/* Info details */}
           <div className="flex items-start gap-4 flex-1 min-w-0">
@@ -224,7 +166,7 @@ export default function AIAlertsPage() {
           {/* Actions Column */}
           <div className="flex items-center gap-2 self-end md:self-start shrink-0">
             <button
-              onClick={() => toggleExpand(alert.id)}
+              onClick={() => toggleExpand(alert._id)}
               className="p-2 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition flex items-center gap-1 text-xs font-bold"
               title="Inspect Metadata logs"
             >
@@ -234,14 +176,14 @@ export default function AIAlertsPage() {
             {!alert.acknowledged ? (
               <>
                 <button
-                  onClick={() => handleAcknowledge(alert.id, alert.title)}
+                  onClick={() => handleAcknowledge(alert._id, alert.title)}
                   className="px-3 py-2 text-xs font-bold bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl flex items-center gap-1 transition shadow-sm"
                 >
                   <Check className="w-3.5 h-3.5" />
                   Resolve
                 </button>
                 <button
-                  onClick={() => handleClear(alert.id)}
+                  onClick={() => handleClear(alert._id)}
                   className="p-2 hover:bg-slate-50 text-slate-400 hover:text-slate-600 border border-slate-200 rounded-xl transition"
                   title="Dismiss"
                 >
@@ -250,7 +192,7 @@ export default function AIAlertsPage() {
               </>
             ) : (
               <button
-                onClick={() => handleClear(alert.id)}
+                onClick={() => handleClear(alert._id)}
                 className="px-3 py-1.5 text-xs font-bold border border-red-200 text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-1 transition"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -268,10 +210,10 @@ export default function AIAlertsPage() {
               AI System Inspection Details
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-              {Object.entries(alert.metadata).map(([key, val]) => (
+              {alert.metadata && Object.entries(alert.metadata).map(([key, val]) => (
                 <div key={key} className="flex justify-between p-2.5 bg-white border border-slate-100 rounded-lg">
                   <span className="font-semibold text-slate-400 capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
-                  <span className="font-extrabold text-slate-700">{val}</span>
+                  <span className="font-extrabold text-slate-700">{String(val)}</span>
                 </div>
               ))}
             </div>
@@ -301,14 +243,21 @@ export default function AIAlertsPage() {
               variant="outline"
               size="sm"
               onClick={handleRefresh}
-              className="flex items-center gap-2 border-slate-200 hover:bg-slate-50 font-bold bg-white text-slate-700 h-10 px-4 rounded-xl shadow-sm"
+              disabled={generating}
+              className="flex items-center gap-2 border-slate-200 hover:bg-slate-50 font-bold bg-white text-slate-700 h-10 px-4 rounded-xl shadow-sm disabled:opacity-60"
             >
-              <RefreshCw className="h-4 w-4 text-slate-500" />
-              Re-Scan Logs
+              <RefreshCw className={`h-4 w-4 text-slate-500 ${generating ? 'animate-spin' : ''}`} />
+              {generating ? 'Scanning...' : 'Re-Scan Logs'}
             </Button>
           </div>
         </div>
       </Card>
+
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-700 font-medium">
+          {error}
+        </div>
+      )}
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -317,7 +266,7 @@ export default function AIAlertsPage() {
             <div>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Alerts</p>
               <p className="mt-2 text-3xl font-extrabold text-slate-900">
-                {alerts.filter(a => !a.acknowledged).length}
+                {overview.activeAlerts}
               </p>
             </div>
             <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
@@ -331,7 +280,7 @@ export default function AIAlertsPage() {
             <div>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Low Stock Projections</p>
               <p className="mt-2 text-3xl font-extrabold text-blue-600">
-                {alerts.filter(a => a.category === 'low_stock' && !a.acknowledged).length}
+                {overview.lowStockCount}
               </p>
             </div>
             <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
@@ -345,7 +294,7 @@ export default function AIAlertsPage() {
             <div>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Unusual Anomalies</p>
               <p className="mt-2 text-3xl font-extrabold text-red-600">
-                {alerts.filter(a => a.category === 'anomaly' && !a.acknowledged).length}
+                {overview.anomalyCount}
               </p>
             </div>
             <div className="p-3 bg-red-50 text-red-600 rounded-xl">
@@ -359,7 +308,7 @@ export default function AIAlertsPage() {
             <div>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Target Off-Tracks</p>
               <p className="mt-2 text-3xl font-extrabold text-purple-600">
-                {alerts.filter(a => a.category === 'sales_target' && !a.acknowledged).length}
+                {overview.salesTargetCount}
               </p>
             </div>
             <div className="p-3 bg-purple-50 text-purple-600 rounded-xl">

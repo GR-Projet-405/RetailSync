@@ -392,12 +392,7 @@ const getTopProducts = async (filters = {}) => {
     { $unwind: '$products' },
     {
       $group: {
-        _id: {
-          productId: '$products.productId',
-          sku: '$products.sku',
-          name: '$products.name',
-          category: '$products.category',
-        },
+        _id: '$products.productId',
         quantitySold: { $sum: '$products.quantitySold' },
         revenue: { $sum: '$products.revenue' },
         grossProfit: { $sum: '$products.grossProfit' },
@@ -409,12 +404,21 @@ const getTopProducts = async (filters = {}) => {
     { $sort: { [sortMap[sortBy]]: -1, quantitySold: -1 } },
     { $limit: limit },
     {
+      $lookup: {
+        from: 'products',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'productDetails'
+      }
+    },
+    { $unwind: { path: '$productDetails', preserveNullAndEmptyArrays: true } },
+    {
       $project: {
         _id: 0,
-        productId: '$_id.productId',
-        sku: '$_id.sku',
-        name: '$_id.name',
-        category: '$_id.category',
+        productId: '$_id',
+        sku: '$productDetails.sku',
+        name: '$productDetails.name',
+        category: '$productDetails.category',
         quantitySold: 1,
         revenue: 1,
         grossProfit: 1,

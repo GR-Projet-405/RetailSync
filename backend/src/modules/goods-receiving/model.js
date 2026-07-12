@@ -68,7 +68,7 @@ const GoodsReceivingPageSchema = new mongoose.Schema(
     branchId: {
       type: mongoose.Schema.Types.ObjectId, // was String — fixed
       ref: "Branch",
-      required: true,
+      required: false,
     },
 
     destinationWarehouse: { type: String, required: true, trim: true },

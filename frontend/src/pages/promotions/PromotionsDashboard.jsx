@@ -52,6 +52,37 @@ export default function PromotionsDiscountsPage() {
   const [selectedBranch, setSelectedBranch] = useState('All Branches');
   const [dateRange, setDateRange] = useState({ label: '01 Jun 2026 - 14 Jun 2026', value: 'custom_june' });
 
+  const [branchesList, setBranchesList] = useState(['All Branches']);
+  const [branchMap, setBranchMap] = useState({});
+  const [categoriesList, setCategoriesList] = useState([]);
+
+  const fetchBranches = async () => {
+    try {
+      const response = await api.get('/branch-management', { params: { limit: 100 } });
+      const list = response.data?.data || [];
+      const formatted = ['All Branches', ...list.map(b => b.branchName || b.name)];
+      setBranchesList(formatted);
+      const newMap = {};
+      list.forEach(b => {
+        const name = b.branchName || b.name;
+        newMap[name] = b._id;
+      });
+      setBranchMap(newMap);
+    } catch (err) {
+      console.error('Failed to fetch branches:', err);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const response = await api.get('/category-management', { params: { limit: 200, isActive: true } });
+      const list = response.data?.data || [];
+      setCategoriesList(list);
+    } catch (err) {
+      console.error('Failed to fetch categories:', err);
+    }
+  };
+
   const fetchPromotions = async () => {
     setLoading(true);
     setError(null);
@@ -94,6 +125,8 @@ export default function PromotionsDiscountsPage() {
 
   React.useEffect(() => {
     fetchPromotions();
+    fetchBranches();
+    fetchCategories();
   }, []);
 
   React.useEffect(() => {
@@ -142,10 +175,8 @@ export default function PromotionsDiscountsPage() {
     minOrderValue: '',
     maxUses: '',
     description: '',
-    categories: ['All categories', 'Beverages']
+    categories: []
   });
-
-  const branchesList = ['All Branches', 'Downtown Flagship', 'North Branch', 'South Branch'];
 
   // Handle branch stats override
   const [stats, setStats] = useState({
@@ -219,7 +250,7 @@ export default function PromotionsDiscountsPage() {
     setEditMode(false);
     setFormData({
       name: '',
-      discount: '20 %',
+      discount: '20',
       type: 'Percentage',
       revenue: 0,
       orders: 0,
@@ -234,7 +265,7 @@ export default function PromotionsDiscountsPage() {
       minOrderValue: 'Rs. 500',
       maxUses: '1000',
       description: '',
-      categories: ['All categories', 'Beverages']
+      categories: []
     });
     setIsFormOpen(true);
   };
@@ -245,13 +276,16 @@ export default function PromotionsDiscountsPage() {
     setSuccessMode('update');
     setEditMode(true);
     setCurrentPromo(promo);
+    const rawDiscountNum = promo.discount ? promo.discount.toString().replace(/[^0-9.]/g, '') : '20';
+    const catIds = promo.categories ? promo.categories.map(c => typeof c === 'object' ? c._id || c.id : c) : [];
     setFormData({ 
       ...promo,
+      discount: rawDiscountNum,
       minOrderValue: promo.minOrderValue !== undefined && promo.minOrderValue !== null ? `Rs. ${promo.minOrderValue}` : 'Rs. 500',
       maxUses: promo.maxUses !== null && promo.maxUses !== undefined ? promo.maxUses.toString() : '',
       startTime: promo.startTime || '08:00',
       endTime: promo.endTime || '23:00',
-      categories: promo.categories || ['All categories', 'Beverages']
+      categories: catIds
     });
     setIsFormOpen(true);
   };
@@ -280,22 +314,21 @@ export default function PromotionsDiscountsPage() {
   };
 
   // Toggle categories checkboxes
-  const handleCategoryToggle = (category) => {
+  const handleCategoryToggle = (catId) => {
     let updatedCats = [...formData.categories];
-    if (category === 'All categories') {
-      if (updatedCats.includes('All categories')) {
+    if (catId === 'ALL') {
+      const allIds = categoriesList.map(c => c._id);
+      const isAllChecked = allIds.length > 0 && allIds.every(id => updatedCats.includes(id));
+      if (isAllChecked) {
         updatedCats = [];
       } else {
-        updatedCats = ['All categories', 'Beverages', 'Snacks', 'Others'];
+        updatedCats = allIds;
       }
     } else {
-      if (updatedCats.includes(category)) {
-        updatedCats = updatedCats.filter(c => c !== category && c !== 'All categories');
+      if (updatedCats.includes(catId)) {
+        updatedCats = updatedCats.filter(id => id !== catId);
       } else {
-        updatedCats.push(category);
-        if (updatedCats.includes('Beverages') && updatedCats.includes('Snacks') && updatedCats.includes('Others')) {
-          updatedCats.push('All categories');
-        }
+        updatedCats.push(catId);
       }
     }
     setFormData({ ...formData, categories: updatedCats });
@@ -371,18 +404,7 @@ export default function PromotionsDiscountsPage() {
       return;
     }
 
-    // Build branch name string to ObjectId lookup map
-    const map = {};
-    if (user?.branchId) {
-      map[user.branchId.name] = user.branchId._id;
-    }
-    promotions.forEach(p => {
-      if (p.branchId) {
-        map[p.branchId.name] = p.branchId._id;
-      }
-    });
-
-    const targetBranchId = formData.branch === 'All Branches' ? null : map[formData.branch];
+    const targetBranchId = formData.branch === 'All Branches' ? null : (branchMap[formData.branch] || null);
 
     // Clean and validate numeric types
     const cleanMinOrderValue = Number(formData.minOrderValue.toString().replace(/[^0-9]/g, '')) || 0;
@@ -398,15 +420,21 @@ export default function PromotionsDiscountsPage() {
       endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
     }
 
-    // Format standard backend payload (omit categories strings to bypass CastError validations)
+    const numericDiscount = parseFloat(formData.discount.toString().replace(/[^0-9.]/g, '')) || 0;
+    const formattedDiscount = formData.type === 'Percentage' 
+      ? `${numericDiscount} %` 
+      : `Rs.${numericDiscount}`;
+
+    // Format standard backend payload with real MongoDB ObjectIds
     const payload = {
       ...formData,
+      discount: formattedDiscount,
       branchId: targetBranchId,
       minOrderValue: cleanMinOrderValue,
       maxUses: cleanMaxUses,
       startDate: startDateTime,
       endDate: endDateTime,
-      categories: [],
+      categories: formData.categories,
     };
 
     try {
@@ -428,7 +456,7 @@ export default function PromotionsDiscountsPage() {
         setSuccessDetails({
           name: formData.name,
           couponCode: currentPromo.couponCode || 'N/A',
-          discount: formData.discount,
+          discount: formattedDiscount,
           validity: `${formData.startDate} - ${formData.endDate}`,
           branch: formData.branch,
           rawPromo: mappedUpdated
@@ -440,10 +468,10 @@ export default function PromotionsDiscountsPage() {
         // Create mode
         const createPayload = {
           ...payload,
-          revenue: Math.floor(Math.random() * 120000) + 15000,
-          ordersCount: Math.floor(Math.random() * 320) + 40,
-          usagesCount: Math.floor(Math.random() * 200) + 10,
-          roi: `${(Math.random() * 1.5 + 1.8).toFixed(1)}x`,
+          revenue: 0,
+          ordersCount: 0,
+          usagesCount: 0,
+          roi: '0.0x',
         };
         const response = await api.post('/promotions-discounts', createPayload);
         const createdPromo = { ...response.data.data, id: response.data.data._id };
@@ -455,16 +483,9 @@ export default function PromotionsDiscountsPage() {
         };
         setPromotions([mappedCreated, ...promotions]);
 
-        // Generate coupon code algorithm: e.g. "Summer Sale" -> "SUMMER20"
-        const discountNumeric = formData.discount.replace(/[^0-9]/g, '') || '20';
-        const cleanName = formData.name.toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const codePrefix = cleanName.substring(0, Math.min(cleanName.length, 6)) || 'PROMO';
-        const generatedCoupon = `${codePrefix}${discountNumeric}`;
-
         setSuccessDetails({
           name: formData.name,
-          couponCode: generatedCoupon,
-          discount: formData.discount,
+          discount: formattedDiscount,
           validity: `${formData.startDate} - ${formData.endDate}`,
           branch: formData.branch,
           rawPromo: mappedCreated
@@ -598,15 +619,23 @@ export default function PromotionsDiscountsPage() {
                               setFormData({ ...formData, discount: e.target.value });
                               if (formErrors.discount) setFormErrors({ ...formErrors, discount: null });
                             }}
-                            className={`w-full px-4 py-2.5 bg-slate-50/75 border rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 transition-all ${
+                            className={`w-full py-2.5 bg-slate-50/75 border rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 transition-all ${
+                              formData.type === 'Percentage' ? 'pl-4 pr-10' : 'pl-10 pr-4'
+                            } ${
                               formErrors.discount 
                                 ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
                                 : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500'
                             }`}
                           />
-                          <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 font-sans">
-                            {formData.type === 'Percentage' ? '%' : 'Rs.'}
-                          </span>
+                          {formData.type === 'Percentage' ? (
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 font-sans">
+                              %
+                            </span>
+                          ) : (
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 font-sans">
+                              Rs.
+                            </span>
+                          )}
                         </div>
                         {formErrors.discount ? (
                           <span className="text-[10px] text-red-500 font-bold block mt-1">{formErrors.discount}</span>
@@ -717,20 +746,54 @@ export default function PromotionsDiscountsPage() {
                   <h3 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">
                     Status
                   </h3>
-                  <div className="flex flex-col gap-3.5 text-xs font-semibold text-slate-600">
-                    {['Draft', 'Active', 'Scheduled', 'Expired'].map((st) => (
-                      <label key={st} className="flex items-center gap-2.5 cursor-pointer hover:text-slate-800 transition-colors">
+                  {editMode && currentPromo && currentPromo.status !== 'Draft' ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-500">Current Status:</span>
+                        <Badge variant={
+                          formData.status === 'Active' ? 'success' :
+                          formData.status === 'Scheduled' ? 'primary' :
+                          formData.status === 'Expired' ? 'danger' : 'neutral'
+                        }>
+                          {formData.status}
+                        </Badge>
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
+                        Campaign is published. Status is automatically calculated based on dates.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3.5 text-xs font-semibold text-slate-600">
+                      <label className="flex items-center gap-2.5 cursor-pointer hover:text-slate-800 transition-colors">
                         <input
                           type="radio"
                           name="status"
-                          checked={formData.status === st}
-                          onChange={() => setFormData({ ...formData, status: st })}
+                          value="Draft"
+                          checked={formData.status === 'Draft'}
+                          onChange={() => setFormData({ ...formData, status: 'Draft' })}
                           className="w-4 h-4 border-slate-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
                         />
-                        <span>{st}</span>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-800">Draft</span>
+                          <span className="text-[10px] text-slate-400 font-medium">Keep unpublished for now</span>
+                        </div>
                       </label>
-                    ))}
-                  </div>
+                      <label className="flex items-center gap-2.5 cursor-pointer hover:text-slate-800 transition-colors">
+                        <input
+                          type="radio"
+                          name="status"
+                          value="Publish"
+                          checked={formData.status !== 'Draft'}
+                          onChange={() => setFormData({ ...formData, status: 'Active' })}
+                          className="w-4 h-4 border-slate-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+                        />
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-800">Publish</span>
+                          <span className="text-[10px] text-slate-400 font-medium">Automatically schedule or activate based on dates</span>
+                        </div>
+                      </label>
+                    </div>
+                  )}
                 </div>
 
                 {/* Schedule Card */}
@@ -852,22 +915,27 @@ export default function PromotionsDiscountsPage() {
                   Eligible Categories
                 </h3>
                 <div className="flex flex-col gap-3.5 text-xs font-semibold text-slate-600">
-                  {[
-                    { name: 'All categories', label: 'All categories' },
-                    { name: 'Beverages', label: 'Beverages' },
-                    { name: 'Snacks', label: 'Snacks' },
-                    { name: 'Others', label: 'Others' }
-                  ].map((cat) => {
-                    const isChecked = formData.categories.includes(cat.name);
+                  <label className="flex items-center gap-3.5 cursor-pointer hover:text-slate-800 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={categoriesList.length > 0 && categoriesList.every(c => formData.categories.includes(c._id))}
+                      onChange={() => handleCategoryToggle('ALL')}
+                      className="w-4 h-4 border-slate-300 text-blue-600 focus:ring-blue-500 rounded cursor-pointer"
+                    />
+                    <span>All categories</span>
+                  </label>
+                  
+                  {categoriesList.map((cat) => {
+                    const isChecked = formData.categories.includes(cat._id);
                     return (
-                      <label key={cat.name} className="flex items-center gap-3.5 cursor-pointer hover:text-slate-800 transition-colors">
+                      <label key={cat._id} className="flex items-center gap-3.5 cursor-pointer hover:text-slate-800 transition-colors">
                         <input
                           type="checkbox"
                           checked={isChecked}
-                          onChange={() => handleCategoryToggle(cat.name)}
+                          onChange={() => handleCategoryToggle(cat._id)}
                           className="w-4 h-4 border-slate-300 text-blue-600 focus:ring-blue-500 rounded cursor-pointer"
                         />
-                        <span>{cat.label}</span>
+                        <span>{cat.name}</span>
                       </label>
                     );
                   })}
