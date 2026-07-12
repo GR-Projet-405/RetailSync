@@ -2,36 +2,32 @@ import api from './api';
 
 const BASE = '/category-management';
 
-export const categoryService = {
-  // List all with filters + pagination (GET /category-management)
+const categoryService = {
+  // List all with filters + pagination
   getAll: (params = {}) =>
     api.get(BASE, { params }),
 
-  // Full category tree (GET /category-management/tree)
+  // Full category tree
   getTree: () =>
     api.get(`${BASE}/tree`),
 
-  // Single category by ID (GET /category-management/:id)
+  // Single category by ID
   getById: (id) =>
     api.get(`${BASE}/${id}`),
 
-  // Create (POST /category-management)
+  // Create
   create: (data) =>
     api.post(BASE, data),
 
-  // Update (PUT /category-management/:id)
+  // Update
   update: (id, data) =>
     api.put(`${BASE}/${id}`, data),
 
-  // Delete (soft) (DELETE /category-management/:id)
+  // Delete (soft)
   remove: (id) =>
     api.delete(`${BASE}/${id}`),
 
-  /**
-   * Returns the full category list (no pagination) — used to populate
-   * dropdowns in Product List filters and the Add/Edit Product form.
-   * Legacy — used by ProductPage dropdowns
-   */
+  // Legacy — used by ProductPage dropdowns
   listAll: async () => {
     const { data } = await api.get(BASE, { params: { limit: 200 } });
     return Array.isArray(data.data) ? data.data : data.data?.items || [];

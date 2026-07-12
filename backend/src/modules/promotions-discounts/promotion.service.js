@@ -273,6 +273,11 @@ class PromotionsDiscountsPageService {
       err.statusCode = 404;
       throw err;
     }
+
+    // Unset promotionId on linked coupons to avoid dangling references
+    const Coupon = require('./coupon.model');
+    await Coupon.updateMany({ promotionId: id }, { $set: { promotionId: null } });
+
     return { success: true, message: 'Promotion deleted successfully' };
   }
 
