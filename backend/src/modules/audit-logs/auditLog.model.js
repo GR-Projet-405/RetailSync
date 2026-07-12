@@ -2,6 +2,17 @@ const mongoose = require('mongoose');
 
 const auditLogSchema = new mongoose.Schema(
   {
+    timestamp: {
+      type: Date,
+      default: Date.now,
+    },
+    user: {
+      type: String,
+      required: true,
+    },
+    role: {
+      type: String,
+    },
     module: {
       type: String,
       required: true,
@@ -40,6 +51,27 @@ const auditLogSchema = new mongoose.Schema(
     },
     newValues: {
       type: mongoose.Schema.Types.Mixed,
+    },
+    action: {
+      type: String,
+    },
+    description: {
+      type: String,
+    },
+    eventType: {
+      type: String,
+      enum: ['User Action', 'System Event', 'Security Alert'],
+    },
+    location: {
+      type: String,
+    },
+    status: {
+      type: String,
+      enum: ['SUCCESS', 'FAILED', 'WARNING'],
+      default: 'SUCCESS',
+    },
+    ipAddress: {
+      type: String,
     },
   },
   {

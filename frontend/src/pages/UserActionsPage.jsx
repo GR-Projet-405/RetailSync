@@ -278,13 +278,8 @@ const DUMMY_STATS = {
 // ---- Component --------------------------------------------------------
 
 export default function UserActionsPage() {
-  const [logs, setLogs] = useState([]);
-  const [stats, setStats] = useState({
-    totalActions: 0,
-    totalLogins: 0,
-    totalModifications: 0,
-    totalSecurityAlerts: 0
-  });
+  const [logs, setLogs] = useState(DUMMY_LOGS);
+  const [stats, setStats] = useState(DUMMY_STATS);
   const [currentDayIndex, setCurrentDayIndex] = useState(0);
 
   const [loadingLogs, setLoadingLogs] = useState(true);
@@ -305,7 +300,8 @@ export default function UserActionsPage() {
 
   useEffect(() => {
     if (!currentUserId) {
-      setLogs([]);
+      setLogs(DUMMY_LOGS);
+      setStats(DUMMY_STATS);
       setLoadingLogs(false);
       setError(null);
       return;

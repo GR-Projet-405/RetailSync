@@ -28,7 +28,7 @@ export default function ActivityLogsPage() {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(15);
 
-  const { data: logsData, isLoading, error, refetch } = useQuery({
+  const { data: logsData, isLoading, error, isError, refetch } = useQuery({
     queryKey: ['audit', 'activity-logs', filters, page],
     queryFn: () => getActivityLogs({
       dateStart: filters.dateRange.start,
@@ -40,7 +40,11 @@ export default function ActivityLogsPage() {
       page,
       limit: rowsPerPage
     }),
-    keepPreviousData: true
+    keepPreviousData: true,
+    retry: 1,
+    onError: (err) => {
+      console.error('Activity logs fetch error:', err);
+    }
   });
 
   const formatDate = (dateString) => {
@@ -148,9 +152,13 @@ export default function ActivityLogsPage() {
     );
   }
 
-  const logs = logsData?.data?.logs || [];
-  const pagination = logsData?.data?.pagination || { total: 0, totalPages: 0, page: 1, limit: 15 };
-  const filterOptions = logsData?.data?.filters || { users: [], branches: [], modules: [], eventTypes: [] };
+  console.log('Activity logs data received:', logsData);
+
+  // Handle different response structures
+  const data = logsData?.data || logsData;
+  const logs = data?.logs || [];
+  const pagination = data?.pagination || { total: 0, totalPages: 0, page: 1, limit: 15 };
+  const filterOptions = data?.filters || { users: [], branches: [], modules: [], eventTypes: [] };
 
   const startIndex = (pagination.page - 1) * pagination.limit + 1;
   const endIndex = Math.min(pagination.page * pagination.limit, pagination.total);
@@ -164,7 +172,7 @@ export default function ActivityLogsPage() {
 
       <div className="mt-8 space-y-6">
         {/* Filters Section */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+        <div className="bg-white/40 backdrop-blur-md rounded-xl border border-white/30 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Filter className="w-5 h-5 text-slate-600 mr-2" />
@@ -277,10 +285,10 @@ export default function ActivityLogsPage() {
         </div>
 
         {/* Logs Table */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white/40 backdrop-blur-md rounded-xl border border-white/30 shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-50">
+              <thead className="bg-slate-50/50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Timestamp
@@ -308,7 +316,7 @@ export default function ActivityLogsPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-200/50">
                 {logs.length === 0 ? (
                   <tr>
                     <td colSpan="8" className="px-6 py-12 text-center text-slate-500">
@@ -320,7 +328,7 @@ export default function ActivityLogsPage() {
                   </tr>
                 ) : (
                   logs.map((log, index) => (
-                    <tr key={index} className="hover:bg-slate-50 transition-colors">
+                    <tr key={index} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                         {formatDate(log.timestamp)}
                       </td>
@@ -359,7 +367,7 @@ export default function ActivityLogsPage() {
 
           {/* Pagination */}
           {pagination.total > 0 && (
-            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+            <div className="px-6 py-4 border-t border-white/30 bg-slate-50/50">
               <div className="flex items-center justify-between">
                 <div className="text-sm text-slate-600">
                   Showing {startIndex} to {endIndex} of {pagination.total} results

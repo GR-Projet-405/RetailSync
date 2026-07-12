@@ -11,8 +11,9 @@ export const MainLayout = ({ children }) => {
       className="h-screen flex overflow-hidden relative"
       style={{
         background: `
-          radial-gradient(circle at top right, rgba(59,130,246,0.05), transparent 35%),
-          linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 55%, #EFF6FF 100%)
+          radial-gradient(circle at top right, rgba(59,130,246,0.15), transparent 50%),
+          radial-gradient(circle at bottom left, rgba(147,51,234,0.1), transparent 50%),
+          linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 50%, #DBEAFE 100%)
         `
       }}
     >

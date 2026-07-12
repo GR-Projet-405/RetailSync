@@ -20,9 +20,13 @@ import {
 
 export default function AuditDashboardPage() {
   const navigate = useNavigate();
-  const { data: dashboardData, isLoading, error } = useQuery({
+  const { data: dashboardData, isLoading, error, isError } = useQuery({
     queryKey: ['audit', 'dashboard'],
     queryFn: getDashboardData,
+    retry: 1,
+    onError: (err) => {
+      console.error('Dashboard data fetch error:', err);
+    }
   });
 
   const formatNumber = (num) => {
@@ -96,7 +100,26 @@ export default function AuditDashboardPage() {
     );
   }
 
-  const { kpi, activityTrend, branchDistribution, recentActivities } = dashboardData.data;
+  console.log('Dashboard data received:', dashboardData);
+
+  // Handle different response structures
+  const data = dashboardData?.data || dashboardData;
+  const { kpi, activityTrend, branchDistribution, recentActivities } = data || {};
+
+  // Defensive checks for data availability
+  if (!kpi || !activityTrend || !branchDistribution || !recentActivities) {
+    return (
+      <div>
+        <PageHeader
+          title="Audit Dashboard"
+          description="Overview of system activity and security status"
+        />
+        <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700">
+          No dashboard data available. Please check your connection and try again.
+        </div>
+      </div>
+    );
+  }
 
   // Calculate max value for activity trend chart
   const maxActivityCount = Math.max(...activityTrend.map(t => t.count), 1);
@@ -115,7 +138,7 @@ export default function AuditDashboardPage() {
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Total Logs */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+          <div className="bg-white/40 backdrop-blur-md rounded-xl border border-white/30 p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">Total Logs</p>
@@ -131,7 +154,7 @@ export default function AuditDashboardPage() {
           </div>
 
           {/* User Actions */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+          <div className="bg-white/40 backdrop-blur-md rounded-xl border border-white/30 p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">User Actions</p>
@@ -147,7 +170,7 @@ export default function AuditDashboardPage() {
           </div>
 
           {/* System Events */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+          <div className="bg-white/40 backdrop-blur-md rounded-xl border border-white/30 p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">System Events</p>
@@ -163,7 +186,7 @@ export default function AuditDashboardPage() {
           </div>
 
           {/* Security Alerts */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+          <div className="bg-white/40 backdrop-blur-md rounded-xl border border-white/30 p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">Security Alerts</p>
@@ -183,7 +206,7 @@ export default function AuditDashboardPage() {
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Activity Trend Chart */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+          <div className="bg-white/40 backdrop-blur-md rounded-xl border border-white/30 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-slate-900">Activity Trend</h3>
               <div className="flex items-center text-sm text-slate-500">
@@ -216,7 +239,7 @@ export default function AuditDashboardPage() {
           </div>
 
           {/* Branch Distribution */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+          <div className="bg-white/40 backdrop-blur-md rounded-xl border border-white/30 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-slate-900">Branch Distribution</h3>
               <div className="flex items-center text-sm text-slate-500">
@@ -259,8 +282,8 @@ export default function AuditDashboardPage() {
         </div>
 
         {/* Recent Activities Table */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-          <div className="p-6 border-b border-slate-200">
+        <div className="bg-white/40 backdrop-blur-md rounded-xl border border-white/30 shadow-sm">
+          <div className="p-6 border-b border-white/30">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-slate-900">Recent Activities</h3>
               <div className="flex items-center text-sm text-slate-500">
@@ -272,7 +295,7 @@ export default function AuditDashboardPage() {
           
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-50">
+              <thead className="bg-slate-50/50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Timestamp
@@ -294,9 +317,9 @@ export default function AuditDashboardPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-200/50">
                 {recentActivities.map((activity, index) => (
-                  <tr key={index} className="hover:bg-slate-50 transition-colors">
+                  <tr key={index} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                       {formatDate(activity.timestamp)}
                     </td>
@@ -329,7 +352,7 @@ export default function AuditDashboardPage() {
             </table>
           </div>
 
-          <div className="p-4 border-t border-slate-200 bg-slate-50">
+          <div className="p-4 border-t border-white/30 bg-slate-50/50">
             <button 
               onClick={() => navigate('/activity-logs')}
               className="flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium"

@@ -20,30 +20,30 @@ const seedProductsAndInventory = async () => {
     }
 
     const branchesToSeed = [
-      { name: 'Central WH', code: 'CWH-001', location: { city: 'Metropolis', country: 'USA' }, status: 'ACTIVE' },
-      { name: 'West WH', code: 'WWH-002', location: { city: 'Metropolis', country: 'USA' }, status: 'ACTIVE' },
-      { name: 'South WH', code: 'SWH-003', location: { city: 'Metropolis', country: 'USA' }, status: 'ACTIVE' },
-      { name: 'East WH', code: 'EWH-004', location: { city: 'Metropolis', country: 'USA' }, status: 'ACTIVE' },
-      { name: 'Retail 1', code: 'R-001', location: { city: 'Metropolis', country: 'USA' }, status: 'ACTIVE' },
-      { name: 'Retail 2', code: 'R-002', location: { city: 'Metropolis', country: 'USA' }, status: 'ACTIVE' },
-      { name: 'Retail 3', code: 'R-003', location: { city: 'Metropolis', country: 'USA' }, status: 'ACTIVE' },
-      { name: 'Retail 5', code: 'R-005', location: { city: 'Metropolis', country: 'USA' }, status: 'ACTIVE' },
-      { name: 'Retail 6', code: 'R-006', location: { city: 'Metropolis', country: 'USA' }, status: 'ACTIVE' },
-      { name: 'Retail 7', code: 'R-007', location: { city: 'Metropolis', country: 'USA' }, status: 'ACTIVE' },
-      { name: 'Retail 10', code: 'R-010', location: { city: 'Metropolis', country: 'USA' }, status: 'ACTIVE' },
-      { name: 'Retail 12', code: 'R-012', location: { city: 'Metropolis', country: 'USA' }, status: 'ACTIVE' },
-      { name: 'Retail 13', code: 'R-013', location: { city: 'Metropolis', country: 'USA' }, status: 'ACTIVE' },
-      { name: 'Retail 14', code: 'R-014', location: { city: 'Metropolis', country: 'USA' }, status: 'ACTIVE' },
+      { branchCode: 'CWH-001', branchName: 'Central WH', address: { line1: '123 Main St', city: 'Metropolis', district: 'Downtown', postalCode: '10001' }, phone: '(555) 123-4001', openingDate: new Date('2020-01-15'), status: 'ACTIVE' },
+      { branchCode: 'WWH-002', branchName: 'West WH', address: { line1: '456 West Ave', city: 'Metropolis', district: 'West', postalCode: '10002' }, phone: '(555) 123-4002', openingDate: new Date('2020-02-15'), status: 'ACTIVE' },
+      { branchCode: 'SWH-003', branchName: 'South WH', address: { line1: '789 South Blvd', city: 'Metropolis', district: 'South', postalCode: '10003' }, phone: '(555) 123-4003', openingDate: new Date('2020-03-15'), status: 'ACTIVE' },
+      { branchCode: 'EWH-004', branchName: 'East WH', address: { line1: '321 East Rd', city: 'Metropolis', district: 'East', postalCode: '10004' }, phone: '(555) 123-4004', openingDate: new Date('2020-04-15'), status: 'ACTIVE' },
+      { branchCode: 'R-001', branchName: 'Retail 1', address: { line1: '111 Retail Ln', city: 'Metropolis', district: 'Downtown', postalCode: '10101' }, phone: '(555) 201-1001', openingDate: new Date('2020-05-01'), status: 'ACTIVE' },
+      { branchCode: 'R-002', branchName: 'Retail 2', address: { line1: '222 Retail Ln', city: 'Metropolis', district: 'Midtown', postalCode: '10102' }, phone: '(555) 201-1002', openingDate: new Date('2020-05-01'), status: 'ACTIVE' },
+      { branchCode: 'R-003', branchName: 'Retail 3', address: { line1: '333 Retail Ln', city: 'Metropolis', district: 'Uptown', postalCode: '10103' }, phone: '(555) 201-1003', openingDate: new Date('2020-05-01'), status: 'ACTIVE' },
+      { branchCode: 'R-005', branchName: 'Retail 5', address: { line1: '555 Retail Ln', city: 'Metropolis', district: 'North', postalCode: '10105' }, phone: '(555) 201-1005', openingDate: new Date('2020-06-01'), status: 'ACTIVE' },
+      { branchCode: 'R-006', branchName: 'Retail 6', address: { line1: '666 Retail Ln', city: 'Metropolis', district: 'Northeast', postalCode: '10106' }, phone: '(555) 201-1006', openingDate: new Date('2020-06-01'), status: 'ACTIVE' },
+      { branchCode: 'R-007', branchName: 'Retail 7', address: { line1: '777 Retail Ln', city: 'Metropolis', district: 'Northwest', postalCode: '10107' }, phone: '(555) 201-1007', openingDate: new Date('2020-06-01'), status: 'ACTIVE' },
+      { branchCode: 'R-010', branchName: 'Retail 10', address: { line1: '1010 Retail Ln', city: 'Metropolis', district: 'Southeast', postalCode: '10110' }, phone: '(555) 201-1010', openingDate: new Date('2020-07-01'), status: 'ACTIVE' },
+      { branchCode: 'R-012', branchName: 'Retail 12', address: { line1: '1212 Retail Ln', city: 'Metropolis', district: 'Southwest', postalCode: '10112' }, phone: '(555) 201-1012', openingDate: new Date('2020-07-01'), status: 'ACTIVE' },
+      { branchCode: 'R-013', branchName: 'Retail 13', address: { line1: '1313 Retail Ln', city: 'Metropolis', district: 'Central', postalCode: '10113' }, phone: '(555) 201-1013', openingDate: new Date('2020-07-01'), status: 'ACTIVE' },
+      { branchCode: 'R-014', branchName: 'Retail 14', address: { line1: '1414 Retail Ln', city: 'Metropolis', district: 'Downtown', postalCode: '10114' }, phone: '(555) 201-1014', openingDate: new Date('2020-08-01'), status: 'ACTIVE' },
     ];
 
     const branchMap = {};
     for (const bData of branchesToSeed) {
-      let branch = await Branch.findOne({ name: bData.name });
+      let branch = await Branch.findOne({ branchCode: bData.branchCode });
       if (!branch) {
         branch = await Branch.create(bData);
-        console.log(`Created branch: ${bData.name}`);
+        console.log(`Created branch: ${bData.branchName}`);
       }
-      branchMap[bData.name] = branch._id;
+      branchMap[bData.branchName] = branch._id;
     }
 
     const productsToSeed = [
