@@ -19,18 +19,17 @@ class CouponService {
       }
     }
 
-    // 2. Prevent duplicate active coupon codes
+    // 2. Prevent duplicate coupon codes globally
     if (data.code) {
       const query = {
-        code: data.code.toUpperCase(),
-        status: 'Active'
+        code: data.code.toUpperCase()
       };
       if (existingId) {
         query._id = { $ne: existingId };
       }
       const duplicate = await Coupon.findOne(query);
       if (duplicate) {
-        const err = new Error('Coupon code is already in use by an active coupon');
+        const err = new Error('Coupon code is already in use');
         err.statusCode = 400;
         throw err;
       }
@@ -74,11 +73,40 @@ class CouponService {
         throw err;
       }
       const Promotion = mongoose.model('Promotion');
-      const promoExists = await Promotion.exists({ _id: data.promotionId });
-      if (!promoExists) {
+      const promo = await Promotion.findById(data.promotionId).lean();
+      if (!promo) {
         const err = new Error('Referenced promotion does not exist');
         err.statusCode = 400;
         throw err;
+      }
+
+      // Check dates if coupon dates and promotion dates are supplied
+      if (data.startDate && promo.startDate) {
+        const promoStart = new Date(promo.startDate);
+        const couponStart = new Date(data.startDate);
+
+        const pStart = new Date(promoStart.getFullYear(), promoStart.getMonth(), promoStart.getDate());
+        const cStart = new Date(couponStart.getFullYear(), couponStart.getMonth(), couponStart.getDate());
+
+        if (cStart < pStart) {
+          const err = new Error(`Coupon Start Date (${cStart.toLocaleDateString()}) cannot be earlier than the Promotion Start Date (${pStart.toLocaleDateString()})`);
+          err.statusCode = 400;
+          throw err;
+        }
+      }
+
+      if (data.endDate && promo.endDate) {
+        const promoEnd = new Date(promo.endDate);
+        const couponEnd = new Date(data.endDate);
+
+        const pEnd = new Date(promoEnd.getFullYear(), promoEnd.getMonth(), promoEnd.getDate());
+        const cEnd = new Date(couponEnd.getFullYear(), couponEnd.getMonth(), couponEnd.getDate());
+
+        if (cEnd > pEnd) {
+          const err = new Error(`Coupon End Date (${cEnd.toLocaleDateString()}) cannot be later than the Promotion End Date (${pEnd.toLocaleDateString()})`);
+          err.statusCode = 400;
+          throw err;
+        }
       }
     }
   }

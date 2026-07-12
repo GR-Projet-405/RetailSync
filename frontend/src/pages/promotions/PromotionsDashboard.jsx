@@ -483,15 +483,8 @@ export default function PromotionsDiscountsPage() {
         };
         setPromotions([mappedCreated, ...promotions]);
 
-        // Generate coupon code algorithm: e.g. "Summer Sale" -> "SUMMER20"
-        const discountNumeric = formData.discount.toString().replace(/[^0-9]/g, '') || '20';
-        const cleanName = formData.name.toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const codePrefix = cleanName.substring(0, Math.min(cleanName.length, 6)) || 'PROMO';
-        const generatedCoupon = `${codePrefix}${discountNumeric}`;
-
         setSuccessDetails({
           name: formData.name,
-          couponCode: generatedCoupon,
           discount: formattedDiscount,
           validity: `${formData.startDate} - ${formData.endDate}`,
           branch: formData.branch,
