@@ -4,7 +4,7 @@ import {
   Barcode, Plus, ScanBarcode, Trash2, Minus, CreditCard, Banknote,
   PackageSearch, ShoppingCart, RotateCcw, CircleAlert, Tag, Percent,
   ChevronDown, Check, AlertCircle, Receipt, DollarSign, Edit3, X,
-  TrendingDown, Calculator, BadgePercent, Gift,
+  TrendingDown, Calculator, BadgePercent, Gift, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import SearchInput from '../components/SearchInput';
@@ -12,26 +12,40 @@ import Button from '../components/Button';
 import Card, { CardContent, CardDescription, CardHeader, CardTitle } from '../components/Card';
 import Modal from '../components/Modal';
 import { useProductsList } from '../hooks/useProducts';
+import { useCategories } from '../hooks/useCategories';
 
 /* Currency formatter */
-const currency = new Intl.NumberFormat('en-LK', {
-  style: 'currency',
-  currency: 'LKR',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
+const currency = {
+  format: (value) => `Rs. ${Number(value || 0).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`,
+};
 
 /* Discount modes */
 const DISCOUNT_MODES = { NONE: 'none', PERCENT: 'percent', FLAT: 'flat' };
 
 /* Category colour map */
 const CATEGORY_COLORS = {
-  Bakery: { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
-  Dairy: { bg: 'bg-sky-50', text: 'text-sky-700', dot: 'bg-sky-400' },
-  Grocery: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-400' },
-  Beverage: { bg: 'bg-violet-50', text: 'text-violet-700', dot: 'bg-violet-400' },
-  Snacks: { bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-400' },
-  'Home Care': { bg: 'bg-pink-50', text: 'text-pink-700', dot: 'bg-pink-400' },
+  Apparel: { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-400' },
+  "Men's Wear": { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-400' },
+  "Women's Wear": { bg: 'bg-pink-50', text: 'text-pink-700', dot: 'bg-pink-400' },
+  "Kids Wear": { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-400' },
+  Electronics: { bg: 'bg-indigo-50', text: 'text-indigo-700', dot: 'bg-indigo-400' },
+  Smartphones: { bg: 'bg-indigo-50', text: 'text-indigo-700', dot: 'bg-indigo-400' },
+  Laptops: { bg: 'bg-indigo-50', text: 'text-indigo-700', dot: 'bg-indigo-400' },
+  'Electronic Accessories': { bg: 'bg-indigo-50', text: 'text-indigo-700', dot: 'bg-indigo-400' },
+  Footwear: { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
+  'Casual Shoes': { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
+  'Formal Shoes': { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
+  'Sports Shoes': { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
+  Skincare: { bg: 'bg-rose-50', text: 'text-rose-700', dot: 'bg-rose-400' },
+  Moisturizers: { bg: 'bg-rose-50', text: 'text-rose-700', dot: 'bg-rose-400' },
+  Sunscreen: { bg: 'bg-rose-50', text: 'text-rose-700', dot: 'bg-rose-400' },
+  Eyewear: { bg: 'bg-teal-50', text: 'text-teal-700', dot: 'bg-teal-400' },
+  Sunglasses: { bg: 'bg-teal-50', text: 'text-teal-700', dot: 'bg-teal-400' },
+  'Prescription Glasses': { bg: 'bg-teal-50', text: 'text-teal-700', dot: 'bg-teal-400' },
+  Accessories: { bg: 'bg-violet-50', text: 'text-violet-700', dot: 'bg-violet-400' },
 };
 const defaultCat = { bg: 'bg-slate-50', text: 'text-slate-700', dot: 'bg-slate-400' };
 
@@ -437,9 +451,22 @@ export default function POSBillingPage() {
   const [showOrderDiscount, setShowOrderDiscount] = useState(false);
 
   /* Tax rate */
-  const [taxRate, setTaxRate] = useState(8);
+  const [taxRate, setTaxRate] = useState(0);
   const [editingTaxRate, setEditingTaxRate] = useState(false);
-  const [draftTaxRate, setDraftTaxRate] = useState('8');
+  const [draftTaxRate, setDraftTaxRate] = useState('0');
+
+  /* Stock Alert Popup State */
+  const [stockAlert, setStockAlert] = useState(null);
+
+  /* Category Management Hook */
+  const { data: categoriesData, isLoading: categoriesLoading } = useCategories();
+
+  /* Category Filter State */
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  /* Pagination State */
+  const [currentPage, setCurrentPage] = useState(1);
+  const PRODUCTS_PER_PAGE = 10;
 
   /* Derived totals */
   const {
@@ -473,22 +500,91 @@ export default function POSBillingPage() {
 
   const totalUnits = cart.reduce((s, i) => s + i.quantity, 0);
 
+  // Get active categories from category management
+  const categoriesList = useMemo(() => {
+    return Array.isArray(categoriesData) ? categoriesData.filter(c => c.status === 'ACTIVE') : [];
+  }, [categoriesData]);
+
+  const categories = useMemo(() => {
+    if (categoriesList && categoriesList.length > 0) {
+      return ['All', ...categoriesList.map(c => c.name).sort()];
+    }
+    if (inventoryProducts && inventoryProducts.length > 0) {
+      const list = new Set(inventoryProducts.map(p => p.category));
+      return ['All', ...Array.from(list).sort()];
+    }
+    return ['All'];
+  }, [categoriesList, inventoryProducts]);
+
+  // Find sub-categories of the selected category to perform hierarchical filtering
+  const activeCategoryNames = useMemo(() => {
+    if (selectedCategory === 'All') return [];
+
+    // Find the selected category document
+    const selectedCatDoc = categoriesList.find(c => c.name === selectedCategory);
+    if (!selectedCatDoc) return [selectedCategory];
+
+    // Find all sub-categories that have this category as parentCategory
+    const subCats = categoriesList.filter(c =>
+      c.parentCategory === selectedCatDoc._id ||
+      c.parentCategory?._id === selectedCatDoc._id ||
+      c.parentCategory === selectedCatDoc.id ||
+      c.parentCategory?.id === selectedCatDoc.id
+    );
+
+    return [selectedCategory, ...subCats.map(c => c.name)];
+  }, [selectedCategory, categoriesList]);
+
   /* Filtered products */
   const filteredProducts = useMemo(() => {
+    let products = inventoryProducts;
+
+    if (selectedCategory !== 'All') {
+      products = products.filter(p => activeCategoryNames.includes(p.category));
+    }
+
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return inventoryProducts;
-    return inventoryProducts.filter((p) =>
+    if (!q) return products;
+    return products.filter((p) =>
       [p.name, p.category, p.sku, p.barcode].join(' ').toLowerCase().includes(q)
     );
-  }, [inventoryProducts, searchQuery]);
+  }, [inventoryProducts, searchQuery, selectedCategory, activeCategoryNames]);
+
+  // Reset page to 1 when user searches or switches category
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory]);
+
+  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * PRODUCTS_PER_PAGE;
+    return filteredProducts.slice(start, start + PRODUCTS_PER_PAGE);
+  }, [filteredProducts, currentPage]);
 
   /* Cart actions */
   const notify = (msg, type = 'info') => { setStatusMessage(msg); setStatusType(type); };
 
   const addProductToCart = useCallback((product) => {
+    if (product.stock <= 0) {
+      notify(`⚠️ Cannot add ${product.name}. This product is out of stock.`, 'error');
+      setStockAlert({
+        title: 'Product Out of Stock',
+        message: `The product "${product.name}" is currently out of stock and cannot be added to the sale.`,
+        productName: product.name,
+        stock: 0
+      });
+      return;
+    }
+
+    let limitReached = false;
     setCart((cur) => {
       const existing = cur.find((i) => i.id === product.id);
       if (existing) {
+        if (existing.quantity >= product.stock) {
+          limitReached = true;
+          return cur;
+        }
         return cur.map((i) => {
           if (i.id !== product.id) return i;
           const next = Math.min(i.quantity + 1, product.stock);
@@ -497,7 +593,18 @@ export default function POSBillingPage() {
       }
       return [...cur, { ...product, quantity: 1, itemDiscount: 0, itemDiscountMode: DISCOUNT_MODES.NONE }];
     });
-    notify(`✓ ${product.name} added to cart.`, 'success');
+
+    if (limitReached) {
+      notify(`⚠️ Cannot add more. Only ${product.stock} units of ${product.name} are available in stock.`, 'error');
+      setStockAlert({
+        title: 'Stock Limit Reached',
+        message: `You cannot add more units of "${product.name}" to the sale. Only ${product.stock} units are available in stock, and all of them are already in the shopping cart.`,
+        productName: product.name,
+        stock: product.stock
+      });
+    } else {
+      notify(`✓ ${product.name} added to cart.`, 'success');
+    }
   }, []);
 
   const findProduct = useCallback((raw) => {
@@ -680,63 +787,89 @@ export default function POSBillingPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-4 space-y-4">
-              {/* Barcode scanner row */}
-              <form className="grid gap-3 lg:grid-cols-[1fr_auto_auto]" onSubmit={handleBarcodeSubmit}>
-                <div className="relative">
-                  <ScanBarcode className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                  <input
-                    autoFocus
-                    value={barcodeValue}
-                    onChange={(e) => setBarcodeValue(e.target.value)}
-                    placeholder="Scan barcode — press Enter to add"
-                    className="w-full rounded-xl border border-[#E2E8F0] bg-white pl-10 pr-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition"
-                  />
-                </div>
-                <Button type="submit" className="h-11 bg-[#2563EB] hover:bg-[#1E40AF] rounded-xl px-5">
-                  Add by scan
-                </Button>
-                <Button type="button" variant="outline" className="h-11 rounded-xl border-[#E2E8F0] bg-white text-slate-700 hover:bg-[#EFF6FF] hover:border-[#BFDBFE]" onClick={() => setBarcodeValue('')}>
-                  Clear
-                </Button>
-              </form>
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Barcode & Manual SKU Column */}
+                <div className="space-y-3.5 md:border-r md:border-slate-100 md:pr-6">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Barcode & SKU Entry</span>
+                    <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Scanner Active
+                    </span>
+                  </div>
 
-              {mockBarcodeSamples.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  <span className="text-[11px] uppercase tracking-wider text-slate-400 self-center mr-1">Sample barcodes</span>
-                  {mockBarcodeSamples.map((product) => (
+                  <form className="flex gap-2" onSubmit={handleBarcodeSubmit}>
+                    <div className="relative flex-1">
+                      <ScanBarcode className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                      <input
+                        autoFocus
+                        value={barcodeValue}
+                        onChange={(e) => setBarcodeValue(e.target.value)}
+                        placeholder="Scan barcode — press Enter"
+                        className="w-full h-11 rounded-xl border border-[#E2E8F0] bg-white pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition"
+                      />
+                    </div>
+                    <Button type="submit" className="h-11 bg-[#2563EB] hover:bg-[#1E40AF] rounded-xl px-4 flex-shrink-0 text-xs font-bold">
+                      Scan
+                    </Button>
+                  </form>
+
+                  <div className="flex gap-2">
+                    <input
+                      value={manualCode}
+                      onChange={(e) => setManualCode(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleManualAdd()}
+                      placeholder="Or enter SKU manually"
+                      className="flex-1 h-11 rounded-xl border border-[#E2E8F0] bg-white px-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition"
+                    />
+                    <Button type="button" onClick={handleManualAdd} className="h-11 rounded-xl bg-slate-800 hover:bg-slate-900 text-white px-4 flex-shrink-0 text-xs font-bold">
+                      <Plus className="w-3.5 h-3.5 mr-1" /> Add
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Search & Category Filter Column */}
+                <div className="space-y-3.5 flex flex-col justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">Browse Inventory</span>
+                    <SearchInput
+                      placeholder="Search products by name or SKU"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="max-w-none bg-white border-[#E2E8F0] text-slate-900 placeholder:text-slate-400 animate-none h-11"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+                    {categories.length > 1 && (
+                      <select
+                        id="category-select"
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        className="w-full h-11 text-sm bg-slate-50 text-slate-700 border border-[#E2E8F0] rounded-xl px-3.5 outline-none focus:ring-2 focus:ring-[#2563EB]/10 focus:border-[#2563EB] transition-all font-semibold cursor-pointer"
+                      >
+                        {categories.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat === 'All' ? 'All Categories' : cat}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+
                     <button
-                      key={product.id}
                       type="button"
-                      onClick={() => handleMockBarcodeScan(product.barcode)}
-                      className="group inline-flex items-center gap-2 rounded-full border border-[#E2E8F0] bg-slate-50 px-3 py-1.5 text-xs text-slate-700 transition hover:border-[#BFDBFE] hover:bg-[#EFF6FF]"
-                      title={`Simulate scanning ${product.barcode}`}
+                      onClick={() => {
+                        setSearchQuery('');
+                        setSelectedCategory('All');
+                        setBarcodeValue('');
+                        setManualCode('');
+                      }}
+                      className="h-11 px-3.5 rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 font-semibold text-xs flex items-center gap-1.5 transition-all"
+                      title="Reset all filters and inputs"
                     >
-                      <span className="font-mono text-[11px] text-[#2563EB]">{product.barcode}</span>
-                      <span className="max-w-[12rem] truncate group-hover:text-slate-900">{product.name}</span>
+                      <RotateCcw className="w-3.5 h-3.5" /> Reset
                     </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Search + manual SKU */}
-              <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
-                <SearchInput
-                  placeholder="Search by name, barcode, or category"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="max-w-none bg-white border-[#E2E8F0] text-slate-900 placeholder:text-slate-400 animate-none"
-                />
-                <div className="flex gap-2">
-                  <input
-                    value={manualCode}
-                    onChange={(e) => setManualCode(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleManualAdd()}
-                    placeholder="Manual SKU / barcode"
-                    className="w-52 rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition"
-                  />
-                  <Button type="button" onClick={handleManualAdd} className="rounded-xl bg-[#2563EB] hover:bg-[#1E40AF] h-11">
-                    <Plus className="w-4 h-4 mr-1" /> Add
-                  </Button>
+                  </div>
                 </div>
               </div>
 
@@ -761,7 +894,9 @@ export default function POSBillingPage() {
                 </span>
               </div>
             </CardHeader>
-            <CardContent className="p-4">
+            <CardContent className="p-4 space-y-4">
+
+
               {inventoryLoading ? (
                 <div className="rounded-2xl border border-dashed border-[#BFDBFE] bg-[#EFF6FF] p-8 text-center text-slate-500">
                   <PackageSearch className="w-8 h-8 mx-auto mb-2 text-[#2563EB] animate-pulse" />
@@ -774,62 +909,109 @@ export default function POSBillingPage() {
                   <p className="text-sm">No products match your search.</p>
                 </div>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {filteredProducts.map((product) => {
-                    const inCart = cart.find((i) => i.id === product.id);
-                    const catStyle = CATEGORY_COLORS[product.category] || defaultCat;
-                    return (
-                      <div
-                        key={product.id}
-                        className={`rounded-2xl border p-4 space-y-3 transition-all duration-200 ${inCart
+                <div className="space-y-4">
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {paginatedProducts.map((product) => {
+                      const inCart = cart.find((i) => i.id === product.id);
+                      const catStyle = CATEGORY_COLORS[product.category] || defaultCat;
+                      return (
+                        <div
+                          key={product.id}
+                          className={`rounded-2xl border p-4 space-y-3 transition-all duration-200 ${inCart
                             ? 'border-[#2563EB] bg-[#EFF6FF] shadow-md'
                             : 'border-[#E2E8F0] bg-white shadow-sm hover:border-[#BFDBFE] hover:shadow-md'
-                          }`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${catStyle.bg} ${catStyle.text}`}>
-                              <span className={`h-1.5 w-1.5 rounded-full ${catStyle.dot}`} />
-                              {product.category}
+                            }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${catStyle.bg} ${catStyle.text}`}>
+                                <span className={`h-1.5 w-1.5 rounded-full ${catStyle.dot}`} />
+                                {product.category}
+                              </div>
+                              <h3 className="text-sm font-semibold text-slate-900 mt-1.5 leading-snug">{product.name}</h3>
                             </div>
-                            <h3 className="text-sm font-semibold text-slate-900 mt-1.5 leading-snug">{product.name}</h3>
-                          </div>
-                          <div className="text-right flex-shrink-0">
-                            <div className="text-sm font-bold text-[#2563EB]">{currency.format(product.price)}</div>
-                            <div className="text-[10px] text-slate-400">/{product.unit}</div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className="rounded-lg bg-white/60 px-2.5 py-1.5 border border-[#E2E8F0]">
-                            <div className="text-[10px] text-slate-400 uppercase tracking-wide">SKU</div>
-                            <div className="text-slate-700 font-medium text-[11px]">{product.sku}</div>
-                          </div>
-                          <div className={`rounded-lg px-2.5 py-1.5 border ${product.stock <= 10 ? 'bg-red-50 border-red-200' : 'bg-white/60 border-[#E2E8F0]'}`}>
-                            <div className="text-[10px] text-slate-400 uppercase tracking-wide">Stock</div>
-                            <div className={`font-medium text-[11px] ${product.stock <= 10 ? 'text-red-600' : 'text-slate-700'}`}>
-                              {product.stock} {product.unit}s
+                            <div className="text-right flex-shrink-0">
+                              <div className="text-sm font-bold text-[#2563EB]">{currency.format(product.price)}</div>
+                              <div className="text-[10px] text-slate-400">/{product.unit}</div>
                             </div>
                           </div>
-                        </div>
 
-                        <Button
-                          type="button"
-                          className={`w-full rounded-xl text-sm h-9 transition-all ${inCart
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="rounded-lg bg-white/60 px-2.5 py-1.5 border border-[#E2E8F0]">
+                              <div className="text-[10px] text-slate-400 uppercase tracking-wide">SKU</div>
+                              <div className="text-slate-700 font-medium text-[11px]">{product.sku}</div>
+                            </div>
+                            <div className={`rounded-lg px-2.5 py-1.5 border ${product.stock <= 10 ? 'bg-red-50 border-red-200' : 'bg-white/60 border-[#E2E8F0]'}`}>
+                              <div className="text-[10px] text-slate-400 uppercase tracking-wide">Stock</div>
+                              <div className={`font-medium text-[11px] ${product.stock <= 10 ? 'text-red-600' : 'text-slate-700'}`}>
+                                {product.stock} {product.unit}s
+                              </div>
+                            </div>
+                          </div>
+
+                          <Button
+                            type="button"
+                            className={`w-full rounded-xl text-sm h-9 transition-all ${inCart
                               ? 'bg-[#1E40AF] hover:bg-[#1E3A8A] shadow-md shadow-blue-300/30'
                               : 'bg-[#2563EB] hover:bg-[#1E40AF]'
-                            }`}
-                          onClick={() => addProductToCart(product)}
-                        >
-                          {inCart ? (
-                            <><Check className="w-3.5 h-3.5 mr-1.5" />In cart ({inCart.quantity})</>
-                          ) : (
-                            <><Plus className="w-3.5 h-3.5 mr-1.5" />Add to cart</>
-                          )}
-                        </Button>
+                              }`}
+                            onClick={() => addProductToCart(product)}
+                          >
+                            {inCart ? (
+                              <><Check className="w-3.5 h-3.5 mr-1.5" />In cart ({inCart.quantity})</>
+                            ) : (
+                              <><Plus className="w-3.5 h-3.5 mr-1.5" />Add to cart</>
+                            )}
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-[#E2E8F0] mt-2">
+                      <div className="text-xs font-medium text-slate-500">
+                        Showing <span className="font-semibold text-slate-800">{Math.min((currentPage - 1) * PRODUCTS_PER_PAGE + 1, filteredProducts.length)}</span> to <span className="font-semibold text-slate-800">{Math.min(currentPage * PRODUCTS_PER_PAGE, filteredProducts.length)}</span> of <span className="font-semibold text-slate-800">{filteredProducts.length}</span> products
                       </div>
-                    );
-                  })}
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          disabled={currentPage === 1}
+                          className="h-8 px-2.5 rounded-lg border border-[#E2E8F0] bg-white text-slate-600 hover:bg-slate-50 hover:border-[#BFDBFE] disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-[#E2E8F0] flex items-center justify-center transition-all"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Prev
+                        </button>
+
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                          const isActive = page === currentPage;
+                          return (
+                            <button
+                              key={page}
+                              type="button"
+                              onClick={() => setCurrentPage(page)}
+                              className={`h-8 w-8 rounded-lg text-xs font-semibold flex items-center justify-center transition-all ${isActive
+                                ? 'bg-[#2563EB] text-white shadow-md shadow-blue-300/30 font-bold'
+                                : 'border border-[#E2E8F0] bg-white text-slate-600 hover:bg-slate-50 hover:border-[#BFDBFE]'
+                                }`}
+                            >
+                              {page}
+                            </button>
+                          );
+                        })}
+
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                          disabled={currentPage === totalPages}
+                          className="h-8 px-2.5 rounded-lg border border-[#E2E8F0] bg-white text-slate-600 hover:bg-slate-50 hover:border-[#BFDBFE] disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-[#E2E8F0] flex items-center justify-center transition-all"
+                        >
+                          Next <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -940,7 +1122,7 @@ export default function POSBillingPage() {
                       min="0"
                       value={orderDiscount}
                       onChange={(e) => setOrderDiscount(e.target.value)}
-                      placeholder={orderDiscountMode === DISCOUNT_MODES.PERCENT ? 'Discount % (e.g. 10)' : 'Amount LKR (e.g. 500)'}
+                      placeholder={orderDiscountMode === DISCOUNT_MODES.PERCENT ? 'Discount % (e.g. 10)' : 'Amount Rs. (e.g. 500)'}
                       className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#2563EB]"
                     />
 
@@ -1037,6 +1219,27 @@ export default function POSBillingPage() {
         </div>
 
       </div>
+
+      {/* Stock Limit & Out-of-Stock Modal */}
+      <Modal isOpen={!!stockAlert} onClose={() => setStockAlert(null)} title={stockAlert?.title || 'Stock Alert'} size="sm">
+        <div className="space-y-4">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-500">
+            <CircleAlert className="h-6 w-6 animate-pulse" />
+          </div>
+          <div className="space-y-2 text-center">
+            <h4 className="font-bold text-slate-800 text-base">{stockAlert?.title}</h4>
+            <p className="text-sm text-slate-500 leading-relaxed">{stockAlert?.message}</p>
+          </div>
+          <div className="pt-2">
+            <Button
+              className="w-full rounded-xl h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+              onClick={() => setStockAlert(null)}
+            >
+              OK
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
