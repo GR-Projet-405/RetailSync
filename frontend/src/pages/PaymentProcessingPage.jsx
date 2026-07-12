@@ -275,14 +275,11 @@ export default function PaymentProcessingPage() {
                   </div>
                   <div>
                     <label className="block mb-3 text-xs font-bold tracking-wider uppercase text-slate-500">Quick Cash</label>
-                    <div>
-                      <label className="block mb-3 text-xs font-bold tracking-wider uppercase text-slate-500">Quick Cash</label>
-                      <div className="grid grid-cols-4 gap-3">
-                        <Button onClick={() => handleQuickCash(quickCashOptions[0])} variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:bg-blue-50">Exact</Button>
-                        <Button onClick={() => handleQuickCash(quickCashOptions[1])} variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:bg-blue-50">{quickCashOptions[1].toLocaleString('en-US')}</Button>
-                        <Button onClick={() => handleQuickCash(quickCashOptions[2])} variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:bg-blue-50">{quickCashOptions[2].toLocaleString('en-US')}</Button>
-                        <Button onClick={() => handleQuickCash(quickCashOptions[3])} variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:bg-blue-50">{quickCashOptions[3].toLocaleString('en-US')}</Button>
-                      </div>
+                    <div className="grid grid-cols-4 gap-3">
+                      <Button onClick={() => handleQuickCash(quickCashOptions[0])} variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:bg-blue-50">Exact</Button>
+                      <Button onClick={() => handleQuickCash(quickCashOptions[1])} variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:bg-blue-50">{quickCashOptions[1].toLocaleString('en-US')}</Button>
+                      <Button onClick={() => handleQuickCash(quickCashOptions[2])} variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:bg-blue-50">{quickCashOptions[2].toLocaleString('en-US')}</Button>
+                      <Button onClick={() => handleQuickCash(quickCashOptions[3])} variant="outline" className="h-12 font-bold text-slate-700 border-slate-300 hover:bg-blue-50">{quickCashOptions[3].toLocaleString('en-US')}</Button>
                     </div>
                   </div>
                   <div>
