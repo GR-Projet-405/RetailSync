@@ -62,7 +62,7 @@ export const SUPPLIER_QUERY_KEYS = {
 
 export const getSuppliers = async (params = {}) => {
   const res = await api.get('/supplier-management', { params });
-  return res.data.suppliers; // array of supplier objects (backend returns { success, suppliers, total, page, totalPages })
+  return res.data.suppliers; // array of supplier objects { _id, name, contactPerson, email, phone, address, status } (backend returns { success, suppliers, total, page, totalPages })
 };
 
 export const getSupplierById = async (id) => {

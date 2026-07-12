@@ -94,7 +94,7 @@ const ProductSchema = new mongoose.Schema(
     leadTimeDays: { type: String, trim: true, default: '' }, // e.g. "7-10 days"
 
     // ---- Multi-branch scoping (REQ-BRANCH-003) ----
-    branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
+    branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: false },
 
     // ---- Publish Settings ----
     status: {
