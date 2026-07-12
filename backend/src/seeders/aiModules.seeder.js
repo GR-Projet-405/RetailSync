@@ -297,8 +297,8 @@ const seedAIModules = async () => {
         sku: p.sku || `SKU-${p._id}`,
         name: p.name,
         category: p.category || 'General',
-        basePrice: p.sellingPrice || 1500,
-        costPrice: p.costPrice || 750,
+        basePrice: p.pricing?.sellingPrice || p.sellingPrice || 1500,
+        costPrice: p.pricing?.costPrice || p.costPrice || 750,
         baseVelocity: Math.floor(Math.random() * 30) + 10,
         reorderLevel: 30
       }));
