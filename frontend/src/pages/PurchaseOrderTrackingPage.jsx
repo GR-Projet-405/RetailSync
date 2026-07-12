@@ -10,7 +10,6 @@ import {
   Package,
   Loader2,
   AlertTriangle,
-  User,
 } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
 import { ROLES } from '../config/roles';
@@ -303,27 +302,12 @@ export default function PurchaseOrderTrackingPage() {
           {/* Order Details */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
             <h2 className="text-base font-bold text-gray-800 mb-4">Order Details</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Vendor</p>
-                <p className="text-sm font-semibold text-gray-800">{order.supplierNameSnapshot}</p>
-                {order.supplier?.supplierId && (
-                  <p className="text-xs text-gray-400 mt-0.5">ID: {order.supplier.supplierId}</p>
-                )}
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Requester</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                    <User className="w-4 h-4 text-amber-600" />
-                  </div>
-                  <p className="text-sm font-semibold text-gray-800">{order.requester?.name || "—"}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Department</p>
-                <p className="text-sm font-semibold text-gray-800">{order.department || "—"}</p>
-              </div>
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Vendor</p>
+              <p className="text-sm font-semibold text-gray-800">{order.supplierNameSnapshot}</p>
+              {order.supplier?.supplierId && (
+                <p className="text-xs text-gray-400 mt-0.5">ID: {order.supplier.supplierId}</p>
+              )}
             </div>
           </div>
 

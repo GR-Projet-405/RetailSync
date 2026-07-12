@@ -44,7 +44,7 @@ const initFromSupplier = asyncHandler(async (req, res) => {
 
 // POST /purchase-orders — create (Step 3: "Save as Draft" or "Send to Supplier")
 const create = asyncHandler(async (req, res) => {
-  const userId = req.user?.id;
+  const userId = req.user?._id || req.user?.id;
   const data = await service.create(req.body, userId);
   res.status(201).json({ success: true, message: 'Purchase order created.', data });
 });

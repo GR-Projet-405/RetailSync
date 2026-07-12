@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import {
   ArrowLeft,
   Pencil,
@@ -138,6 +139,7 @@ function ConfirmWithdrawModal({ onConfirm, onCancel, submitting }) {
 export default function ApprovalWorkflowPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user } = useAuth();
 
   const [po, setPo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -272,6 +274,10 @@ export default function ApprovalWorkflowPage() {
   const supplierId = po.supplier?.supplierId || "—";
   const contact = po.supplierContact || {};
   const approver = po.approver || {};
+  const currentUserName = user
+    ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.username || user.email || "Current User"
+    : "—";
+  const currentUserRole = user?.roleId?.name || user?.role || approver.role || "";
 
   return (
     <div>
@@ -475,11 +481,11 @@ export default function ApprovalWorkflowPage() {
             <div className="text-xs text-gray-500 mb-1.5">Logged in as:</div>
             <div className="flex items-center gap-2 mb-4 flex-wrap">
               <span className="text-base font-bold text-gray-900">
-                {approver.name || "—"}
+                {currentUserName}
               </span>
-              {approver.role && (
+              {currentUserRole && (
                 <span className="bg-blue-50 text-blue-700 text-[11px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wide">
-                  {approver.role}
+                  {currentUserRole}
                 </span>
               )}
             </div>
