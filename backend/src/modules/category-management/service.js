@@ -17,16 +17,20 @@ const getProductCount = async (categoryId, categoryName) => {
 
 // ── Fetch All ─────────────────────────────────────────────────────────────────
 const fetchAll = async (query = {}) => {
-  const { page = 1, limit = 10, search = '', parentId, isActive = true } = query;
+  const { page = 1, limit = 10, search = '', parentId, isActive } = query;
 
-  const filter = { isActive: isActive === 'false' ? false : Boolean(isActive) };
-  if (parentId !== undefined) filter.parentId = parentId === 'null' ? null : parentId;
+  const filter = {};
+  if (isActive !== undefined && isActive !== 'all') {
+    filter.isActive = isActive === 'true';
+  }
+  if (parentId !== undefined) filter.parentCategory = parentId === 'null' ? null : parentId;
   if (search) filter.name = { $regex: search, $options: 'i' };
 
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
   const [categories, total] = await Promise.all([
     Category.find(filter)
+      .populate('parentCategory', 'name code isActive sortOrder')
       .populate('createdBy', 'firstName lastName email')
       .populate('updatedBy', 'firstName lastName email')
       .sort({ sortOrder: 1, name: 1 })
@@ -56,17 +60,18 @@ const fetchAll = async (query = {}) => {
 // ── Fetch Single ──────────────────────────────────────────────────────────────
 const fetchDetails = async (id) => {
   const category = await Category.findById(id)
+    .populate('parentCategory', 'name code isActive sortOrder')
     .populate('createdBy', 'firstName lastName email')
     .populate('updatedBy', 'firstName lastName email');
 
   if (!category) return null;
 
   const [children, siblings, totalProducts] = await Promise.all([
-    Category.find({ parentId: id, isActive: true })
+    Category.find({ parentCategory: id, isActive: true })
       .select('name code isActive sortOrder icon')
       .sort({ sortOrder: 1 }),
-    category.parentId
-      ? Category.find({ parentId: category.parentId, _id: { $ne: id }, isActive: true })
+    category.parentCategory
+      ? Category.find({ parentCategory: category.parentCategory, _id: { $ne: id }, isActive: true })
           .select('name code isActive sortOrder')
       : Promise.resolve([]),
     getProductCount(id, category.name),
@@ -128,7 +133,7 @@ const softDelete = async (id, userId) => {
   const category = await Category.findById(id);
   if (!category) throw new Error('Category not found');
 
-  const children = await Category.find({ parentId: id, isActive: true });
+  const children = await Category.find({ parentCategory: id, isActive: true });
   if (children.length > 0)
     throw new Error(`Cannot delete category with ${children.length} active sub-categories. Please deactivate them first.`);
 
@@ -141,13 +146,14 @@ const softDelete = async (id, userId) => {
 // ── Tree ──────────────────────────────────────────────────────────────────────
 const fetchTree = async () => {
   const categories = await Category.find({ isActive: true })
+    .populate('parentCategory', 'name code isActive sortOrder')
     .populate('createdBy', 'firstName lastName email')
     .sort({ sortOrder: 1, name: 1 });
 
   const buildTree = (parentId = null) =>
     categories
       .filter((c) => {
-        const cParent = c.parentId ? c.parentId.toString() : null;
+        const cParent = c.parentCategory ? c.parentCategory.toString() : null;
         const target = parentId ? parentId.toString() : null;
         return cParent === target;
       })
