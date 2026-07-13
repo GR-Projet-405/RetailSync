@@ -27,7 +27,7 @@ const transporter = nodemailer.createTransport(transportConfig);
 const sendEmail = async (options) => {
   const mailOptions = {
     from: `RetailSync <${env.EMAIL_USER}>`,
-    to: options.email,
+    to: options.to || options.email,
     subject: options.subject,
     html: options.html,
   };
