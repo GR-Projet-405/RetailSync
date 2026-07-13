@@ -159,10 +159,10 @@ export default function ReturnStatusPage() {
         <div className="flex justify-end w-full mt-2">
           <button
             type="button"
-            onClick={() => navigate('/returns-refunds')} 
+            onClick={() => navigate('/returns/history')} 
             className="flex items-center gap-1 text-xs font-bold text-blue-600 transition-colors cursor-pointer hover:text-blue-700 focus:outline-none"
           >
-            <span>Initiate Another Return</span>
+            <span>Go to History</span>
             <ArrowRight size={14} strokeWidth={2.5} />
           </button>
         </div>
