@@ -8,6 +8,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
+const recordActivity = require('./middleware/activity.middleware');
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
+app.use(recordActivity);
 
 // Initialize MongoDB Connection
 connectDB();
