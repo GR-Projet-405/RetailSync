@@ -132,7 +132,7 @@ function ActionMenu({ user, onView, onEdit, onDelete, onResetPw, onToggleStatus,
 export default function EmployeePage() {
   const { hasRole, user } = useAuth();
   const { data: branchesData } = useBranches();
-  const branches = branchesData || [];
+  const branches = Array.isArray(branchesData) ? branchesData : (branchesData?.data || []);
 
   const { data: rolesData } = useRoles();
   const allRoles = rolesData?.data || [];
@@ -338,7 +338,7 @@ export default function EmployeePage() {
                   <option value="">All Branches</option>
                   {branches.map((b) => (
                   <option key={b._id} value={b._id}>
-                  {b.name}
+                  {b.branchName || b.name} {(b.branchCode || b.code) ? `(${b.branchCode || b.code})` : ''}
                   </option>
                   ))}
               </select>
@@ -439,7 +439,7 @@ export default function EmployeePage() {
                     <div className="space-y-3 pt-5 border-t border-slate-100 mb-6">
                       <div className="flex items-center gap-3 text-sm text-slate-600">
                         <Building2 size={15} className="text-slate-400 shrink-0" />
-                        <span className="truncate">{user.branchId ? user.branchId.name : 'No Branch'}</span>
+                        <span className="truncate">{user.branchId ? (user.branchId.branchName || user.branchId.name) : 'No Branch'}</span>
                       </div>
                       <div className="flex items-center gap-3 text-sm text-slate-600">
                         <Mail size={15} className="text-slate-400 shrink-0" />

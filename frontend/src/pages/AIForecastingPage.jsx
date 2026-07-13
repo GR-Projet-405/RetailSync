@@ -3,95 +3,66 @@ import { LineChart as ChartIcon, Calendar, ArrowUpRight, ArrowDownRight, Refresh
 import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
 import Button from '../components/Button';
 import Spinner from '../components/Spinner';
+import api from '../services/api';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, Line, LineChart
 } from 'recharts';
 
-// Helper to generate dynamic mock forecasting data based on metrics and duration
-const generateForecastData = (metric, period) => {
-  const pointsCount = period === '7d' ? 7 : period === '14d' ? 14 : 30;
-  const data = [];
-  
-  // Base values depending on metric
-  const baseVal = metric === 'revenue' ? 4500 : 130;
-  const noiseRange = metric === 'revenue' ? 800 : 25;
-
-  for (let i = 1; i <= pointsCount; i++) {
-    const dayStr = i < 10 ? `0${i}` : `${i}`;
-    const date = `Jul ${dayStr}`;
-    
-    // Simulate cyclic weekend spike
-    const isWeekend = i % 7 === 5 || i % 7 === 6; // Friday/Saturday-like cyclic surge
-    const cycleMultiplier = isWeekend ? 1.3 : 1.0;
-    
-    // Add linear positive trend to predictions
-    const trend = 1 + (i * 0.008); 
-    const predicted = Math.round(baseVal * cycleMultiplier * trend + (Math.sin(i) * noiseRange / 2));
-    
-    // Lower/Upper bounds around prediction
-    const boundDelta = metric === 'revenue' ? 400 + (i * 10) : 12 + (i * 0.2);
-    const lowerBound = Math.round(predicted - boundDelta);
-    const upperBound = Math.round(predicted + boundDelta);
-
-    // Actual sales only exist for past days (simulate today is Jul 07)
-    let actual = null;
-    if (i <= 6) {
-      actual = Math.round(baseVal * cycleMultiplier * (trend - 0.02) + (Math.cos(i) * noiseRange / 2));
-    }
-
-    data.push({ date, actual, predicted, lowerBound, upperBound });
-  }
-
-  return data;
+// Map icon string names from backend to components
+const ICON_MAP = {
+  Sun, CloudRain, Award, ShieldCheck, AlertTriangle, HelpCircle,
 };
-
-// Summary metrics calculation based on duration
-const getSummaryMetrics = (metric, period) => {
-  const multiplier = period === '7d' ? 1 : period === '14d' ? 2 : 4.2;
-  const isRev = metric === 'revenue';
-
-  return {
-    predictedRevenue: {
-      value: isRev 
-        ? `$${Math.round(33400 * multiplier).toLocaleString()}.00`
-        : `${Math.round(980 * multiplier).toLocaleString()} Txns`,
-      change: isRev ? '+11.1%' : '+9.4%',
-      trend: 'up'
-    },
-    highDemandCount: {
-      value: period === '7d' ? '4 Items' : period === '14d' ? '9 Items' : '14 Items',
-      change: 'Increased',
-      trend: 'up'
-    },
-    stockRiskLevel: {
-      value: period === '7d' ? 'Low Risk' : period === '14d' ? 'Medium Risk' : 'High Risk',
-      variant: period === '7d' ? 'success' : period === '14d' ? 'warning' : 'danger'
-    }
-  };
-};
-
-const MOCK_INSIGHTS = [
-  { title: 'Weekend Bakery Spike', detail: 'Bakery item sales are projected to rise by 25% on Saturdays and Sundays. Suggesting high stock levels for bread and croissants by Friday evenings.', icon: Sun, iconColor: 'text-amber-500', bg: 'bg-amber-50' },
-  { title: 'Rainy Day Cold-Drinks Drop', detail: 'A heavy rain forecast on Jul 09 is predicted to drop beverage sales by 12%. Adjust chilled storage limits accordingly.', icon: CloudRain, iconColor: 'text-blue-500', bg: 'bg-blue-50' }
-];
 
 export default function AIForecastingPage() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('7d');
-  const [metric, setMetric] = useState('revenue'); // revenue vs transactions
+  const [metric, setMetric] = useState('revenue');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [error, setError] = useState(null);
+
+  // API data
+  const [chartData, setChartData] = useState([]);
+  const [summaryMetrics, setSummaryMetrics] = useState(null);
+  const [productForecasts, setProductForecasts] = useState([]);
+  const [insights, setInsights] = useState([]);
 
   useEffect(() => {
-    setLoading(true);
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
+    const fetchForecast = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await api.get('/ai-forecasting/forecast', {
+          params: { metric, period },
+        });
+
+        const data = res.data.data;
+        setChartData(data.chartData || []);
+        setSummaryMetrics(data.summaryMetrics || null);
+        setProductForecasts(data.productForecasts || []);
+        setInsights(data.insights || []);
+      } catch (err) {
+        console.error('AI Forecasting fetch error:', err);
+        setError(err.message || 'Failed to load forecast data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchForecast();
   }, [period, metric, refreshKey]);
 
-  const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
+  const handleRefresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await api.post('/ai-forecasting/forecast/refresh', { metric, period });
+      setRefreshKey(prev => prev + 1);
+    } catch (err) {
+      console.error('Forecast refresh error:', err);
+      setError(err.message);
+      setLoading(false);
+    }
   };
 
   const getRiskBadgeColor = (risk) => {
@@ -102,12 +73,34 @@ export default function AIForecastingPage() {
     }
   };
 
-  // Dynamically calculate chart data and summaries using useMemo
-  const chartData = useMemo(() => generateForecastData(metric, period), [metric, period]);
-  const summaryMetrics = useMemo(() => getSummaryMetrics(metric, period), [metric, period]);
-  
-  const multiplier = period === '7d' ? 1 : period === '14d' ? 2 : 4.2;
-  const unitPrefix = metric === 'revenue' ? '$' : '';
+  const unitPrefix = metric === 'revenue' ? 'Rs. ' : '';
+
+  // Derived display values
+  const displaySummary = useMemo(() => {
+    if (!summaryMetrics) {
+      return {
+        predictedRevenue: { value: '-', change: '-', trend: 'up' },
+        highDemandCount: { value: '-', change: '-', trend: 'up' },
+        stockRiskLevel: { value: '-', variant: 'success' },
+      };
+    }
+    return {
+      predictedRevenue: {
+        value: summaryMetrics.predictedValue,
+        change: summaryMetrics.predictedChange,
+        trend: summaryMetrics.predictedTrend,
+      },
+      highDemandCount: {
+        value: summaryMetrics.highDemandCount,
+        change: summaryMetrics.highDemandChange,
+        trend: 'up',
+      },
+      stockRiskLevel: {
+        value: summaryMetrics.stockRiskLevel,
+        variant: summaryMetrics.stockRiskVariant,
+      },
+    };
+  }, [summaryMetrics]);
 
   return (
     <div className="space-y-6 fade-in">
@@ -172,6 +165,12 @@ export default function AIForecastingPage() {
         </div>
       </Card>
 
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-700 font-medium">
+          {error}
+        </div>
+      )}
+
       {loading ? (
         <div className="flex h-[500px] items-center justify-center rounded-2xl border border-slate-100 bg-white shadow-sm">
           <div className="text-center">
@@ -188,7 +187,7 @@ export default function AIForecastingPage() {
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Forecasted {metric === 'revenue' ? 'Sales' : 'Volume'}</p>
                   <p className="mt-2 text-3xl font-extrabold text-slate-900">
-                    {summaryMetrics.predictedRevenue.value}
+                    {displaySummary.predictedRevenue.value}
                   </p>
                 </div>
                 <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
@@ -197,7 +196,7 @@ export default function AIForecastingPage() {
               </div>
               <div className="mt-4 flex items-center gap-1">
                 <span className="inline-flex items-center text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                  {summaryMetrics.predictedRevenue.change}
+                  {displaySummary.predictedRevenue.change}
                 </span>
                 <span className="text-xs font-semibold text-slate-400">expected growth</span>
               </div>
@@ -207,7 +206,7 @@ export default function AIForecastingPage() {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">High Demand Products</p>
-                  <p className="mt-2 text-3xl font-extrabold text-slate-900">{summaryMetrics.highDemandCount.value}</p>
+                  <p className="mt-2 text-3xl font-extrabold text-slate-900">{displaySummary.highDemandCount.value}</p>
                 </div>
                 <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
                   <ChartIcon className="w-5 h-5" />
@@ -215,7 +214,7 @@ export default function AIForecastingPage() {
               </div>
               <div className="mt-4 flex items-center gap-1">
                 <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 rounded-full">
-                  {summaryMetrics.highDemandCount.change}
+                  {displaySummary.highDemandCount.change}
                 </span>
                 <span className="text-xs font-semibold text-slate-400">vs last 7 days</span>
               </div>
@@ -225,7 +224,7 @@ export default function AIForecastingPage() {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Understock Risk</p>
-                  <p className="mt-2 text-3xl font-extrabold text-slate-900">{summaryMetrics.stockRiskLevel.value}</p>
+                  <p className="mt-2 text-3xl font-extrabold text-slate-900">{displaySummary.stockRiskLevel.value}</p>
                 </div>
                 <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
                   <ShieldCheck className="w-5 h-5" />
@@ -233,7 +232,7 @@ export default function AIForecastingPage() {
               </div>
               <div className="mt-4 flex items-center gap-1">
                 <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                  {summaryMetrics.stockRiskLevel.value === 'Low Risk' ? 'Healthy Inventory' : summaryMetrics.stockRiskLevel.value === 'Medium Risk' ? 'Moderate Risk' : 'Critical Stockouts'}
+                  {displaySummary.stockRiskLevel.value === 'Low Risk' ? 'Healthy Inventory' : displaySummary.stockRiskLevel.value === 'Medium Risk' ? 'Moderate Risk' : 'Critical Stockouts'}
                 </span>
                 <span className="text-xs font-semibold text-slate-400">levels forecasted</span>
               </div>
@@ -287,8 +286,8 @@ export default function AIForecastingPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-0 space-y-4">
-                {MOCK_INSIGHTS.map((insight, idx) => {
-                  const Icon = insight.icon;
+                {insights.map((insight, idx) => {
+                  const Icon = ICON_MAP[insight.icon] || Sun;
                   return (
                     <div key={idx} className={`p-4 ${insight.bg} border border-slate-100 rounded-xl space-y-2`}>
                       <div className="flex items-center gap-2">
@@ -317,20 +316,14 @@ export default function AIForecastingPage() {
                       <th className="py-3 px-4 font-bold">Product Details</th>
                       <th className="py-3 px-4 font-bold">SKU</th>
                       <th className="py-3 px-4 font-bold text-right">Current Stock</th>
-                      <th className="py-3 px-4 font-bold text-right">Forecasted Demand (30 Days)</th>
+                      <th className="py-3 px-4 font-bold text-right">Forecasted Demand ({period === '7d' ? '7' : period === '14d' ? '14' : '30'} Days)</th>
                       <th className="py-3 px-4 font-bold text-right">Recommended Reorder</th>
                       <th className="py-3 px-4 font-bold text-center">Understock Risk</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 text-sm">
-                    {[
-                      { id: 1, name: 'Espresso Blend Coffee', sku: 'COF-ESP-001', currentStock: 45, predictedDemand: Math.round(180 * (multiplier / 4.2)), recommendedReorder: Math.round(150 * (multiplier / 4.2)), risk: 'Low' },
-                      { id: 2, name: 'Whole Wheat Bread', sku: 'BAK-WWB-002', currentStock: 12, predictedDemand: Math.round(95 * (multiplier / 4.2)), recommendedReorder: Math.round(100 * (multiplier / 4.2)), risk: period === '7d' ? 'Medium' : 'High' },
-                      { id: 3, name: 'Organic Bananas (kg)', sku: 'FRU-BAN-003', currentStock: 120, predictedDemand: Math.round(250 * (multiplier / 4.2)), recommendedReorder: Math.round(150 * (multiplier / 4.2)), risk: 'Medium' },
-                      { id: 4, name: 'Greek Yogurt (500g)', sku: 'DY-GRY-004', currentStock: 64, predictedDemand: Math.round(110 * (multiplier / 4.2)), recommendedReorder: Math.round(60 * (multiplier / 4.2)), risk: 'Low' },
-                      { id: 5, name: 'Chocolate Chip Cookie', sku: 'BAK-CCC-005', currentStock: 8, predictedDemand: Math.round(80 * (multiplier / 4.2)), recommendedReorder: Math.round(90 * (multiplier / 4.2)), risk: period === '7d' ? 'Medium' : 'High' }
-                    ].map((p) => (
-                      <tr key={p.id} className="hover:bg-slate-50/50 transition">
+                    {productForecasts.map((p, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/50 transition">
                         <td className="py-3.5 px-4 font-semibold text-slate-800">{p.name}</td>
                         <td className="py-3.5 px-4 text-slate-500 text-xs font-bold">{p.sku}</td>
                         <td className="py-3.5 px-4 text-right font-medium text-slate-700">{p.currentStock} units</td>

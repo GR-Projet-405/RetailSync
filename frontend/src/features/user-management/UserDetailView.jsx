@@ -100,7 +100,7 @@ export default function UserDetailView({ user }) {
               label="Branch"
               value={
                 user.branchId
-                  ? `${user.branchId.name} (${user.branchId.code})`
+                  ? `${user.branchId.branchName || user.branchId.name}${(user.branchId.branchCode || user.branchId.code) ? ` (${user.branchId.branchCode || user.branchId.code})` : ''}`
                   : 'No branch assigned'
               }
             />
