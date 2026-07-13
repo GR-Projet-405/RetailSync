@@ -172,7 +172,10 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
   };
 
   const handleNewSale = () => setShowConfirmNewSale(true);
-  const confirmNewSale = () => { setShowConfirmNewSale(false); navigate('/pos-billing', { state: { cart: [] } }); };
+  const confirmNewSale = () => {
+    setShowConfirmNewSale(false);
+    navigate('/pos-billing', { state: { cart: [] } });
+  };
 
   const PaymentIcon = { cash: Banknote, card: CreditCard, wallet: Smartphone }[paymentMethod] || Banknote;
 
