@@ -61,7 +61,7 @@ export default function PaymentProcessingPage() {
   const posDiscounts = itemSavings + orderDiscountAmount; // Discounts applied from POS page
 
   // If a registered customer is selected, give a member discount
-  const memberDiscount = selectedCustomer ? 1200 : 0;
+  const memberDiscount = selectedCustomer ? 20 : 0;
 
   // Final amount dynamically updates (POS total already includes POS discounts & tax)
   // We just subtract the Member Discount & Points Discount
