@@ -19,7 +19,7 @@ export const useCreateRole = () => {
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['roles']);
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
     },
   });
 };
@@ -32,7 +32,7 @@ export const useUpdateRole = () => {
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['roles']);
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
     },
   });
 };
@@ -45,7 +45,7 @@ export const useDeleteRole = () => {
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['roles']);
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
     },
   });
 };

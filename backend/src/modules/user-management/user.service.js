@@ -1,8 +1,9 @@
+const mongoose = require('mongoose');
 const User = require('./user.model');
-
+const Role = require('../role-management/role.model');
 // ─── Helpers ──────────────────────────────────────────────
 const buildQuery = ({ search, roleId, status, branchId }) => {
-  const query = {};
+const query = {};
 
   if (search) {
     query.$or = [
@@ -17,6 +18,7 @@ const buildQuery = ({ search, roleId, status, branchId }) => {
   if (roleId && roleId !== 'all') query.roleId = roleId;
   if (status && status !== 'all') query.status = status;
   if (branchId && branchId !== 'all') query.branchId = branchId;
+  
 
   return query;
 };
@@ -33,7 +35,7 @@ const getUsers = async ({ search, roleId, status, branchId, page = 1, limit = 10
   const [users, total] = await Promise.all([
     User.find(query)
       .populate('roleId', 'name description isSystemRole')
-      .populate('branchId', 'name code location')
+      .populate('branchId', 'branchName branchCode name code address')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -58,7 +60,7 @@ const getUsers = async ({ search, roleId, status, branchId, page = 1, limit = 10
 const getUserById = async (id) => {
   const user = await User.findById(id)
     .populate('roleId', 'name description permissions isSystemRole')
-    .populate('branchId', 'name code location contactPhone contactEmail')
+    .populate('branchId', 'branchName branchCode name code address phone email')
     .lean();
   if (!user) {
     const err = new Error('User not found');
@@ -72,6 +74,25 @@ const getUserById = async (id) => {
  * Create a new user
  */
 const createUser = async (userData) => {
+ 
+  // Check if branch already has a Branch Manager
+  if (userData.roleId) {
+    const role = await Role.findById(userData.roleId);
+    if (role?.name === 'BRANCH_MANAGER' && userData.branchId) {
+      const existingBM = await User.findOne({
+        branchId: userData.branchId,
+        roleId: userData.roleId,
+        status: { $ne: 'INACTIVE' }
+      }).populate('roleId');
+      
+      if (existingBM?.roleId?.name === 'BRANCH_MANAGER') {
+        const err = new Error('This branch already has an active Branch Manager.');
+        err.statusCode = 409;
+        throw err;
+      }
+    }
+  }
+  
   // Check uniqueness
   const existing = await User.findOne({
     $or: [{ username: userData.username }, { email: userData.email }],
@@ -89,7 +110,7 @@ const createUser = async (userData) => {
 
   return await User.findById(user._id)
     .populate('roleId', 'name description')
-    .populate('branchId', 'name code location')
+    .populate('branchId', 'branchName branchCode name code address')
     .lean();
 };
 
@@ -121,7 +142,7 @@ const updateUser = async (id, updateData) => {
     { $set: updateData },
     { new: true, runValidators: true }
   ).populate('roleId', 'name description')
-   .populate('branchId', 'name code location');
+   .populate('branchId', 'branchName branchCode name code address');
 
   if (!user) {
     const err = new Error('User not found');
@@ -154,7 +175,7 @@ const updateUserStatus = async (id, status) => {
     { $set: { status } },
     { new: true, runValidators: true }
   ).populate('roleId', 'name description')
-   .populate('branchId', 'name code location');
+   .populate('branchId', 'branchName branchCode name code address');
 
   if (!user) {
     const err = new Error('User not found');
@@ -191,7 +212,7 @@ const updateUserRole = async (id, roleId) => {
     { $set: { roleId } },
     { new: true, runValidators: true }
   ).populate('roleId', 'name description')
-   .populate('branchId', 'name code location');
+   .populate('branchId', 'branchName branchCode name code address');
 
   if (!user) {
     const err = new Error('User not found');
@@ -205,8 +226,16 @@ const updateUserRole = async (id, roleId) => {
 /**
  * Get aggregated stats for dashboard
  */
-const getUserStats = async () => {
+const getUserStats = async (branchId = null) => {
+  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+  fourteenDaysAgo.setHours(0, 0, 0, 0); // round to midnight
+
+  const branchFilter = branchId
+    ? { $match: { branchId: new mongoose.Types.ObjectId(String(branchId)) } }
+    : null;
+
   const stats = await User.aggregate([
+    ...(branchFilter ? [branchFilter] : []),
     {
       $group: {
         _id: null,
@@ -215,18 +244,21 @@ const getUserStats = async () => {
         inactive: { $sum: { $cond: [{ $eq: ['$status', 'INACTIVE'] }, 1, 0] } },
         suspended: { $sum: { $cond: [{ $eq: ['$status', 'SUSPENDED'] }, 1, 0] } },
         pending: { $sum: { $cond: [{ $eq: ['$status', 'PENDING'] }, 1, 0] } },
+        onLeave: { $sum: { $cond: [{ $eq: ['$isOnLeave', true] }, 1, 0] } },
+        newHires: { $sum: { $cond: [{ $gte: ['$createdAt', fourteenDaysAgo] }, 1, 0] } },
       },
     },
   ]);
 
   const byRole = await User.aggregate([
+    ...(branchFilter ? [branchFilter] : []),
     {
       $lookup: {
         from: 'roles', // Name of the roles collection
         localField: 'roleId',
         foreignField: '_id',
-        as: 'roleData'
-      }
+        as: 'roleData',
+      },
     },
     { $unwind: '$roleData' },
     { $group: { _id: '$roleData.name', count: { $sum: 1 } } },
@@ -234,7 +266,9 @@ const getUserStats = async () => {
   ]);
 
   return {
-    summary: stats[0] || { total: 0, active: 0, inactive: 0, suspended: 0 },
+    summary: stats[0] || { total: 0, active: 0, inactive: 0, suspended: 0, pending: 0,
+    onLeave: 0,
+    newHires: 0,},
     byRole,
   };
 };

@@ -113,7 +113,7 @@ export const BranchForm = ({ isOpen, onClose, initialData = null }) => {
       title={isEditMode ? 'Edit Branch' : 'Create New Branch'}
       size="xl"
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="p-6">
+      <form onSubmit={handleSubmit} className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           
           {/* Left Column: Branch Info */}

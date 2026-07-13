@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+require('../user-management/user.model');
 
 // ─── Line Item Sub-Schema ──────────────────────────────────────────────────
 const LineItemSchema = new mongoose.Schema({
@@ -70,7 +71,11 @@ const PurchaseOrderPageSchema = new mongoose.Schema({
     default: 'DRAFT',
   },
 
-  createdBy:  { type: String },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+  },
   submittedAt: { type: Date }, // set when the order is sent to the supplier
 
   // Set when the order moves into PARTIALLY_RECEIVED / FULLY_RECEIVED —

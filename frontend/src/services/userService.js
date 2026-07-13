@@ -41,7 +41,9 @@ export const getUserById = async (id) => {
  * POST /api/v1/user-management
  */
 export const createUser = async (payload) => {
-  const { data } = await api.post(BASE, payload);
+  const isFormData = payload instanceof FormData;
+  const headers = isFormData ? { 'Content-Type': 'multipart/form-data' } : {};
+  const { data } = await api.post(BASE, payload, { headers });
   return data;
 };
 
@@ -49,7 +51,9 @@ export const createUser = async (payload) => {
  * PUT /api/v1/user-management/:id
  */
 export const updateUser = async (id, payload) => {
-  const { data } = await api.put(`${BASE}/${id}`, payload);
+  const isFormData = payload instanceof FormData;
+  const headers = isFormData ? { 'Content-Type': 'multipart/form-data' } : {};
+  const { data } = await api.put(`${BASE}/${id}`, payload, { headers });
   return data;
 };
 

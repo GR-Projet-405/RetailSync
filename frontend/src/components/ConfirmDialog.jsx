@@ -3,6 +3,13 @@ import Modal from './Modal';
 import Button from './Button';
 
 export const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText = 'Confirm', cancelText = 'Cancel', type = 'warning' }) => {
+  const confirmVariant = {
+    danger: 'danger',
+    warning: 'warning',
+    success: 'success',
+    primary: 'primary',
+  }[type] || 'primary';
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <div className="space-y-4">
@@ -11,8 +18,8 @@ export const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, conf
           <Button variant="outline" onClick={onClose}>
             {cancelText}
           </Button>
-          <Button 
-            variant={type === 'danger' ? 'danger' : 'primary'} 
+          <Button
+            variant={confirmVariant}
             onClick={() => {
               onConfirm();
               onClose();
