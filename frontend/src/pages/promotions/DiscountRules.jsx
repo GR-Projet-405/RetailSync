@@ -83,7 +83,6 @@ const formatCondition = (type, state) => {
 
 export default function DiscountRulesPage() {
   const [rules, setRules] = useState([]);
-  const [activeTab, setActiveTab] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -119,13 +118,13 @@ export default function DiscountRulesPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  const [tablePageSize, setTablePageSize] = useState(5); // Unified with variable naming pattern
 
   const fetchRules = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get('/promotions-discounts/discount-rules');
+      const response = await api.get('/promotions-discounts/discount-rules', { params: { limit: 1000 } });
       const fetchedData = response.data?.data?.rules || response.data?.data || [];
       const mappedData = fetchedData.map(r => ({
         ...r,
@@ -201,24 +200,14 @@ export default function DiscountRulesPage() {
     }
   }, [formData, isModalOpen]);
 
-  // Filters by rule type tabs
-  const filteredRules = useMemo(() => {
-    return rules.filter(rule => {
-      if (activeTab === 'All') return true;
-      if (activeTab === 'Promotion Rules') return rule.type === 'Day Based' || rule.type === 'Quantity Based';
-      if (activeTab === 'Coupon Rules') return rule.type === 'Customer Type';
-      if (activeTab === 'Cart Rules') return rule.type === 'Cart Total' || rule.type === 'Product Category';
-      return true;
-    }).sort((a, b) => a.priority - b.priority);
-  }, [rules, activeTab]);
-
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTab]);
+  // Unified priority sorted rules
+  const sortedRules = useMemo(() => {
+    return [...rules].sort((a, b) => a.priority - b.priority);
+  }, [rules]);
 
   // Pagination calculations
-  const totalItems = filteredRules.length;
-  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const totalItems = sortedRules.length;
+  const totalPages = Math.ceil(totalItems / tablePageSize) || 1;
 
   React.useEffect(() => {
     if (currentPage > totalPages) {
@@ -226,11 +215,11 @@ export default function DiscountRulesPage() {
     }
   }, [totalPages, currentPage]);
 
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const startIndex = (currentPage - 1) * tablePageSize;
+  const endIndex = Math.min(startIndex + tablePageSize, totalItems);
   const paginatedRules = useMemo(() => {
-    return filteredRules.slice(startIndex, startIndex + pageSize);
-  }, [filteredRules, startIndex, pageSize]);
+    return sortedRules.slice(startIndex, startIndex + tablePageSize);
+  }, [sortedRules, startIndex, tablePageSize]);
 
   // BR-SALE-002: Discount threshold warning check
   const showThresholdWarning = useMemo(() => {
@@ -391,33 +380,12 @@ export default function DiscountRulesPage() {
         }
       />
 
-      {/* Tab Segment Filters */}
-      <div className="flex items-center gap-2 bg-white border border-slate-200 p-1.5 rounded-2xl w-fit select-none shadow-sm">
-        {['All Rules', 'Promotion Rules', 'Coupon Rules', 'Cart Rules'].map((tab) => {
-          const apiTab = tab === 'All Rules' ? 'All' : tab;
-          const isActive = activeTab === apiTab;
-          return (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(apiTab)}
-              className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
-                isActive
-                  ? 'bg-blue-50 text-blue-600 border border-blue-100 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              {tab}
-            </button>
-          );
-        })}
-      </div>
-
       {/* Discount Rules Table Card */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col select-none min-h-[480px]">
         
         {/* Table Title Block */}
         <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-sm font-black text-slate-800">All Discount Rules</h3>
+          <h3 className="text-sm font-black text-slate-800">Discount Execution Queue</h3>
           
           <div className="flex items-center gap-2">
             <button className="p-1.5 hover:bg-slate-50 border border-slate-200 rounded-lg text-slate-400">
@@ -435,91 +403,125 @@ export default function DiscountRulesPage() {
           <table className="w-full text-left border-collapse table-fixed min-w-[800px]">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                <th className="px-6 py-4 font-bold w-[22%]">Rule Name</th>
-                <th className="px-6 py-4 font-bold w-[18%]">Rule Type</th>
-                <th className="px-6 py-4 font-bold w-[25%]">Condition</th>
-                <th className="px-6 py-4 font-bold w-[15%]">Discount Value</th>
-                <th className="px-6 py-4 font-bold text-center w-[10%]">Status</th>
+                <th className="px-6 py-4 font-bold w-[20%]">Rule Name</th>
+                <th className="px-6 py-4 font-bold w-[15%]">Rule Type</th>
+                <th className="px-6 py-4 font-bold text-center w-[12%]">Priority</th>
+                <th className="px-6 py-4 font-bold w-[23%]">Condition</th>
+                <th className="px-6 py-4 font-bold w-[12%]">Discount Value</th>
+                <th className="px-6 py-4 font-bold text-center w-[8%]">Status</th>
                 <th className="px-6 py-4 font-bold text-center w-[10%]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-slate-400 select-none">
+                  <td colSpan="7" className="px-6 py-12 text-center text-slate-400 select-none">
                     Loading discount rules...
                   </td>
                 </tr>
               ) : paginatedRules.length > 0 ? (
-                paginatedRules.map((rule) => (
-                  <tr key={rule.id} className="hover:bg-blue-50/10 transition-colors duration-150">
-                    <td className="px-6 py-5 whitespace-nowrap font-bold text-slate-800">
-                      {rule.name}
-                    </td>
-                    <td className="px-6 py-5 whitespace-nowrap text-slate-500 font-semibold">
-                      {rule.type}
-                    </td>
-                    <td className="px-6 py-5 whitespace-nowrap text-slate-600 font-medium font-mono text-[11px]">
-                      {rule.condition}
-                    </td>
-                    <td className="px-6 py-5 whitespace-nowrap font-extrabold text-slate-800">
-                      {rule.discountLimit}
-                    </td>
-                    <td className="px-6 py-5 whitespace-nowrap text-center">
-                      <Badge variant={rule.status === 'Active' ? 'success' : 'danger'}>
-                        {rule.status}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-5 whitespace-nowrap text-center relative">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => handleOpenViewModal(rule)}
-                          className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="View Details"
-                        >
-                          <Eye size={15} />
-                        </button>
-                        <button
-                          onClick={() => handleOpenEditModal(rule)}
-                          className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-                          title="Edit Rule"
-                        >
-                          <Pencil size={15} />
-                        </button>
-                        <div className="relative">
-                          <button
-                            onClick={() => setActiveMenuId(activeMenuId === rule.id ? null : rule.id)}
-                            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
-                          >
-                            <MoreVertical size={15} />
-                          </button>
-                          
-                          {activeMenuId === rule.id && (
-                            <>
-                              <div className="fixed inset-0 z-10" onClick={() => setActiveMenuId(null)} />
-                              <div className="absolute right-0 bottom-full mb-1.5 w-28 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 overflow-hidden text-xs text-left">
-                                <button
-                                  onClick={() => {
-                                    handleDeleteRule(rule.id);
-                                    setActiveMenuId(null);
-                                  }}
-                                  className="w-full px-3 py-2 text-red-600 hover:bg-red-50 transition-colors flex items-center gap-1 font-semibold"
-                                >
-                                  <Trash2 size={13} />
-                                  <span>Delete</span>
-                                </button>
-                              </div>
-                            </>
-                          )}
+                paginatedRules.map((rule) => {
+                  const allSortedRules = [...rules].sort((a, b) => a.priority - b.priority);
+                  const globalIndex = allSortedRules.findIndex(r => r.id === rule.id);
+                  
+                  return (
+                    <tr key={rule.id} className="hover:bg-blue-50/10 transition-colors duration-150">
+                      <td className="px-6 py-5 whitespace-nowrap font-bold text-slate-800">
+                        {rule.name}
+                      </td>
+                      <td className="px-6 py-5 whitespace-nowrap text-slate-500 font-semibold">
+                        {rule.type}
+                      </td>
+                      {/* Interactive Priority Column */}
+                      <td className="px-6 py-5 whitespace-nowrap text-center">
+                        <div className="flex items-center justify-center gap-2 font-bold select-none">
+                          <span className="text-slate-800 font-mono text-[13px] bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-lg">
+                            #{rule.priority}
+                          </span>
+                          <div className="flex flex-col">
+                            <button
+                              type="button"
+                              disabled={globalIndex === 0}
+                              onClick={() => movePriority(globalIndex, 'up')}
+                              className="text-slate-400 hover:text-blue-650 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors cursor-pointer"
+                              title="Increase Priority (Move Up)"
+                            >
+                              <ChevronUp size={13} className="stroke-[3]" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={globalIndex === allSortedRules.length - 1}
+                              onClick={() => movePriority(globalIndex, 'down')}
+                              className="text-slate-400 hover:text-blue-650 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors cursor-pointer"
+                              title="Decrease Priority (Move Down)"
+                            >
+                              <ChevronDown size={13} className="stroke-[3]" />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-6 py-5 whitespace-nowrap text-slate-650 font-medium font-mono text-[11px]">
+                        {rule.condition}
+                      </td>
+                      <td className="px-6 py-5 whitespace-nowrap font-extrabold text-slate-800">
+                        {rule.discountLimit}
+                      </td>
+                      <td className="px-6 py-5 whitespace-nowrap text-center">
+                        <Badge variant={rule.status === 'Active' ? 'success' : 'danger'}>
+                          {rule.status}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-5 whitespace-nowrap text-center relative">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => handleOpenViewModal(rule)}
+                            className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                            title="View Details"
+                          >
+                            <Eye size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleOpenEditModal(rule)}
+                            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            title="Edit Rule"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <div className="relative">
+                            <button
+                              onClick={() => setActiveMenuId(activeMenuId === rule.id ? null : rule.id)}
+                              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                            >
+                              <MoreVertical size={15} />
+                            </button>
+                            
+                            {activeMenuId === rule.id && (
+                              <>
+                                <div className="fixed inset-0 z-10" onClick={() => setActiveMenuId(null)} />
+                                <div className="absolute right-0 bottom-full mb-1.5 w-28 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 overflow-hidden text-xs text-left">
+                                  <button
+                                    onClick={() => {
+                                      handleDeleteRule(rule.id);
+                                      setActiveMenuId(null);
+                                    }}
+                                    className="w-full px-3 py-2 text-red-600 hover:bg-red-50 transition-colors flex items-center gap-1 font-semibold cursor-pointer"
+                                  >
+                                    <Trash2 size={13} />
+                                    <span>Delete</span>
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-slate-400 select-none">
-                    No rules found matching this segment.
+                  <td colSpan="7" className="px-6 py-12 text-center text-slate-400 select-none">
+                    No discount rules configured yet.
                   </td>
                 </tr>
               )}
@@ -537,7 +539,7 @@ export default function DiscountRulesPage() {
             <button
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
-              className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-50 flex items-center justify-center transition-colors hover:bg-slate-50"
+              className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-650 hover:bg-slate-50 disabled:opacity-50 flex items-center justify-center transition-colors cursor-pointer"
             >
               &lt;
             </button>
@@ -548,7 +550,7 @@ export default function DiscountRulesPage() {
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-colors shadow-sm ${
+                  className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-colors shadow-sm cursor-pointer ${
                     isActive
                       ? 'border-blue-600 bg-blue-600 text-white font-bold'
                       : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
@@ -562,7 +564,7 @@ export default function DiscountRulesPage() {
             <button
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
-              className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-50 flex items-center justify-center transition-colors hover:bg-slate-50"
+              className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-605 hover:bg-slate-50 disabled:opacity-50 flex items-center justify-center transition-colors cursor-pointer"
             >
               &gt;
             </button>
