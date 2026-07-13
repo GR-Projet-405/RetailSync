@@ -94,6 +94,7 @@ import AddCustomerPage from '../pages/AddCustomerPage';
 import CustomerProfilePage from '../pages/CustomerProfilePage';
 import CustomerHistoryPage from '../pages/CustomerHistoryPage';
 import CustomerSearchPage from '../pages/CustomerSearchPage';
+import ManagerDashboard from '../pages/ManagerDashboard';
 
 
 
