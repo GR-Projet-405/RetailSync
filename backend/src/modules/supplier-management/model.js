@@ -106,5 +106,4 @@ SupplierSchema.pre('save', async function (next) {
   this.supplierId = `SUP-${String(count + 1).padStart(3, '0')}`;
   next();
 });
-
 module.exports = mongoose.model('Supplier', SupplierSchema);

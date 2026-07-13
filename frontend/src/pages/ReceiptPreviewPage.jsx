@@ -12,53 +12,56 @@ import Button from '../components/Button';
 import Card, { CardContent, CardHeader, CardTitle } from '../components/Card';
 import Modal from '../components/Modal';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
-const currency = new Intl.NumberFormat('en-LK', {
-  style: 'currency',
-  currency: 'LKR',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
+
+const currency = {
+  format: (value) => `Rs. ${Number(value || 0).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`,
+};
 
 export default function ReceiptPreviewPage() {
   const navigate = useNavigate();
-  const location  = useLocation();
+  const location = useLocation();
+  const { user } = useAuth();
   const receiptRef = useRef(null);
-  const [isPrinting,        setIsPrinting]        = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [isThermalPrinting, setIsThermalPrinting] = useState(false);
-  const [showDigitalInvoice,  setShowDigitalInvoice]  = useState(false);
-  const [showConfirmNewSale,  setShowConfirmNewSale]  = useState(false);
+  const [showDigitalInvoice, setShowDigitalInvoice] = useState(false);
+  const [showConfirmNewSale, setShowConfirmNewSale] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
   // ── Stable receipt metadata (initialised once on mount) ───────────────────
   const [meta] = useState(() => {
     const s = location.state || {};
     return {
-      cart:                s.cart                || [],
-      subtotal:            s.subtotal            || 0,
-      itemSavings:         s.itemSavings         || 0,
-      orderDiscountAmount: s.orderDiscountAmount  || 0,
-      tax:                 s.tax                 || 0,
-      total:               s.total               || 0,
-      totalUnits:          s.totalUnits          || 0,
-      paymentMethod:       s.paymentMethod       || 'cash',
-      amountReceived:      s.amountReceived      || 0,
-      changeDue:           s.changeDue           || 0,
-      customer:            s.customer            || null,
-      invoiceNumber:       s.invoiceNumber       ||
-        `INV-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${String(Math.floor(Math.random()*99999)).padStart(5,'0')}`,
-      date:          s.date          || new Date().toLocaleDateString('en-GB',  { day:'2-digit', month:'short', year:'numeric' }),
-      time:          s.time          || new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', hour12:true }),
-      cashierName:   s.cashierName   || 'Nipuni Perera',
+      cart: s.cart || [],
+      subtotal: s.subtotal || 0,
+      itemSavings: s.itemSavings || 0,
+      orderDiscountAmount: s.orderDiscountAmount || 0,
+      tax: s.tax || 0,
+      total: s.total || 0,
+      totalUnits: s.totalUnits || 0,
+      paymentMethod: s.paymentMethod || 'cash',
+      amountReceived: s.amountReceived || 0,
+      changeDue: s.changeDue || 0,
+      customer: s.customer || null,
+      invoiceNumber: s.invoiceNumber ||
+        `INV-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`,
+      date: s.date || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      time: s.time || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+      cashierName: s.cashierName || (user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || user.email : 'Nipuni Perera'),
       counterNumber: s.counterNumber || '01',
-      storeName:     s.storeName     || 'RetailSync',
-      storeAddress:  s.storeAddress  || 'No.120, Galle Road, Colombo 03',
-      storePhone:    s.storePhone    || '011-1234567',
-      storeEmail:    s.storeEmail    || 'info@retailsync.lk',
-      storeBranch:   s.storeBranch   || 'Colombo Main',
-      taxNumber:     s.taxNumber     || 'REG-2024-00123',
+      storeName: s.storeName || 'RetailSync',
+      storeAddress: s.storeAddress || 'No.120, Galle Road, Colombo 03',
+      storePhone: s.storePhone || '011-1234567',
+      storeEmail: s.storeEmail || 'info@retailsync.lk',
+      storeBranch: s.storeBranch || 'Colombo Main',
+      taxNumber: s.taxNumber || 'REG-2024-00123',
       receiptFooter: s.receiptFooter || 'Thank you for shopping with us! Visit again.',
-      storeLogo:     s.storeLogo     || '🛒',
+      storeLogo: s.storeLogo || '🛒',
     };
   });
 
@@ -71,11 +74,11 @@ export default function ReceiptPreviewPage() {
   } = meta;
 
   // ── Email send state ───────────────────────────────────────────────────────
-  const [emailInput,       setEmailInput]       = useState('');
-  const [isSendingEmail,   setIsSendingEmail]   = useState(false);
-  const [emailStatus,      setEmailStatus]      = useState(null); // 'success' | 'error' | null
-  const [emailMsg,         setEmailMsg]         = useState('');
-  const [emailPreviewUrl,  setEmailPreviewUrl]  = useState(null);
+  const [emailInput, setEmailInput] = useState('');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailStatus, setEmailStatus] = useState(null); // 'success' | 'error' | null
+  const [emailMsg, setEmailMsg] = useState('');
+  const [emailPreviewUrl, setEmailPreviewUrl] = useState(null);
 
   // Pre-fill from customer record if available
   useEffect(() => {
@@ -148,10 +151,10 @@ export default function ReceiptPreviewPage() {
 <div style="font-size:10px">${invoiceNumber} | ${date} ${time}</div>
 <div style="font-size:10px">Cashier: ${cashierName} | Counter: ${counterNumber}</div>
 <div class="dashed"></div></div>
-${cart.map(i=>`<div class="row"><span style="flex:1;text-align:left">${i.name} x${i.quantity}</span><span>${currency.format(i.price*i.quantity)}</span></div>`).join('')}
+${cart.map(i => `<div class="row"><span style="flex:1;text-align:left">${i.name} x${i.quantity}</span><span>${currency.format(i.price * i.quantity)}</span></div>`).join('')}
 <div class="dashed"></div>
 <div class="row"><span>Subtotal</span><span>${currency.format(subtotal)}</span></div>
-${itemSavings>0?`<div class="row"><span>Discounts</span><span>-${currency.format(itemSavings+orderDiscountAmount)}</span></div>`:''}
+${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.format(itemSavings + orderDiscountAmount)}</span></div>` : ''}
 <div class="row"><span>Tax</span><span>${currency.format(tax)}</span></div>
 <div class="dashed"></div>
 <div class="row bold" style="font-size:14px"><span>TOTAL</span><span>${currency.format(total)}</span></div>
@@ -203,7 +206,7 @@ ${itemSavings>0?`<div class="row"><span>Discounts</span><span>-${currency.format
               </p>
               {emailPreviewUrl && (
                 <a href={emailPreviewUrl} target="_blank" rel="noopener noreferrer"
-                   className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                  className="text-xs text-blue-600 hover:underline flex items-center gap-1">
                   <ExternalLink className="w-3 h-3" /> View email in browser
                 </a>
               )}
@@ -219,11 +222,10 @@ ${itemSavings>0?`<div class="row"><span>Discounts</span><span>-${currency.format
             size="sm"
             onClick={handleSendEmail}
             disabled={isSendingEmail}
-            className={`w-full font-semibold flex items-center justify-center gap-1.5 ${
-              emailStatus === 'success'
+            className={`w-full font-semibold flex items-center justify-center gap-1.5 ${emailStatus === 'success'
                 ? 'bg-emerald-600 hover:bg-emerald-700'
                 : 'bg-blue-600 hover:bg-blue-700'
-            } text-white rounded-lg py-2`}
+              } text-white rounded-lg py-2`}
           >
             {isSendingEmail ? (
               <><div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" /> Sending…</>
@@ -462,11 +464,11 @@ ${itemSavings>0?`<div class="row"><span>Discounts</span><span>-${currency.format
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {cart.map((item, idx) => {
-                  const lineTotal    = item.price * item.quantity;
-                  const discountAmt  = item.itemDiscountMode === 'percent'
+                  const lineTotal = item.price * item.quantity;
+                  const discountAmt = item.itemDiscountMode === 'percent'
                     ? lineTotal * (item.itemDiscount || 0) / 100
                     : (item.itemDiscount || 0);
-                  const finalTotal   = Math.max(lineTotal - discountAmt, 0);
+                  const finalTotal = Math.max(lineTotal - discountAmt, 0);
                   return (
                     <tr key={idx} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3">
@@ -587,7 +589,8 @@ ${itemSavings>0?`<div class="row"><span>Discounts</span><span>-${currency.format
       {confirmNewSaleModal}
 
       {/* Print Styles */}
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @media print {
           body { background: white !important; font-family: 'Courier New', monospace !important; }
           html, body, #root, .h-screen, .h-screen > div, main, .workspace-container {

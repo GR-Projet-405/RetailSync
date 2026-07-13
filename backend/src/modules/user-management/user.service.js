@@ -35,7 +35,7 @@ const getUsers = async ({ search, roleId, status, branchId, page = 1, limit = 10
   const [users, total] = await Promise.all([
     User.find(query)
       .populate('roleId', 'name description isSystemRole')
-      .populate('branchId', 'name code location')
+      .populate('branchId', 'branchName branchCode name code address')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -60,7 +60,7 @@ const getUsers = async ({ search, roleId, status, branchId, page = 1, limit = 10
 const getUserById = async (id) => {
   const user = await User.findById(id)
     .populate('roleId', 'name description permissions isSystemRole')
-    .populate('branchId', 'name code location contactPhone contactEmail')
+    .populate('branchId', 'branchName branchCode name code address phone email')
     .lean();
   if (!user) {
     const err = new Error('User not found');
@@ -110,7 +110,7 @@ const createUser = async (userData) => {
 
   return await User.findById(user._id)
     .populate('roleId', 'name description')
-    .populate('branchId', 'name code location')
+    .populate('branchId', 'branchName branchCode name code address')
     .lean();
 };
 
@@ -142,7 +142,7 @@ const updateUser = async (id, updateData) => {
     { $set: updateData },
     { new: true, runValidators: true }
   ).populate('roleId', 'name description')
-   .populate('branchId', 'name code location');
+   .populate('branchId', 'branchName branchCode name code address');
 
   if (!user) {
     const err = new Error('User not found');
@@ -175,7 +175,7 @@ const updateUserStatus = async (id, status) => {
     { $set: { status } },
     { new: true, runValidators: true }
   ).populate('roleId', 'name description')
-   .populate('branchId', 'name code location');
+   .populate('branchId', 'branchName branchCode name code address');
 
   if (!user) {
     const err = new Error('User not found');
@@ -212,7 +212,7 @@ const updateUserRole = async (id, roleId) => {
     { $set: { roleId } },
     { new: true, runValidators: true }
   ).populate('roleId', 'name description')
-   .populate('branchId', 'name code location');
+   .populate('branchId', 'branchName branchCode name code address');
 
   if (!user) {
     const err = new Error('User not found');
