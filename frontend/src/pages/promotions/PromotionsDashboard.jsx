@@ -40,7 +40,7 @@ const BRANCH_STATS = {
 };
 
 export default function PromotionsDiscountsPage() {
-  const { user, hasRole, activeBranch } = useAuth();
+  const { user, hasRole, activeBranch, setActiveBranch } = useAuth();
   const isBranchManager = hasRole('BRANCH_MANAGER');
   const isAdmin = hasRole('ADMIN') || hasRole('SUPER_ADMIN');
   const navigate = useNavigate();
@@ -151,9 +151,9 @@ export default function PromotionsDiscountsPage() {
   React.useEffect(() => {
     if (isBranchManager) {
       const managerBranch = user?.branchId?.name || 'Downtown Flagship';
-      setSelectedBranch(managerBranch);
+      setActiveBranch(managerBranch);
     }
-  }, [isBranchManager, user]);
+  }, [isBranchManager, user, setActiveBranch]);
   
   // Toggles for page views and modals
   const [isFormOpen, setIsFormOpen] = useState(false);
