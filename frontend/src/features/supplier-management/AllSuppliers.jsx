@@ -52,6 +52,7 @@ const AllSuppliers = ({ onAddSupplier, onViewProfile }) => {
   const [page, setPage] = useState(1);
   const [suppliers, setSuppliers] = useState([]);
   const [stats, setStats] = useState({ total: 0, active: 0, pending: 0, totalSpendYTD: 0 });
+  const [filterStatus, setFilterStatus] = useState('');
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -61,7 +62,7 @@ const AllSuppliers = ({ onAddSupplier, onViewProfile }) => {
     setError(null);
     try {
       const [listRes, statsRes] = await Promise.all([
-        getSuppliers({ search, page, limit: ITEMS_PER_PAGE }),
+        getSuppliers({ search, status: filterStatus || undefined, page, limit: ITEMS_PER_PAGE }),
         getSupplierStats(),
       ]);
       setSuppliers(listRes.suppliers ?? []);
@@ -72,7 +73,7 @@ const AllSuppliers = ({ onAddSupplier, onViewProfile }) => {
     } finally {
       setLoading(false);
     }
-  }, [search, page]);
+  }, [search, filterStatus, page]);
 
   useEffect(() => {
     fetchData();
@@ -84,6 +85,32 @@ const AllSuppliers = ({ onAddSupplier, onViewProfile }) => {
   const totalSpend = stats.totalSpendYTD
     ? `$${(stats.totalSpendYTD / 1_000_000).toFixed(1)}M`
     : '$0';
+
+  const handleExport = () => {
+    if (!suppliers.length) return;
+    const headers = ['Supplier Name', 'ID', 'Category', 'Contact', 'Email', 'Phone', 'Rating', 'Status'];
+    const rows = suppliers.map(s => [
+      s.name,
+      s.supplierId,
+      s.industryCategory,
+      s.contacts?.[0]?.name || '',
+      s.contacts?.[0]?.email || '',
+      s.contacts?.[0]?.phone || '',
+      s.rating || 0,
+      s.status
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(',') + "\n" 
+      + rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join("\n");
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "suppliers.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   if (error) {
     return (
@@ -152,10 +179,17 @@ const AllSuppliers = ({ onAddSupplier, onViewProfile }) => {
           />
         </div>
         <div className="flex items-center gap-2">
-          <button className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2 rounded-xl transition-colors">
-            <Filter className="w-4 h-4" /> Filter
-          </button>
-          <button className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2 rounded-xl transition-colors">
+          <select
+            value={filterStatus}
+            onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+            className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2 rounded-xl transition-colors outline-none cursor-pointer"
+          >
+            <option value="">All Statuses</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="Pending">Pending</option>
+          </select>
+          <button onClick={handleExport} className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2 rounded-xl transition-colors">
             <Download className="w-4 h-4" /> Export
           </button>
         </div>
