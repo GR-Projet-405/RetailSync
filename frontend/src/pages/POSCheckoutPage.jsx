@@ -14,6 +14,7 @@ import SearchInput from '../components/SearchInput';
 import Modal from '../components/Modal';
 import { useCustomers } from '../features/customer-management/hooks/useCustomers';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 
 const currency = {
   format: (value) => `Rs. ${Number(value || 0).toLocaleString('en-US', {
@@ -123,7 +124,15 @@ export default function POSCheckoutPage() {
     setShowCancelModal(true);
   };
 
-  const confirmCancelSale = () => {
+  const confirmCancelSale = async () => {
+    try {
+      if (cart.length > 0) {
+        const adjustments = cart.map(item => ({ productId: item.id || item._id, delta: item.quantity }));
+        await api.post('/pos-billing/adjust-stock', { adjustments });
+      }
+    } catch (error) {
+      console.error('Failed to restore stock on cancel:', error);
+    }
     setShowCancelModal(false);
     navigate('/pos-billing', {
       state: {

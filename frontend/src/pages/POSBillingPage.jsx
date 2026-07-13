@@ -13,6 +13,8 @@ import Card, { CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import Modal from '../components/Modal';
 import { useProductsList } from '../hooks/useProducts';
 import { useCategories } from '../hooks/useCategories';
+import api from '../services/api';
+import { useQueryClient } from '@tanstack/react-query';
 
 /* Currency formatter */
 const currency = {
@@ -386,6 +388,12 @@ function OrderSummary({ subtotal, itemSavings, orderDiscountAmount, orderDiscoun
 export default function POSBillingPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    queryClient.resetQueries({ queryKey: ['products'] });
+  }, [queryClient]);
+
   const restoredState = location.state || {};
   const [searchQuery, setSearchQuery] = useState('');
   const [barcodeValue, setBarcodeValue] = useState('');
@@ -401,18 +409,24 @@ export default function POSBillingPage() {
 
   const inventoryProducts = useMemo(() => {
     if (!productsData?.data) return [];
-    return productsData.data.map(p => ({
-      id: p.id || p._id,
-      barcode: p.barcode || '',
-      name: p.name || 'Unnamed Product',
-      price: p.pricing?.sellingPrice ?? p.sellingPrice ?? p.price ?? 0,
-      currency: 'LKR',
-      unit: p.unit || 'pcs',
-      stock: p.totalStock ?? p.stock ?? 0,
-      sku: p.sku || 'N/A',
-      category: p.category?.name ?? (typeof p.category === 'string' ? p.category : 'Uncategorised')
-    }));
-  }, [productsData]);
+    return productsData.data.map(p => {
+      const productId = p.id || p._id;
+      const inCart = cart.find(item => item.id === productId);
+      const baseStock = p.totalStock ?? p.stock ?? 0;
+      const currentStock = Math.max(0, baseStock - (inCart ? inCart.quantity : 0));
+      return {
+        id: productId,
+        barcode: p.barcode || '',
+        name: p.name || 'Unnamed Product',
+        price: p.pricing?.sellingPrice ?? p.sellingPrice ?? p.price ?? 0,
+        currency: 'LKR',
+        unit: p.unit || 'pcs',
+        stock: currentStock,
+        sku: p.sku || 'N/A',
+        category: p.category?.name ?? (typeof p.category === 'string' ? p.category : 'Uncategorised')
+      };
+    });
+  }, [productsData, cart]);
 
   useEffect(() => {
     if (productsError) {
@@ -565,7 +579,7 @@ export default function POSBillingPage() {
   /* Cart actions */
   const notify = (msg, type = 'info') => { setStatusMessage(msg); setStatusType(type); };
 
-  const addProductToCart = useCallback((product) => {
+  const addProductToCart = useCallback(async (product) => {
     if (product.stock <= 0) {
       notify(`⚠️ Cannot add ${product.name}. This product is out of stock.`, 'error');
       setStockAlert({
@@ -577,33 +591,27 @@ export default function POSBillingPage() {
       return;
     }
 
-    let limitReached = false;
+    let prev;
     setCart((cur) => {
+      prev = cur;
       const existing = cur.find((i) => i.id === product.id);
       if (existing) {
-        if (existing.quantity >= product.stock) {
-          limitReached = true;
-          return cur;
-        }
         return cur.map((i) => {
           if (i.id !== product.id) return i;
-          const next = Math.min(i.quantity + 1, product.stock);
-          return { ...i, quantity: next };
+          return { ...i, quantity: i.quantity + 1 };
         });
       }
       return [...cur, { ...product, quantity: 1, itemDiscount: 0, itemDiscountMode: DISCOUNT_MODES.NONE }];
     });
 
-    if (limitReached) {
-      notify(`⚠️ Cannot add more. Only ${product.stock} units of ${product.name} are available in stock.`, 'error');
-      setStockAlert({
-        title: 'Stock Limit Reached',
-        message: `You cannot add more units of "${product.name}" to the sale. Only ${product.stock} units are available in stock, and all of them are already in the shopping cart.`,
-        productName: product.name,
-        stock: product.stock
-      });
-    } else {
-      notify(`✓ ${product.name} added to cart.`, 'success');
+    notify(`✓ ${product.name} added to cart.`, 'success');
+
+    try {
+      await api.post('/pos-billing/adjust-stock', { productId: product.id, delta: -1 });
+    } catch (error) {
+      console.error(error);
+      notify(`⚠️ Failed to sync database stock: ${error.response?.data?.message || error.message}`, 'error');
+      if (prev) setCart(prev);
     }
   }, []);
 
@@ -657,24 +665,76 @@ export default function POSBillingPage() {
     setManualCode('');
   };
 
-  const updateCartQuantity = (id, delta) => {
-    setCart((cur) =>
-      cur.map((i) => {
+  const updateCartQuantity = async (id, delta) => {
+    const item = cart.find(i => i.id === id);
+    if (!item) return;
+
+    let prev;
+    setCart((cur) => {
+      prev = cur;
+      return cur.map((i) => {
         if (i.id !== id) return i;
         const next = i.quantity + delta;
         if (next <= 0) return null;
-        return { ...i, quantity: Math.min(next, i.stock) };
-      }).filter(Boolean)
-    );
+        return { ...i, quantity: next };
+      }).filter(Boolean);
+    });
+
+    notify(delta > 0 ? `✓ Added 1 unit.` : `✓ Removed 1 unit.`, 'success');
+
+    try {
+      await api.post('/pos-billing/adjust-stock', { productId: id, delta: -delta });
+    } catch (error) {
+      console.error(error);
+      notify(`⚠️ Failed to update stock: ${error.response?.data?.message || error.message}`, 'error');
+      if (prev) setCart(prev);
+    }
   };
 
-  const setCartQuantity = (id, qty) => {
-    setCart((cur) =>
-      cur.map((i) => (i.id === id ? { ...i, quantity: qty } : i))
-    );
+  const setCartQuantity = async (id, qty) => {
+    const item = cart.find(i => i.id === id);
+    if (!item) return;
+
+    const diff = qty - item.quantity;
+    if (diff === 0) return;
+
+    let prev;
+    setCart((cur) => {
+      prev = cur;
+      return cur.map((i) => (i.id === id ? { ...i, quantity: qty } : i));
+    });
+
+    notify(`✓ Updated quantity to ${qty}.`, 'success');
+
+    try {
+      await api.post('/pos-billing/adjust-stock', { productId: id, delta: -diff });
+    } catch (error) {
+      console.error(error);
+      notify(`⚠️ Failed to update stock: ${error.response?.data?.message || error.message}`, 'error');
+      if (prev) setCart(prev);
+    }
   };
 
-  const removeCartItem = (id) => setCart((cur) => cur.filter((i) => i.id !== id));
+  const removeCartItem = async (id) => {
+    const item = cart.find(i => i.id === id);
+    if (!item) return;
+
+    let prev;
+    setCart((cur) => {
+      prev = cur;
+      return cur.filter((i) => i.id !== id);
+    });
+
+    notify(`✓ ${item.name} removed from cart.`, 'success');
+
+    try {
+      await api.post('/pos-billing/adjust-stock', { productId: id, delta: item.quantity });
+    } catch (error) {
+      console.error(error);
+      notify(`⚠️ Failed to remove item: ${error.response?.data?.message || error.message}`, 'error');
+      if (prev) setCart(prev);
+    }
+  };
 
   const applyItemDiscount = (id, value, mode) => {
     setCart((cur) =>
@@ -682,11 +742,23 @@ export default function POSBillingPage() {
     );
   };
 
-  const clearSale = () => {
+  const clearSale = async () => {
+    if (cart.length === 0) return;
+
+    const currentCart = [...cart];
     setCart([]);
     setOrderDiscount('');
     setOrderDiscountMode(DISCOUNT_MODES.NONE);
-    notify('Sale cleared. Ready for a new transaction.', 'info');
+    notify('Sale cleared and database stock restored.', 'info');
+
+    try {
+      const adjustments = currentCart.map(item => ({ productId: item.id, delta: item.quantity }));
+      await api.post('/pos-billing/adjust-stock', { adjustments });
+    } catch (error) {
+      console.error(error);
+      notify(`⚠️ Failed to clear sale: ${error.response?.data?.message || error.message}`, 'error');
+      setCart(currentCart);
+    }
   };
 
   /* Tax rate editing */
@@ -910,59 +982,120 @@ export default function POSBillingPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {paginatedProducts.map((product) => {
                       const inCart = cart.find((i) => i.id === product.id);
                       const catStyle = CATEGORY_COLORS[product.category] || defaultCat;
+                      
+                      // Stock status styles
+                      let stockBadgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                      let stockText = `${product.stock} ${product.unit}s`;
+                      let stockAlertText = 'In Stock';
+                      let stockProgressColor = 'bg-emerald-500';
+
+                      if (product.stock === 0) {
+                        stockBadgeColor = 'bg-red-50 text-red-700 border-red-200';
+                        stockAlertText = 'Out of Stock';
+                        stockText = '0 units';
+                        stockProgressColor = 'bg-red-300';
+                      } else if (product.stock <= 5) {
+                        stockBadgeColor = 'bg-red-50 text-red-700 border-red-200 animate-pulse';
+                        stockAlertText = `Critical: Only ${product.stock} left!`;
+                        stockProgressColor = 'bg-red-500';
+                      } else if (product.stock <= 15) {
+                        stockBadgeColor = 'bg-amber-50 text-amber-700 border-amber-200';
+                        stockAlertText = 'Low Stock';
+                        stockProgressColor = 'bg-amber-500';
+                      }
+
+                      const stockPercentage = Math.min((product.stock / 50) * 100, 100);
+
                       return (
                         <div
                           key={product.id}
-                          className={`rounded-2xl border p-4 space-y-3 transition-all duration-200 ${inCart
-                            ? 'border-[#2563EB] bg-[#EFF6FF] shadow-md'
-                            : 'border-[#E2E8F0] bg-white shadow-sm hover:border-[#BFDBFE] hover:shadow-md'
+                          className={`group relative rounded-2xl border bg-white p-4 flex flex-col justify-between transition-all duration-300 min-h-[260px] ${inCart
+                            ? 'border-[#2563EB] ring-2 ring-[#2563EB]/15 bg-gradient-to-b from-[#EFF6FF]/60 to-white shadow-lg'
+                            : 'border-slate-200/80 hover:border-blue-300/80 hover:shadow-[0_12px_24px_-8px_rgba(59,130,246,0.12)] hover:-translate-y-1'
                             }`}
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${catStyle.bg} ${catStyle.text}`}>
-                                <span className={`h-1.5 w-1.5 rounded-full ${catStyle.dot}`} />
-                                {product.category}
-                              </div>
-                              <h3 className="text-sm font-semibold text-slate-900 mt-1.5 leading-snug">{product.name}</h3>
-                            </div>
-                            <div className="text-right flex-shrink-0">
-                              <div className="text-sm font-bold text-[#2563EB]">{currency.format(product.price)}</div>
-                              <div className="text-[10px] text-slate-400">/{product.unit}</div>
-                            </div>
+                          {/* Row 1: Category & SKU */}
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 ${catStyle.bg} ${catStyle.text} border-transparent`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${catStyle.dot}`} />
+                              {product.category}
+                            </span>
+                            <span className="text-[10px] font-semibold text-slate-400">
+                              SKU: {product.sku}
+                            </span>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="rounded-lg bg-white/60 px-2.5 py-1.5 border border-[#E2E8F0]">
-                              <div className="text-[10px] text-slate-400 uppercase tracking-wide">SKU</div>
-                              <div className="text-slate-700 font-medium text-[11px]">{product.sku}</div>
-                            </div>
-                            <div className={`rounded-lg px-2.5 py-1.5 border ${product.stock <= 10 ? 'bg-red-50 border-red-200' : 'bg-white/60 border-[#E2E8F0]'}`}>
-                              <div className="text-[10px] text-slate-400 uppercase tracking-wide">Stock</div>
-                              <div className={`font-medium text-[11px] ${product.stock <= 10 ? 'text-red-600' : 'text-slate-700'}`}>
-                                {product.stock} {product.unit}s
-                              </div>
-                            </div>
+                          {/* Row 2: Product Name */}
+                          <div className="mt-3 mb-2">
+                            <h3 className="text-xs font-bold text-slate-800 leading-snug tracking-tight line-clamp-2 min-h-[34px] group-hover:text-slate-950">
+                              {product.name}
+                            </h3>
                           </div>
 
-                          <Button
-                            type="button"
-                            className={`w-full rounded-xl text-sm h-9 transition-all ${inCart
-                              ? 'bg-[#1E40AF] hover:bg-[#1E3A8A] shadow-md shadow-blue-300/30'
-                              : 'bg-[#2563EB] hover:bg-[#1E40AF]'
-                              }`}
-                            onClick={() => addProductToCart(product)}
-                          >
-                            {inCart ? (
-                              <><Check className="w-3.5 h-3.5 mr-1.5" />In cart ({inCart.quantity})</>
-                            ) : (
-                              <><Plus className="w-3.5 h-3.5 mr-1.5" />Add to cart</>
+                          {/* Row 3: Price and Barcode */}
+                          <div className="flex items-center justify-between gap-2 mt-auto border-t border-slate-100 pt-2.5">
+                            <div className="flex flex-col">
+                              <span className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">Price</span>
+                              <span className="text-sm font-extrabold text-[#2563EB]">
+                                {currency.format(product.price)}
+                              </span>
+                            </div>
+                            {product.barcode && (
+                              <div className="flex flex-col items-end">
+                                <span className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">Barcode</span>
+                                <span className="text-[10px] font-semibold text-slate-500 bg-slate-50 rounded px-1.5 py-0.5 border border-slate-200/30">
+                                  {product.barcode}
+                                </span>
+                              </div>
                             )}
-                          </Button>
+                          </div>
+
+                          {/* Row 4: Stock Indicator */}
+                          <div className="space-y-1.5 mt-3">
+                            <div className="flex items-center justify-between text-[10px] font-bold">
+                              <span className="text-slate-400 uppercase tracking-wider">Stock Status</span>
+                              <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold border ${stockBadgeColor}`}>
+                                {stockAlertText}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden border border-slate-200/40">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${stockProgressColor}`}
+                                  style={{ width: `${stockPercentage}%` }}
+                                />
+                              </div>
+                              <span className="text-[11px] font-bold text-slate-700 min-w-[40px] text-right">
+                                {stockText}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Row 5: Action Button */}
+                          <div className="mt-3.5">
+                            <Button
+                              type="button"
+                              disabled={product.stock === 0}
+                              className={`w-full rounded-xl text-xs h-9 font-bold transition-all duration-300 shadow-sm flex items-center justify-center gap-1.5 ${inCart
+                                ? 'bg-gradient-to-r from-blue-700 to-indigo-700 hover:from-blue-800 hover:to-indigo-800 hover:shadow-md text-white border-transparent'
+                                : 'bg-[#2563EB] hover:bg-[#1E40AF] text-white border-transparent hover:shadow-md'
+                                }`}
+                              onClick={() => addProductToCart(product)}
+                            >
+                              {inCart ? (
+                                <><Check className="w-3.5 h-3.5" /> In Cart ({inCart.quantity})</>
+                              ) : product.stock === 0 ? (
+                                <>Out of stock</>
+                              ) : (
+                                <><Plus className="w-3.5 h-3.5" /> Add to Sale</>
+                              )}
+                            </Button>
+                          </div>
                         </div>
                       );
                     })}
