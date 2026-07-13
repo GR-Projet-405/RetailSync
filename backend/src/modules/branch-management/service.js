@@ -1,11 +1,12 @@
-class BranchPageService {
-  async fetchDetails() {
-    // Skeletons to be populated by development teams
-    return {
-      module: 'Branch Management',
-      status: 'Under Development'
-    };
-  }
-}
+const Branch = require('../branch-management/branch.model');
 
-module.exports = new BranchPageService();
+const getBranches = async () => {
+  const branches = await Branch.find({ status: 'ACTIVE' })
+    .select('_id name code location status')
+    .sort({ name: 1 })
+    .lean();
+
+  return branches;
+};
+
+module.exports = { getBranches };

@@ -1,22 +1,45 @@
-require('dotenv').config({ path: '../../.env' });
+const dns = require('dns');
+// Windows DNS client blocks SRV queries from Node.js; use Google DNS instead.
+if (process.platform === 'win32') dns.setServers(['8.8.8.8', '8.8.4.4']);
+
 const mongoose = require('mongoose');
 const env = require('../config/env');
-const seedBranches = require('./branches.seeder');
-const seedRoles = require('./roles.seeder');
-const seedUsers = require('./users.seeder');
-const seedNotifications = require('./notifications.seeder');
+
+// Core seeders (singular filenames — these are the actual files on disk)
+const seedBranches  = require('./branch.seeder');
+const seedRoles     = require('./role.seeder');
+const seedUsers     = require('./user.seeder');
+
+// Product Management branch additions
+const seedCategories           = require('./categories.seeder');
+const seedSuppliers            = require('./suppliers.seeder');
+const seedReports              = require('./reports.seeder');
+const seedProductsAndInventory = require('./productsAndInventory.seeder');
+const seedAIModules = require('./aiModules.seeder');
 
 const runSeeders = async () => {
   try {
     console.log('Connecting to MongoDB...');
-    await mongoose.connect(env.MONGODB_URI);
+    await mongoose.connect(env.MONGODB_URI, { dbName: 'retailsync_db' });
     console.log('MongoDB Connected.');
 
     console.log('--- Starting Seed Process ---');
+
+    // Foundation: branches → roles → users (order matters)
     await seedBranches();
     await seedRoles();
     await seedUsers();
-    await seedNotifications();
+
+    // Product-Management additions (depend on branches/users above)
+    await seedCategories();
+    await seedSuppliers();
+    await seedReports();
+    try {
+      await seedProductsAndInventory();
+    } catch (err) {
+      console.warn('Warning: Products/Inventory seeder had errors (non-fatal):', err.message);
+    }
+    await seedAIModules();
     console.log('--- Seed Process Completed Successfully ---');
 
     process.exit(0);

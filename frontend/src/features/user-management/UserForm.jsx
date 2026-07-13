@@ -2,16 +2,10 @@ import { useState, useEffect } from 'react';
 import { User, Mail, Lock, Phone, Shield, Building2, ImageIcon, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../../components/Button';
-import { ROLE_LABELS, ALL_ROLES } from '../../config/roles';
+import { useBranches } from '../../hooks/useBranches';
+import { useRoles } from '../../hooks/useRoles';
 
-// ─── Mock branch list (replace with real branch query in production) ──
-const MOCK_BRANCHES = [
-  { _id: 'b1', name: 'Main Branch', code: 'MAIN' },
-  { _id: 'b2', name: 'North Branch', code: 'NORTH' },
-  { _id: 'b3', name: 'South Branch', code: 'SOUTH' },
-  { _id: 'b4', name: 'East Branch', code: 'EAST' },
-  { _id: 'b5', name: 'West Branch', code: 'WEST' },
-];
+import api from '../../services/api'; // Safe centralized Axios instance wrapper
 
 const STATUSES = [
   { value: 'ACTIVE', label: 'Active' },
@@ -114,14 +108,41 @@ const validate = (form, isEdit = false) => {
     }
   }
 
-  if (!form.role) errors.role = 'Role is required';
+  if (!form.roleId && !form.role) errors.roleId = 'Role is required';
 
   return errors;
 };
 
 // ─── UserForm ─────────────────────────────────────────────
-export default function UserForm({ initialData = null, onSubmit, onCancel, isLoading = false }) {
+export default function UserForm({ initialData = null, onSubmit, onCancel, isLoading = false, currentUserRole, branches: branchesProp = [] }) {
   const isEdit = Boolean(initialData);
+  const { data: branchesData } = useBranches();
+  const branches = branchesProp.length > 0 ? branchesProp : (branchesData || []);
+
+  const { data: rolesData } = useRoles();
+  const [dbRoles, setDbRoles] = useState([]);
+
+  // Fetch roles directly from backend config/seed if needed (dev branch logic)
+  useEffect(() => {
+    const fetchLiveRoles = async () => {
+      try {
+        const res = await api.get('/role-management/list');
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          setDbRoles(res.data.data);
+        }
+      } catch (err) {
+        console.error('Failed to load live database roles:', err.message);
+      }
+    };
+    fetchLiveRoles();
+  }, []);
+
+  const allRoles = dbRoles.length > 0 ? dbRoles : (rolesData?.data || []);
+
+  const BRANCH_MANAGER_ALLOWED_ROLES = ['CASHIER', 'INVENTORY_MANAGER'];
+  const roles = currentUserRole === 'BRANCH_MANAGER'
+    ? allRoles.filter(r => BRANCH_MANAGER_ALLOWED_ROLES.includes(r.name))
+    : allRoles;
 
   const [form, setForm] = useState({
     firstName: '',
@@ -131,8 +152,9 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
     password: '',
     phoneNumber: '',
     profileImage: '',
-    role: 'EMPLOYEE',
-    branch: '',
+    profileImageFile: null,
+    roleId: '',    
+    branchId: '',
     status: 'ACTIVE',
     ...initialData,
   });
@@ -141,8 +163,9 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
   const [showPassword, setShowPassword] = useState(false);
   const [touched, setTouched] = useState({});
 
-  // Sync on initialData change
+  // Sync initialData cleanly
   useEffect(() => {
+
     if (initialData) {
       setForm({
         firstName: '',
@@ -152,11 +175,13 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
         password: '',
         phoneNumber: '',
         profileImage: '',
-        role: 'EMPLOYEE',
-        branch: '',
+        profileImageFile: null,
+        roleId: '',
+        branchId: '',
         status: 'ACTIVE',
         ...initialData,
-        branch: initialData.branch?._id || initialData.branch || '',
+        roleId: initialData.roleId?._id || initialData.roleId || initialData.role?._id || initialData.role || '',
+        branchId: initialData.branchId?._id || initialData.branchId || initialData.branch?._id || initialData.branch || '',
       });
     }
   }, [initialData]);
@@ -175,18 +200,38 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
     const validationErrors = validate(form, isEdit);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      // Mark all fields as touched
       const allTouched = Object.keys(form).reduce((acc, k) => ({ ...acc, [k]: true }), {});
       setTouched(allTouched);
       return;
     }
 
     // Build payload — strip password if empty in edit mode
-    const payload = { ...form };
-    if (isEdit && !payload.password) delete payload.password;
-    if (!payload.branch) payload.branch = null;
-    if (!payload.phoneNumber) payload.phoneNumber = null;
-    if (!payload.profileImage) payload.profileImage = null;
+    const payload = new FormData();
+    const resolvedRoleId = form.roleId || form.role || '';
+    const resolvedBranchId = form.branchId || form.branch || '';
+
+    const formCopy = { 
+      ...form,
+      roleId: resolvedRoleId,
+      branchId: resolvedBranchId
+    };
+    if (isEdit && !formCopy.password) delete formCopy.password;
+    if (!formCopy.branchId) formCopy.branchId = '';
+    if (!formCopy.phoneNumber) formCopy.phoneNumber = '';
+
+    Object.keys(formCopy).forEach(key => {
+      if (key === 'profileImageFile' || key === 'profileImage' || key === 'role' || key === 'branch') return;
+      if (formCopy[key] !== null && formCopy[key] !== undefined) {
+        payload.append(key, formCopy[key]);
+      }
+    });
+
+    if (form.profileImageFile) {
+      payload.append('profileImage', form.profileImageFile);
+    } else if (form.profileImage) {
+      payload.append('profileImage', form.profileImage);
+    }
+
 
     onSubmit(payload);
   };
@@ -275,7 +320,7 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
               <input
                 type={showPassword ? 'text' : 'password'}
                 placeholder={isEdit ? '••••••••' : 'Min. 8 characters'}
-                value={form.password}
+                value={form.password || ''}
                 onChange={set('password')}
                 onBlur={() => setTouched((p) => ({ ...p, password: true }))}
                 autoComplete="new-password"
@@ -314,35 +359,39 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
           <Shield size={11} /> Role & Branch Assignment
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Role" required error={touched.role && errors.role}>
-            <Select
-              icon={Shield}
-              value={form.role}
-              onChange={set('role')}
-              error={touched.role && errors.role}
-            >
-              <option value="">Select role...</option>
-              {ALL_ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {ROLE_LABELS[r]}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Assigned Branch">
-            <Select
-              icon={Building2}
-              value={form.branch || ''}
-              onChange={set('branch')}
-            >
-              <option value="">No branch assigned</option>
-              {MOCK_BRANCHES.map((b) => (
-                <option key={b._id} value={b._id}>
-                  {b.name} ({b.code})
-                </option>
-              ))}
-            </Select>
-          </Field>
+          {currentUserRole !== 'BRANCH_MANAGER' ? (
+            <>
+              <Field label="Role" required error={(touched.roleId || touched.role) && errors.roleId}>
+                <Select
+                  icon={Shield}
+                  value={form.roleId || form.role || ''}
+                  onChange={set('roleId')}
+                  error={(touched.roleId || touched.role) && errors.roleId}
+                >
+                  <option value="">Select role...</option>
+                  {roles.map((r) => (
+                    <option key={r._id} value={r._id}>
+                      {r.name.replace('_', ' ')}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Assigned Branch">
+                <Select
+                  icon={Building2}
+                  value={form.branchId || form.branch || ''}
+                  onChange={set('branchId')}
+                >
+                  <option value="">No branch assigned</option>
+                  {branches.map((b) => (
+                    <option key={b._id} value={b._id}>
+                      {b.branchName || b.name} {(b.branchCode || b.code) ? `(${b.branchCode || b.code})` : ''}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </>
+          ) : null}
         </div>
 
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -355,13 +404,21 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
               ))}
             </Select>
           </Field>
-          <Field label="Profile Image URL">
-            <Input
-              icon={ImageIcon}
-              type="url"
-              placeholder="https://..."
-              value={form.profileImage || ''}
-              onChange={set('profileImage')}
+          <Field label="Profile Image">
+            <input
+              type="file"
+              accept="image/jpeg, image/png, image/webp"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file) {
+                  setForm((prev) => ({
+                    ...prev,
+                    profileImageFile: file,
+                    profileImage: URL.createObjectURL(file)
+                  }));
+                }
+              }}
+              className="w-full text-sm rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all duration-150 cursor-pointer"
             />
           </Field>
         </div>
@@ -376,7 +433,9 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
             className="w-10 h-10 rounded-full object-cover border-2 border-blue-200"
             onError={(e) => { e.target.style.display = 'none'; }}
           />
-          <span className="text-xs text-slate-500 truncate">{form.profileImage}</span>
+          <span className="text-xs text-slate-500 truncate">
+            {form.profileImageFile ? form.profileImageFile.name : form.profileImage}
+          </span>
         </div>
       )}
 
