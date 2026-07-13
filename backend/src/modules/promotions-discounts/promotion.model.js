@@ -22,8 +22,8 @@ const promotionSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Promotion type is required'],
       enum: {
-        values: ['Percentage', 'Fixed Amount'],
-        message: 'Type must be either Percentage or Fixed Amount',
+        values: ['Percentage', 'Fixed Amount', 'Free Shipping'],
+        message: 'Type must be either Percentage, Fixed Amount, or Free Shipping',
       },
       default: 'Percentage',
     },

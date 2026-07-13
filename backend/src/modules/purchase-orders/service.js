@@ -66,7 +66,10 @@ class PurchaseOrderPageService {
 
   // ── Step 1: supplier typeahead search ──
   async searchSuppliers(search = '') {
-    const filter = search ? { name: { $regex: search, $options: 'i' } } : {};
+    const filter = { status: 'Active' };
+   if (search) {
+     filter.name = { $regex: search, $options: 'i' };
+ }
     const suppliers = await Supplier.find(filter).select('name supplierId').limit(20);
 
     return suppliers.map((s) => ({
