@@ -82,7 +82,11 @@ export default function TransactionDetailsPage() {
                     <span className="px-3 py-1 text-xs font-bold text-blue-700 bg-blue-100 rounded-full">Completed</span>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" className="flex items-center gap-2 font-bold text-red-600 border-red-200 hover:bg-red-50">
+                    <Button
+                        onClick={() => navigate('/returns-refunds', { state: { autoLoadReceiptId: transaction.receiptId } })}
+                        variant="outline"
+                        className="flex items-center gap-2 font-bold text-red-600 border-red-200 hover:bg-red-50"
+                    >
                         <RefreshCcw size={16} /> Issue Refund
                     </Button>
                     <Button
@@ -182,6 +186,11 @@ export default function TransactionDetailsPage() {
                                 <div>
                                     <p className="text-slate-500 mb-0.5">Member Discount</p>
                                     <p className="font-bold text-emerald-600">- Rs. {formatCurrency(transaction.memberDiscount)}</p>
+                                </div>
+
+                                <div>
+                                    <p className="text-slate-500 mb-0.5">POS Discount</p>
+                                    <p className="font-bold text-purple-600">- Rs. {formatCurrency(transaction.posDiscount)}</p>
                                 </div>
 
                                 {transaction.pointsRedeemed > 0 && (

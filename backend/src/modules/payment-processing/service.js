@@ -1,3 +1,4 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
 
@@ -92,10 +93,12 @@ class PaymentProcessingService {
     if (!transaction) throw new Error("Transaction not found");
 
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: process.env.EMAIL_HOST,
+      port: parseInt(process.env.EMAIL_PORT),
+      secure: process.env.EMAIL_SECURE === 'true', //secure:true for port 465, secure:false for port 587
       auth: {
-        user: 'ashenlakmal05@gmail.com',
-        pass: 'suvf aklf rjbt yyob'
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
       }
     });
 
@@ -212,7 +215,7 @@ class PaymentProcessingService {
     `;
 
     const mailOptions = {
-      from: '"RetailOS Pro POS" <ashenlakmal05@gmail.com>',
+      from: `"RetailOS Pro POS" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: `Your Receipt from RetailOS Pro (#${transaction.receiptId})`,
       html: htmlContent
