@@ -21,9 +21,20 @@ const verifyReceiptHandler = asyncHandler(async (req, res) => {
   }
 });
 
-// 2. Create Return Request
+// 2. Create Return Request 
 const createReturnHandler = asyncHandler(async (req, res) => {
-  const returnRequest = await service.createReturnRequest(req.body);
+  let returnData = req.body;
+
+  if (typeof returnData.items === 'string') {
+    returnData.items = JSON.parse(returnData.items);
+  }
+
+  if (req.file && returnData.items && returnData.items.length > 0) {
+    returnData.items[0].photoProofUrl = req.file.path;
+  }
+
+  const returnRequest = await service.createReturnRequest(returnData);
+  
   res.status(201).json({
     success: true,
     message: 'Return request submitted successfully.',

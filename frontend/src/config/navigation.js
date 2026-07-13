@@ -276,6 +276,13 @@ export const NAVIGATION_GROUPS = [
         allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
       },
       {
+        id: 'returns-refunds-history',
+        name: 'Returns & Refunds History',
+        path: '/returns/history',
+        icon: 'FileText',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
+      },
+      {
         id: 'customer-management',
         name: 'Customer Management',
         path: '/customers',
