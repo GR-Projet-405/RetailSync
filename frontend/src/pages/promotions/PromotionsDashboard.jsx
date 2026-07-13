@@ -58,7 +58,7 @@ export default function PromotionsDiscountsPage() {
 
   const fetchBranches = async () => {
     try {
-      const response = await api.get('/branch-management', { params: { limit: 100 } });
+      const response = await api.get('/branch-management', { params: { limit: 100 }, timeout: 45000 });
       const list = response.data?.data || [];
       const formatted = ['All Branches', ...list.map(b => b.branchName || b.name)];
       setBranchesList(formatted);
@@ -75,7 +75,7 @@ export default function PromotionsDiscountsPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await api.get('/category-management', { params: { limit: 200, isActive: true } });
+      const response = await api.get('/category-management', { params: { limit: 200, isActive: true }, timeout: 45000 });
       const list = response.data?.data || [];
       setCategoriesList(list);
     } catch (err) {
@@ -252,16 +252,6 @@ export default function PromotionsDiscountsPage() {
     return promotions.filter(p => p.branch === selectedBranch || p.branch === 'All Branches');
   }, [promotions, selectedBranch]);
 
-  // BR-SALE-002 threshold warning memo
-  const showThresholdWarning = useMemo(() => {
-    const rawVal = parseFloat(formData.discount) || 0;
-    if (formData.type === 'Percentage') {
-      return rawVal > 50;
-    } else {
-      return rawVal > 1000;
-    }
-  }, [formData.discount, formData.type]);
-
   // Open form view for creating promotion
   const handleCreateOpen = () => {
     setSubmitError(null);
@@ -270,8 +260,6 @@ export default function PromotionsDiscountsPage() {
     setActiveFormTab(0);
     setFormData({
       name: '',
-      discount: '20',
-      type: 'Percentage',
       revenue: 0,
       orders: 0,
       usage: 0,
@@ -299,11 +287,9 @@ export default function PromotionsDiscountsPage() {
     setEditMode(true);
     setCurrentPromo(promo);
     setActiveFormTab(0);
-    const rawDiscountNum = promo.discount ? promo.discount.toString().replace(/[^0-9.]/g, '') : '20';
     const catIds = promo.categories ? promo.categories.map(c => typeof c === 'object' ? c._id || c.id : c) : [];
     setFormData({ 
       ...promo,
-      discount: promo.type === 'Free Shipping' ? '0' : rawDiscountNum,
       minOrderValue: promo.minOrderValue !== undefined && promo.minOrderValue !== null ? `Rs. ${promo.minOrderValue}` : 'Rs. 500',
       maxUses: promo.maxUses !== null && promo.maxUses !== undefined ? promo.maxUses.toString() : '',
       startTime: promo.startTime || '08:00',
@@ -366,7 +352,6 @@ export default function PromotionsDiscountsPage() {
     if (tabIndex === 0) {
       // Clear previous tab 0 errors
       delete errors.name;
-      delete errors.discount;
 
       // Name validation
       if (!formData.name.trim()) {
@@ -375,21 +360,6 @@ export default function PromotionsDiscountsPage() {
       } else if (formData.name.trim().length < 3) {
         errors.name = 'Promotion name must be at least 3 characters';
         hasError = true;
-      }
-
-      // Discount value validation
-      if (formData.type !== 'Free Shipping') {
-        const discountVal = parseFloat(formData.discount.toString().replace(/[^0-9.]/g, ''));
-        if (!formData.discount) {
-          errors.discount = 'Discount value is required';
-          hasError = true;
-        } else if (isNaN(discountVal) || discountVal <= 0) {
-          errors.discount = 'Discount value must be a positive number';
-          hasError = true;
-        } else if (formData.type === 'Percentage' && discountVal > 100) {
-          errors.discount = 'Percentage discount cannot exceed 100%';
-          hasError = true;
-        }
       }
     }
 
@@ -456,18 +426,6 @@ export default function PromotionsDiscountsPage() {
       errors.name = 'Promotion name must be at least 3 characters';
     }
 
-    // Discount value validation
-    if (formData.type !== 'Free Shipping') {
-      const discountVal = parseFloat(formData.discount.toString().replace(/[^0-9.]/g, ''));
-      if (!formData.discount) {
-        errors.discount = 'Discount value is required';
-      } else if (isNaN(discountVal) || discountVal <= 0) {
-        errors.discount = 'Discount value must be a positive number';
-      } else if (formData.type === 'Percentage' && discountVal > 100) {
-        errors.discount = 'Percentage discount cannot exceed 100%';
-      }
-    }
-
     // Date range validation
     if (!formData.startDate) {
       errors.startDate = 'Start date is required';
@@ -510,7 +468,7 @@ export default function PromotionsDiscountsPage() {
     setFormErrors(errors);
 
     // Auto-navigate to first tab with error
-    if (errors.name || errors.discount) {
+    if (errors.name) {
       setActiveFormTab(0);
     } else if (errors.minOrderValue || errors.maxUses) {
       setActiveFormTab(1);
@@ -519,6 +477,12 @@ export default function PromotionsDiscountsPage() {
     }
 
     return Object.keys(errors).length === 0;
+  };
+
+  const handleFormKeyDown = (e) => {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+      e.preventDefault();
+    }
   };
 
   // Handle Form Submission
@@ -544,11 +508,6 @@ export default function PromotionsDiscountsPage() {
       endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
     }
 
-    const numericDiscount = parseFloat(formData.discount.toString().replace(/[^0-9.]/g, '')) || 0;
-    const formattedDiscount = formData.type === 'Free Shipping' 
-      ? 'Free Shipping' 
-      : (formData.type === 'Percentage' ? `${numericDiscount} %` : `Rs.${numericDiscount}`);
-
     // Format categories checklist names for success dialog
     const catNames = categoriesList
       .filter(c => formData.categories.includes(c._id))
@@ -558,7 +517,6 @@ export default function PromotionsDiscountsPage() {
     // Format standard backend payload with real MongoDB ObjectIds
     const payload = {
       ...formData,
-      discount: formattedDiscount,
       branchId: targetBranchId,
       minOrderValue: cleanMinOrderValue,
       maxUses: cleanMaxUses,
@@ -569,12 +527,21 @@ export default function PromotionsDiscountsPage() {
       minApprovalRole: formData.minApprovalRole || 'Branch Manager'
     };
 
+    delete payload.discount;
+    delete payload.type;
+
+    delete payload._id;
+    delete payload.id;
+    delete payload.createdAt;
+    delete payload.updatedAt;
+    delete payload.__v;
+
     try {
       setLoading(true);
       setSubmitError(null);
       if (editMode) {
         // Update mode
-        const response = await api.put(`/promotions-discounts/${currentPromo.id}`, payload);
+        const response = await api.put(`/promotions-discounts/${currentPromo.id}`, payload, { timeout: 45000 });
         const updatedPromo = { ...response.data.data, id: response.data.data._id };
         const mappedUpdated = {
           ...updatedPromo,
@@ -604,7 +571,7 @@ export default function PromotionsDiscountsPage() {
           usagesCount: 0,
           roi: '0.0x',
         };
-        const response = await api.post('/promotions-discounts', createPayload);
+        const response = await api.post('/promotions-discounts', createPayload, { timeout: 45000 });
         const createdPromo = { ...response.data.data, id: response.data.data._id };
         const mappedCreated = {
           ...createdPromo,
@@ -720,7 +687,7 @@ export default function PromotionsDiscountsPage() {
             )}
 
             {/* Form Fields Container */}
-            <form onSubmit={handleFormSubmit} className="p-6">
+            <form onSubmit={handleFormSubmit} onKeyDown={handleFormKeyDown} className="p-6">
               
               {/* Tab 1: Basic Info */}
               {activeFormTab === 0 && (
@@ -756,99 +723,8 @@ export default function PromotionsDiscountsPage() {
                         <span className="text-[10px] text-slate-400 block font-medium select-none">Choose a descriptive campaign name</span>
                       )}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="block text-slate-600 font-semibold select-none">Discount Type</label>
-                        <div className="relative">
-                          <select
-                            value={formData.type}
-                            onChange={(e) => setFormData({ ...formData, type: e.target.value, discount: e.target.value === 'Free Shipping' ? '0' : formData.discount })}
-                            className="w-full px-4 py-2.5 bg-slate-50/75 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none font-semibold text-slate-800 appearance-none focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer"
-                          >
-                            <option value="Percentage">Percentage Discount (%)</option>
-                            <option value="Fixed Amount">Fixed Amount Discount (Rs.)</option>
-                            <option value="Free Shipping">Free Shipping</option>
-                          </select>
-                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                        </div>
-                      </div>
 
-                      {formData.type !== 'Free Shipping' ? (
-                        <div className="space-y-1">
-                          <label className="block text-slate-600 font-semibold select-none">Discount Value</label>
-                          <div className="relative">
-                            <input
-                              type="text"
-                              required
-                              placeholder={formData.type === 'Percentage' ? '15' : '500'}
-                              value={formData.discount}
-                              onChange={(e) => {
-                                setFormData({ ...formData, discount: e.target.value });
-                                if (formErrors.discount) setFormErrors({ ...formErrors, discount: null });
-                              }}
-                              className={`w-full py-2.5 bg-slate-50/75 border rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 transition-all ${
-                                formData.type === 'Percentage' ? 'pl-4 pr-10' : 'pl-10 pr-4'
-                              } ${
-                                formErrors.discount 
-                                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
-                                  : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500'
-                              }`}
-                            />
-                            {formData.type === 'Percentage' ? (
-                              <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 font-sans">
-                                %
-                              </span>
-                            ) : (
-                              <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 font-sans">
-                                Rs.
-                              </span>
-                            )}
-                          </div>
-                          {formErrors.discount ? (
-                            <span className="text-[10px] text-red-500 font-bold block mt-1">{formErrors.discount}</span>
-                          ) : (
-                            <span className="text-[10px] text-slate-400 block font-medium select-none">Set the discount amount</span>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="space-y-1">
-                          <label className="block text-slate-400 font-semibold select-none">Discount Value</label>
-                          <input
-                            type="text"
-                            disabled
-                            value="N/A (Free Shipping)"
-                            className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl outline-none font-semibold text-slate-400"
-                          />
-                        </div>
-                      )}
-                    </div>
 
-                    {formData.type !== 'Free Shipping' && showThresholdWarning && (
-                      <div className="flex items-start gap-2.5 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-[11px] font-semibold select-none leading-relaxed">
-                        <div className="w-4 h-4 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5 font-bold">
-                          !
-                        </div>
-                        <p className="flex-1">
-                          <strong>Approval Required:</strong> Discounts exceeding 50% or Rs. 1,000 require Branch Manager approval before activation.
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="space-y-1">
-                      <label className="block text-slate-600 font-semibold select-none">Minimum Approval Role</label>
-                      <div className="relative">
-                        <select
-                          value={formData.minApprovalRole || 'Branch Manager'}
-                          onChange={(e) => setFormData({ ...formData, minApprovalRole: e.target.value })}
-                          className="w-full px-4 py-2.5 bg-slate-50/75 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none font-semibold text-slate-800 appearance-none focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer"
-                        >
-                          <option value="Branch Manager">Branch Manager</option>
-                          <option value="Sales Director">Sales Director</option>
-                          <option value="Admin">Admin</option>
-                        </select>
-                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                      </div>
-                    </div>
                     <div className="space-y-1">
                       <div className="flex justify-between items-center select-none">
                         <label className="block text-slate-600 font-semibold">Description (optional)</label>
@@ -1161,10 +1037,7 @@ export default function PromotionsDiscountsPage() {
                           <span className="text-[10px] text-slate-400 block uppercase">Target Branch</span>
                           <span className="text-slate-800 font-extrabold">{formData.branch || 'All Branches'}</span>
                         </div>
-                        <div>
-                          <span className="text-[10px] text-slate-400 block uppercase">Minimum Approval Role</span>
-                          <span className="text-slate-800 font-extrabold">{formData.minApprovalRole || 'Branch Manager'}</span>
-                        </div>
+
                         {formData.campaignObjective && (
                           <div className="md:col-span-2">
                             <span className="text-[10px] text-slate-400 block uppercase">Objective</span>
@@ -1496,20 +1369,20 @@ export default function PromotionsDiscountsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Discount Amount</span>
-                <span className="text-sm font-bold text-slate-800">{currentPromo.discount}</span>
-              </div>
-              <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Discount Type</span>
-                <span className="text-sm font-bold text-slate-800">{currentPromo.type}</span>
-              </div>
-              <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Campaign Start</span>
                 <span className="text-sm font-bold text-slate-800 font-mono">{currentPromo.startDate || '—'}</span>
               </div>
               <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Campaign End</span>
                 <span className="text-sm font-bold text-slate-800 font-mono">{currentPromo.endDate || '—'}</span>
+              </div>
+              <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl col-span-2">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Eligible Categories</span>
+                <span className="text-sm font-bold text-slate-800">
+                  {currentPromo.categories && currentPromo.categories.length > 0
+                    ? currentPromo.categories.map(c => typeof c === 'object' ? c.name || c._id : c).join(', ')
+                    : 'All Categories'}
+                </span>
               </div>
             </div>
 
