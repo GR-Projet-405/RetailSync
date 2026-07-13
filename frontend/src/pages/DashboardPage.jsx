@@ -65,12 +65,12 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-               <div className="bg-white rounded-xl border border-slate-200 p-6 h-80 flex flex-col justify-center items-center">
+               <div className="relative bg-white rounded-xl border border-slate-200 p-6 h-80 flex flex-col justify-center items-center">
                  <h3 className="text-sm font-semibold text-slate-700 absolute top-6 left-6">Revenue By Branch</h3>
                  <Icons.BarChart3 className="w-12 h-12 text-slate-300 mb-4" />
                  <p className="text-slate-500">Revenue Distribution Chart Placeholder</p>
                </div>
-               <div className="bg-white rounded-xl border border-slate-200 p-6 h-80 flex flex-col justify-center items-center">
+               <div className="relative bg-white rounded-xl border border-slate-200 p-6 h-80 flex flex-col justify-center items-center">
                  <h3 className="text-sm font-semibold text-slate-700 absolute top-6 left-6">Profit Distribution</h3>
                  <Icons.PieChart className="w-12 h-12 text-slate-300 mb-4" />
                  <p className="text-slate-500">Profit Donut Chart Placeholder</p>

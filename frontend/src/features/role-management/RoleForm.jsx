@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Button from '../../components/Button';
 
 // Flatten PERMISSIONS for simple checkbox rendering
@@ -13,22 +13,23 @@ const AVAILABLE_PERMISSIONS = [
   'PROCESS_SALE', 'VIEW_REPORTS'
 ];
 
-export default function RoleForm({ initialData, onSubmit, onCancel, isLoading }) {
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    permissions: [],
-  });
+const getInitialFormData = (initialData) => ({
+  name: initialData?.name || '',
+  description: initialData?.description || '',
+  permissions: initialData?.permissions || [],
+});
 
-  useEffect(() => {
-    if (initialData) {
-      setFormData({
-        name: initialData.name || '',
-        description: initialData.description || '',
-        permissions: initialData.permissions || [],
-      });
-    }
-  }, [initialData]);
+const getSourceKey = (initialData) => initialData?._id || initialData?.name || 'new-role';
+
+export default function RoleForm({ initialData, onSubmit, onCancel, isLoading }) {
+  const [formSourceKey, setFormSourceKey] = useState(() => getSourceKey(initialData));
+  const [formData, setFormData] = useState(() => getInitialFormData(initialData));
+
+  const sourceKey = getSourceKey(initialData);
+  if (formSourceKey !== sourceKey) {
+    setFormSourceKey(sourceKey);
+    setFormData(getInitialFormData(initialData));
+  }
 
   const handleChange = (e) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
