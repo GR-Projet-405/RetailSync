@@ -13,6 +13,7 @@ import Button from '../components/Button';
 import SearchInput from '../components/SearchInput';
 import Modal from '../components/Modal';
 import { useCustomers } from '../features/customer-management/hooks/useCustomers';
+import { useAuth } from '../contexts/AuthContext';
 
 const currency = {
   format: (value) => `Rs. ${Number(value || 0).toLocaleString('en-US', {
@@ -35,6 +36,7 @@ const getTierColor = (tier) => {
 export default function POSCheckoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
 
   const state = location.state || {};
   const {
@@ -107,7 +109,9 @@ export default function POSCheckoutPage() {
         invoiceNumber: `INV-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`,
         date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
         time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-        cashierName: 'Nipuni Perera',
+        cashierName: user 
+          ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || user.email 
+          : 'Nipuni Perera',
         counterNumber: '01'
       }
     });

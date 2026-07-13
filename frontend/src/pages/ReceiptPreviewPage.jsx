@@ -12,6 +12,8 @@ import Button from '../components/Button';
 import Card, { CardContent, CardHeader, CardTitle } from '../components/Card';
 import Modal from '../components/Modal';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+
 
 const currency = {
   format: (value) => `Rs. ${Number(value || 0).toLocaleString('en-US', {
@@ -23,6 +25,7 @@ const currency = {
 export default function ReceiptPreviewPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const receiptRef = useRef(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [isThermalPrinting, setIsThermalPrinting] = useState(false);
@@ -49,7 +52,7 @@ export default function ReceiptPreviewPage() {
         `INV-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`,
       date: s.date || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       time: s.time || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-      cashierName: s.cashierName || 'Nipuni Perera',
+      cashierName: s.cashierName || (user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || user.email : 'Nipuni Perera'),
       counterNumber: s.counterNumber || '01',
       storeName: s.storeName || 'RetailSync',
       storeAddress: s.storeAddress || 'No.120, Galle Road, Colombo 03',
