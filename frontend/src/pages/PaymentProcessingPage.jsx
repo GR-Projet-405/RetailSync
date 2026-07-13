@@ -226,8 +226,19 @@ export default function PaymentProcessingPage() {
       cardLastFourDigits: paymentMethod === 'card' ? cardNumber.slice(-4) : ''
     };
 
-    //get token from localStorage for authorization
-    const token = localStorage.getItem('token');
+    //token retrieval and validation
+    let token = localStorage.getItem('retailsync_token');
+
+    //remove any surrounding quotes if present
+    if (token && typeof token === 'string') {
+      token = token.replace(/^"|"$/g, '');
+    }
+
+    if (!token) {
+      toast.error("Authentication error: Please log out and log in again.");
+      setIsProcessing(false);
+      return;
+    }
 
     try {
       const response = await fetch(`${API_BASE_URL}/process`, {
@@ -249,7 +260,8 @@ export default function PaymentProcessingPage() {
           }
         });
       } else {
-        toast.error("Payment Failed! Please try again.");
+        console.error("Backend Error:", result);
+        toast.error(result.message || "Payment Failed! Please try again.");
       }
     } catch (error) {
       console.error("Error processing payment:", error);

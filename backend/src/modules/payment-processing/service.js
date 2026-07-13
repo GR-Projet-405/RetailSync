@@ -16,7 +16,6 @@ class PaymentProcessingService {
   }
 
   // 2. Add a new customer
-  // 2. Add a new customer
   async createCustomer(customerData) {
     const formattedData = {
       firstName: customerData.firstName || 'Guest',
@@ -54,7 +53,15 @@ class PaymentProcessingService {
 
     // Save the transaction to the database
     const transaction = new Transaction(transactionData);
-    const savedTransaction = await transaction.save();
+    let savedTransaction = await transaction.save();
+
+    savedTransaction = await savedTransaction.populate([
+      { path: 'customerId' },
+      {
+        path: 'cashierId',
+        populate: { path: 'branchId', model: 'Branch' }
+      }
+    ]);
 
     // If a registered customer made the payment, update their points
     if (customerId) {
@@ -72,7 +79,10 @@ class PaymentProcessingService {
   async getAllTransactions() {
     return await Transaction.find()
       .populate('customerId', 'firstName lastName phone email loyaltyPoints')
-      .populate('cashierId', 'name')
+      .populate({
+        path: 'cashierId',
+        populate: { path: 'branchId', model: 'Branch' }
+      })
       .sort({ createdAt: -1 });
   }
 
