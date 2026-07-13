@@ -40,7 +40,7 @@ const BRANCH_STATS = {
 };
 
 export default function PromotionsDiscountsPage() {
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, activeBranch } = useAuth();
   const isBranchManager = hasRole('BRANCH_MANAGER');
   const isAdmin = hasRole('ADMIN') || hasRole('SUPER_ADMIN');
   const navigate = useNavigate();
@@ -49,7 +49,7 @@ export default function PromotionsDiscountsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [formErrors, setFormErrors] = useState({});
-  const [selectedBranch, setSelectedBranch] = useState('All Branches');
+  const selectedBranch = activeBranch || 'All Branches';
   const [dateRange, setDateRange] = useState({ label: '01 Jun 2026 - 14 Jun 2026', value: 'custom_june' });
 
   const [branchesList, setBranchesList] = useState(['All Branches']);
@@ -1243,8 +1243,6 @@ export default function PromotionsDiscountsPage() {
         <div className="space-y-6">
           <PromotionHeader
             selectedBranch={selectedBranch}
-            setSelectedBranch={setSelectedBranch}
-            branches={branchesList}
             dateRange={dateRange}
             setDateRange={setDateRange}
             onCreatePromotion={handleCreateOpen}
