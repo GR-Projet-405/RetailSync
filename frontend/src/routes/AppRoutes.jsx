@@ -20,7 +20,7 @@ import ProfileSettingsPage from '../pages/ProfileSettingsPage';
 import BranchListPage from '../pages/admin/BranchListPage';
 import BranchDetailsPage from '../pages/admin/BranchDetailsPage';
 import BranchDashboard from '../pages/manager/BranchDashboard';
-import EmployeePage from '../pages/EmployeeDashboard';
+import EmployeePage from '../pages/EmployeePage';
 import CustomerPage from '../pages/CustomerPage';
 import SupplierPage from '../pages/SupplierPage';
 import UserRolePage from '../pages/UserRolePage';
