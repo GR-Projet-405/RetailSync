@@ -408,7 +408,7 @@ export default function ProductFormModal({
 
         {/* Supplier */}
         <section className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
-          {/* <div>
+          <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Supplier</label>
             <select
               value={form.supplier}
@@ -420,7 +420,7 @@ export default function ProductFormModal({
                 <option key={s._id} value={s._id}>{s.name}</option>
               ))}
             </select>
-          </div> */}
+          </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Lead Time</label>
             <input
