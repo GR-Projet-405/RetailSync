@@ -122,7 +122,7 @@ export default function PurchaseOrderPage() {
   // (partially/fully received) from the Goods Receiving flow instead.
   const canManagePOs = hasRole(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER);
   // Only Admin and Branch Manager should see the "Create New PO" button
-  const canCreatePOs = hasRole(ROLES.ADMIN, ROLES.BRANCH_MANAGER);
+  const canCreatePOs = hasRole(ROLES.SUPER_ADMIN,ROLES.ADMIN, ROLES.BRANCH_MANAGER);
 
   const [selectedRows,   setSelectedRows]   = useState(new Set());
   const [allSelected,    setAllSelected]    = useState(false);
