@@ -23,7 +23,12 @@ const addCustomer = asyncHandler(async (req, res) => {
 
 // POST: Process the Payment
 const processPayment = asyncHandler(async (req, res) => {
-  const transaction = await service.processTransaction(req.body);
+
+  const paymentData = req.body;
+
+  paymentData.cashierId = req.user._id; // Attach the cashier's ID from the authenticated user
+
+  const transaction = await service.processTransaction(paymentData);
   res.status(201).json({
     success: true,
     message: 'Payment processed successfully!',

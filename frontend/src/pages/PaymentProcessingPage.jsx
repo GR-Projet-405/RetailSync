@@ -13,6 +13,11 @@ export default function PaymentProcessingPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // --- GET LOGGED IN USER ---
+  //const loggedInUser = JSON.parse(localStorage.getItem('user') || '{}');
+  //const currentUserId = loggedInUser._id || loggedInUser.id || null;
+
+
   // --- GET DATA FROM POS BILLING PAGE ---
   // If someone visits this page directly without items, we provide default fallbacks
   const {
@@ -221,10 +226,16 @@ export default function PaymentProcessingPage() {
       cardLastFourDigits: paymentMethod === 'card' ? cardNumber.slice(-4) : ''
     };
 
+    //get token from localStorage for authorization
+    const token = localStorage.getItem('token');
+
     try {
       const response = await fetch(`${API_BASE_URL}/process`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload)
       });
 
