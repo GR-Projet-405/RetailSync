@@ -210,7 +210,8 @@ export default function PaymentProcessingPage() {
       customerId: selectedCustomer ? selectedCustomer._id : null,
       items: formattedItems, // Sending the formatted cart items
       subTotal: subTotal,
-      memberDiscount: memberDiscount + posDiscounts, // Saving all discounts into schema
+      posDiscount: posDiscounts,
+      memberDiscount: memberDiscount,
       taxAmount: taxAmount,
       finalTotal: amountDue,
       pointsRedeemed: appliedPointsDiscount * 10,
@@ -461,7 +462,7 @@ export default function PaymentProcessingPage() {
                   </div>
                 )}
 
-                <div className="flex justify-between text-slate-600"><span>VAT(15%)</span><span className="font-medium text-slate-800">Rs. {formatCurrency(taxAmount)}</span></div>
+                <div className="flex justify-between text-slate-600"><span>TAX</span><span className="font-medium text-slate-800">Rs. {formatCurrency(taxAmount)}</span></div>
               </div>
               <div className="w-full h-px my-4 bg-slate-200"></div>
               <div className="flex items-end justify-between mb-5">

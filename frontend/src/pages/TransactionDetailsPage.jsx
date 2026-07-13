@@ -167,11 +167,25 @@ export default function TransactionDetailsPage() {
                                         </div>
                                     </>
                                 )}
-
                                 <div>
-                                    <p className="text-slate-500 mb-0.5">Member Discount</p>
-                                    <p className="font-bold text-emerald-600">- Rs. {formatCurrency(transaction.memberDiscount)}</p>
+                                    <p className="text-slate-500 mb-0.5">Subtotal</p>
+                                    <p className="font-bold text-slate-800">Rs. {formatCurrency(transaction.subTotal || 0)}</p>
                                 </div>
+
+                                {(transaction.posDiscount > 0) && (
+                                    <div>
+                                        <p className="text-slate-500 mb-0.5">POS Discount</p>
+                                        <p className="font-bold text-violet-600">- Rs. {formatCurrency(transaction.posDiscount)}</p>
+                                    </div>
+                                )}
+
+                                {/* show member discount if it exists */}
+                                {(transaction.memberDiscount > 0) && (
+                                    <div>
+                                        <p className="text-slate-500 mb-0.5">Member Discount</p>
+                                        <p className="font-bold text-emerald-600">- Rs. {formatCurrency(transaction.memberDiscount)}</p>
+                                    </div>
+                                )}
 
                                 {transaction.pointsRedeemed > 0 && (
                                     <div>
@@ -188,7 +202,7 @@ export default function TransactionDetailsPage() {
                                 )}
 
                                 <div>
-                                    <p className="text-slate-500 mb-0.5">VAT(15%)</p>
+                                    <p className="text-slate-500 mb-0.5">TAX</p>
                                     <p className="font-bold text-red-500">+ Rs. {formatCurrency(transaction.taxAmount)}</p>
                                 </div>
                             </div>
@@ -283,7 +297,7 @@ export default function TransactionDetailsPage() {
                                 </div>
 
                                 <div className="flex justify-between text-[11px] font-medium text-amber-700/60 pl-7">
-                                    <span>{isHistory ? "Current Database Balance" : `Previous: ${customer.loyaltyPoints || 0}`}</span>
+                                    <span>{isHistory ? "Current Balance" : `Previous: ${customer.loyaltyPoints || 0}`}</span>
                                     {transaction.pointsEarned > 0 && <span>Earned: +{transaction.pointsEarned}</span>}
                                     {transaction.pointsRedeemed > 0 && <span>Redeemed: -{transaction.pointsRedeemed}</span>}
                                 </div>

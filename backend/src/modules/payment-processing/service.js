@@ -129,7 +129,7 @@ class PaymentProcessingService {
       loyaltyHtml = `
           <hr style="border: 0; border-top: 1px dashed #cbd5e1; margin: 15px 0;" />
           <div style="text-align: center; background-color: #fffbeb; border: 1px solid #fde68a; padding: 12px; border-radius: 8px;">
-              <p style="margin: 0; color: #92400e; font-size: 14px; font-weight: bold;">Customer: ${customer.name}</p>
+              <p style="margin: 0; color: #92400e; font-size: 14px; font-weight: bold;">Customer: ${customer.firstName} ${customer.lastName}</p>
               ${transaction.pointsEarned > 0 ? `<p style="margin: 5px 0 0 0; color: #d97706; font-size: 12px;">Points Earned: +${transaction.pointsEarned}</p>` : ''}
               ${transaction.pointsRedeemed > 0 ? `<p style="margin: 5px 0 0 0; color: #d97706; font-size: 12px;">Points Redeemed: -${transaction.pointsRedeemed}</p>` : ''}
               <p style="margin: 8px 0 0 0; color: #b45309; font-size: 13px; font-weight: bold;">New Points Balance: ${customer.loyaltyPoints} Pts</p>
@@ -176,7 +176,7 @@ class PaymentProcessingService {
                       <span>- Rs. ${(transaction.pointsRedeemed / 10).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                   </div>` : ''}
                   <div style="display: flex; justify-content: space-between; margin: 5px 0;">
-                      <span>VAT (15%):</span>
+                      <span>TAX :</span>
                       <span>Rs. ${transaction.taxAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                   </div>
               </div>
