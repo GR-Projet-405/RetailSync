@@ -5,7 +5,7 @@ const transportConfig = env.EMAIL_HOST
   ? {
     host: env.EMAIL_HOST,
     port: parseInt(env.EMAIL_PORT || '587', 10),
-    secure: env.EMAIL_SECURE === 'true',
+    secure: env.EMAIL_SECURE === 'true' || env.EMAIL_SECURE === true || env.EMAIL_SECURE === '1',
     auth: {
       user: env.EMAIL_USER,
       pass: env.EMAIL_PASS,
