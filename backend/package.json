@@ -6,8 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "seed": "node src/seeders/seed.js",
-    "seed:audit": "node src/seeders/seedAuditLogsOnly.js"
+    "seed": "node src/seeders/seed.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

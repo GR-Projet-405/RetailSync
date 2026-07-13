@@ -60,11 +60,9 @@ import AIReorderingPage from '../pages/AIReorderingPage';
 import AIAssistantPage from '../pages/AIAssistantPage';
 import AIAlertsPage from '../pages/AIAlertsPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
+import SystemEventsPage from '../features/system-events/SystemEventsPage';
 import AuditDashboardPage from '../pages/AuditDashboardPage';
 import ActivityLogsPage from '../pages/ActivityLogsPage';
-
-import SystemEventsPage from '../features/system-events/SystemEventsPage';
-
 import HelpSupportPage from '../pages/HelpSupportPage';
 import SuggestedPurchaseListPage from '../pages/SuggestedPurchaseListPage';
 import AIApprovalWorkflowPage from "../pages/AIApprovalWorkflowPage";
@@ -104,10 +102,13 @@ const SALES_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES
 const POS_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER];
 
 export const AppRoutes = () => {
+  const { user } = useAuth();
+
   return (
     <Routes>
       {/* Auth Routes */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
 
       <Route element={
         <ProtectedRoute allowedRoles={POS_ROLES}>
@@ -121,8 +122,8 @@ export const AppRoutes = () => {
 
       {/* Main Dashboard Panel Layout */}
       <Route element={<MainLayout />}>
-        {/* Redirect empty paths to dashboard */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        {/* Redirect empty paths to login if unauthenticated, otherwise dashboard */}
+        <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
 
         {/* Dashboard */}
         <Route path="/dashboard" element={
@@ -186,21 +187,6 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
-
-        {/* Audit Dashboard */}
-        <Route path="/audit-dashboard" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
-            <AuditDashboardPage />
-          </ProtectedRoute>
-        } />
-
-        {/* Activity Logs */}
-        <Route path="/activity-logs" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
-            <ActivityLogsPage />
-          </ProtectedRoute>
-        } />
-
         {/* System Events */}
         <Route path="/system-events" element={
           <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
@@ -215,7 +201,19 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
-        {/* User & Role Management */}
+        {/* Audit Dashboard */}
+        <Route path="/audit-dashboard" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
+            <AuditDashboardPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Activity Logs */}
+        <Route path="/activity-logs" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
+            <ActivityLogsPage />
+          </ProtectedRoute>
+        } />
         <Route path="/users-roles" element={
           <ProtectedRoute allowedRoles={ADMIN_ROLES}>
             <UserRolePage />
@@ -554,8 +552,8 @@ export const AppRoutes = () => {
         } />
       </Route>
 
-      {/* Fallback to Dashboard */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      {/* Fallback to login if unauthenticated, otherwise dashboard */}
+      <Route path="*" element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
     </Routes>
   );
 };

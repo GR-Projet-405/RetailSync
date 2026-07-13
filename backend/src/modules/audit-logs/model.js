@@ -66,4 +66,4 @@ AuditLogSchema.index({ module: 1 });
 AuditLogSchema.index({ location: 1 });
 AuditLogSchema.index({ eventType: 1 });
 
-module.exports = mongoose.model('AuditLog', AuditLogSchema, 'auditlogs');
+module.exports = mongoose.model('AuditLog', AuditLogSchema);

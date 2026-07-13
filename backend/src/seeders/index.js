@@ -4,7 +4,6 @@ const env = require('../config/env');
 const seedBranches = require('./branch.seeder');  // මෙතන 'branches.seeder' නෙවෙයි 'branch.seeder'
 const seedRoles = require('./role.seeder');      // මෙතන 'roles.seeder' නෙවෙයි 'role.seeder'
 const seedUsers = require('./user.seeder');      // මෙතන 'users.seeder' නෙවෙයි 'user.seeder'
-const seedAuditLogs = require('./auditLogs.seeder');
 
 const runSeeders = async () => {
   try {
@@ -16,7 +15,6 @@ const runSeeders = async () => {
     await seedBranches();
     await seedRoles();
     await seedUsers();
-    await seedAuditLogs();
     console.log('--- Seed Process Completed Successfully ---');
 
     process.exit(0);

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginPage({ onLoginSuccess }) {
   const [email, setEmail] = useState('');
@@ -8,6 +8,7 @@ export default function LoginPage({ onLoginSuccess }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -15,26 +16,14 @@ export default function LoginPage({ onLoginSuccess }) {
     setError('');
 
     try {
-      const res = await api.post('/auth/login', {
-        email,
-        password,
-      });
+      const result = await login(email, password);
 
-      const token = res.data.token || res.data.data?.token;
-      const user = res.data.user || res.data.data?.user;
-
-      localStorage.setItem('retailsync_token', token);
-      localStorage.setItem('token', token);
-      localStorage.setItem('retailsync_userRole', user?.role || '');
-      localStorage.setItem('userRole', user?.role || '');
-
-      if (onLoginSuccess) {
-        onLoginSuccess(user?.role);
+      if (result.success) {
+        navigate('/dashboard');
+      } else {
+        setError(result.message || 'Login failed');
       }
-
-      navigate('/dashboard');
     } catch (err) {
-      console.error('Login failed:', err);
       setError('Invalid email or password. Please try again.');
     } finally {
       setLoading(false);
@@ -144,6 +133,27 @@ export default function LoginPage({ onLoginSuccess }) {
               </button>
             </div>
           </form>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="bg-white px-2 text-gray-500">Or</span>
+              </div>
+            </div>
+
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => navigate('/register')}
+                className="font-medium text-blue-600 hover:text-blue-500"
+              >
+                Register Here
+              </button>
+            </div>
+          </div>
 
           <div className="mt-6 text-center text-xs text-gray-500">
             © 2026 RetailSync Inc. All rights reserved.

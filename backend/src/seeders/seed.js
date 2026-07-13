@@ -10,7 +10,6 @@ const seedUsers = require('./user.seeder');
 const seedSuppliers = require('./suppliers.seeder');
 const seedReports              = require('./reports.seeder');
 const seedProductsAndInventory = require('./productsAndInventory.seeder');
-const seedAuditLogs            = require('./auditLogs.seeder');
 
 const runSeeders = async () => {
   try {
@@ -25,7 +24,6 @@ const runSeeders = async () => {
     await seedSuppliers();
     await seedReports();
     await seedProductsAndInventory();
-    await seedAuditLogs();
     console.log('--- Seed Process Completed Successfully ---');
 
     process.exit(0);
