@@ -4,18 +4,30 @@ import Card, { CardHeader, CardTitle, CardContent } from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import toast from '../utils/toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Wallet, User, ShoppingBag, Lock, Banknote, CreditCard, QrCode, Loader2, Search, Plus, CheckCircle, XCircle } from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:5000/api/v1/payment-processing';
 
 export default function PaymentProcessingPage() {
-  // --- PAYMENT STATES ---
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // --- GET DATA FROM POS BILLING PAGE ---
+  // If someone visits this page directly without items, we provide default fallbacks
+  const {
+    cart = [],
+    subtotal = 0,
+    itemSavings = 0,
+    orderDiscountAmount = 0,
+    tax = 0,
+    total = 0
+  } = location.state || {};
+
+  // --- PAYMENT STATES ---
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [tenderedInput, setTenderedInput] = useState('');
 
-  // We only store these in the React state for validation. 
   // SECURITY NOTE: For PCI compliance, NEVER send the full card number or CVV to the backend database.
   const [cardName, setCardName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
@@ -33,7 +45,7 @@ export default function PaymentProcessingPage() {
   const [pointsToRedeem, setPointsToRedeem] = useState('');
   const [appliedPointsDiscount, setAppliedPointsDiscount] = useState(0);
 
-  // --- NEW CUSTOMER FORM STATES (Updated to match new schema) ---
+  // --- NEW CUSTOMER FORM STATES ---
   const [newCustFirstName, setNewCustFirstName] = useState('');
   const [newCustLastName, setNewCustLastName] = useState('');
   const [newCustPhone, setNewCustPhone] = useState('');
@@ -42,23 +54,25 @@ export default function PaymentProcessingPage() {
   // --- LOADING & SUCCESS STATES ---
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
-  // CALCULATION LOGIC
-  const subTotal = 152200;
-  const taxAmount = 2100;
+  // CALCULATION LOGIC (Dynamically from POS)
+  const subTotal = subtotal;
+  const taxAmount = tax;
+  const posDiscounts = itemSavings + orderDiscountAmount; // Discounts applied from POS page
+
   // If a registered customer is selected, give a member discount
   const memberDiscount = selectedCustomer ? 1200 : 0;
 
-  // Final amount dynamically updates if points are applied or member is selected
-  const amountDue = (subTotal + taxAmount) - memberDiscount - appliedPointsDiscount;
+  // Final amount dynamically updates (POS total already includes POS discounts & tax)
+  // We just subtract the Member Discount & Points Discount
+  const amountDue = Math.max(total - memberDiscount - appliedPointsDiscount, 0);
 
   // Cash calculations
   const numericTendered = parseFloat(tenderedInput.replace(/,/g, '')) || 0;
   const changeDue = numericTendered >= amountDue ? numericTendered - amountDue : 0;
   const isSufficient = numericTendered >= amountDue;
 
-  // Basic Card Validation (Checks if fields are filled properly)
+  // Basic Card Validation
   const isCardValid = cardName.trim() !== '' && cardNumber.length >= 19 && cardExpiry.length === 5 && cardCvv.length >= 3;
 
   const formatCurrency = (amount) => amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -66,66 +80,48 @@ export default function PaymentProcessingPage() {
   // Quick cash button handler
   const handleQuickCash = (amount) => setTenderedInput(formatCurrency(amount).replace('.00', ''));
 
-  // Auto-generate logical cash amounts based on the final total
-  const getQuickCashSuggestions = (total) => {
-    if (total <= 0) return [0, 0, 0, 0];
-
-    const exact = total;
-
-    // next logical cash amounts: next 500, next 1000, next 5000
-    let next500 = Math.ceil(total / 500) * 500;
+  // Auto-generate logical cash amounts
+  const getQuickCashSuggestions = (totalValue) => {
+    if (totalValue <= 0) return [0, 0, 0, 0];
+    const exact = totalValue;
+    let next500 = Math.ceil(totalValue / 500) * 500;
     if (next500 === exact) next500 += 500;
-
-    // next 1000 should be greater than next500, so we check and adjust accordingly
-    let next1000 = Math.ceil(total / 1000) * 1000;
+    let next1000 = Math.ceil(totalValue / 1000) * 1000;
     if (next1000 <= next500) next1000 = next500 + 500;
-
-    // next 5000 should be greater than next1000, so we check and adjust accordingly
-    let next5000 = Math.ceil(total / 5000) * 5000;
+    let next5000 = Math.ceil(totalValue / 5000) * 5000;
     if (next5000 <= next1000) next5000 = Math.ceil(next1000 / 5000) * 5000;
-    if (next5000 <= next1000) next5000 += 5000; // Backup fallback
-
+    if (next5000 <= next1000) next5000 += 5000;
     return [exact, next500, next1000, next5000];
   };
 
-  // auto-generate quick cash suggestions whenever the amount due changes
   const quickCashOptions = getQuickCashSuggestions(amountDue);
 
-  // Disable process button if conditions are not met
   const isProcessDisabled =
     (paymentMethod === 'cash' && !isSufficient) ||
     (paymentMethod === 'card' && !isCardValid) ||
-    (paymentMethod === 'qr') || isProcessing;
+    (paymentMethod === 'qr') || isProcessing || amountDue <= 0;
 
   // CUSTOMER & POINTS LOGIC
-
-  // Remove customer and reset everything to Guest mode
   const handleRemoveCustomer = () => {
     setSelectedCustomer(null);
     setPointsToRedeem('');
-    setAppliedPointsDiscount(0); // Remove any applied point discounts
+    setAppliedPointsDiscount(0);
     toast.info("Customer removed. Switched to Guest mode.");
   };
 
-  // Apply points to get a discount
   const handleApplyPoints = () => {
     const points = parseInt(pointsToRedeem);
-
     if (!points || points <= 0) {
       return toast.warning("Please enter a valid point amount.");
     }
-
     if (points > (selectedCustomer.loyaltyPoints || 0)) {
       return toast.error("Insufficient loyalty points!");
     }
-
-    // Calculation: 10 Points = Rs. 1.00
     const discountValue = points / 10;
     setAppliedPointsDiscount(discountValue);
     toast.success(`Rs. ${formatCurrency(discountValue)} discount applied from points!`);
   };
 
-  // Remove applied points (Allows cashier to edit/cancel points)
   const handleClearPoints = () => {
     setPointsToRedeem('');
     setAppliedPointsDiscount(0);
@@ -133,8 +129,6 @@ export default function PaymentProcessingPage() {
   };
 
   // API INTEGRATION FUNCTIONS
-
-  // Search customers in the database
   const fetchCustomers = async (search = '') => {
     setIsLoadingCustomers(true);
     try {
@@ -148,7 +142,6 @@ export default function PaymentProcessingPage() {
     }
   };
 
-  // Auto-search when typing in the modal (with a 0.5s delay to prevent too many requests)
   useEffect(() => {
     if (isCustomerModalOpen) {
       const delayDebounceFn = setTimeout(() => {
@@ -158,18 +151,15 @@ export default function PaymentProcessingPage() {
     }
   }, [customerSearchQuery, isCustomerModalOpen]);
 
-  // Save new customer to the database
   const handleAddNewCustomer = async () => {
     if (!newCustFirstName || !newCustLastName || !newCustPhone) {
       toast.warning("First Name, Last Name and Phone are required!");
       return;
     }
-
     try {
       const response = await fetch(`${API_BASE_URL}/customers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // Updated payload with firstName and lastName
         body: JSON.stringify({
           firstName: newCustFirstName,
           lastName: newCustLastName,
@@ -183,7 +173,6 @@ export default function PaymentProcessingPage() {
         toast.success("Customer Added Successfully!");
         setSelectedCustomer(result.data);
         setIsAddCustomerModalOpen(false);
-        // Reset form
         setNewCustFirstName(''); setNewCustLastName(''); setNewCustPhone(''); setNewCustEmail('');
       } else {
         toast.error("Failed to add customer. Phone might already exist.");
@@ -198,14 +187,33 @@ export default function PaymentProcessingPage() {
   const handleProcessPayment = async () => {
     setIsProcessing(true);
 
-    // SECURITY: We only send the last 4 digits of the card to the database.
+    // Format cart items to match your Mongoose Schema exactly
+    const formattedItems = cart.map(item => {
+      const lineTotal = item.price * item.quantity;
+      const discountAmt = item.itemDiscountMode === 'percent'
+        ? (lineTotal * item.itemDiscount) / 100
+        : (item.itemDiscount || 0);
+      const lineFinal = Math.max(lineTotal - discountAmt, 0);
+
+      return {
+        name: item.name || 'Unknown',
+        category: item.category || 'Uncategorised',
+        sku: item.sku || 'N/A',
+        qty: item.quantity || 1,
+        originalPrice: item.price || 0,
+        price: item.price || 0,
+        total: lineFinal
+      };
+    });
+
     const payload = {
       customerId: selectedCustomer ? selectedCustomer._id : null,
+      items: formattedItems, // Sending the formatted cart items
       subTotal: subTotal,
-      memberDiscount: memberDiscount,
+      memberDiscount: memberDiscount + posDiscounts, // Saving all discounts into schema
       taxAmount: taxAmount,
       finalTotal: amountDue,
-      pointsRedeemed: appliedPointsDiscount * 10, // Convert Rs back to Points for DB
+      pointsRedeemed: appliedPointsDiscount * 10,
       paymentMethod: paymentMethod,
       tenderedAmount: paymentMethod === 'cash' ? numericTendered : amountDue,
       changeDue: paymentMethod === 'cash' ? changeDue : 0,
@@ -375,7 +383,6 @@ export default function PaymentProcessingPage() {
                 <>
                   <div className="relative flex items-center gap-3 p-3 border border-blue-100 rounded-lg bg-blue-50/50">
                     <div className="flex items-center justify-center w-10 h-10 text-sm font-bold text-blue-700 uppercase bg-blue-100 rounded-full">
-                      {/* Generates initials safely from firstName and lastName */}
                       {(selectedCustomer.firstName?.charAt(0) || '') + (selectedCustomer.lastName?.charAt(0) || '')}
                     </div>
                     <div>
@@ -384,7 +391,6 @@ export default function PaymentProcessingPage() {
                       </p>
                       <p className="text-xs text-slate-500">{selectedCustomer.phone}</p>
                     </div>
-                    {/* Remove Customer Button */}
                     <button onClick={handleRemoveCustomer} className="absolute transition-colors top-2 right-2 text-slate-400 hover:text-red-500" title="Remove Customer">
                       <XCircle size={18} />
                     </button>
@@ -395,7 +401,6 @@ export default function PaymentProcessingPage() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-semibold text-amber-800">Loyalty Points:</span>
                       <span className="text-sm font-bold text-amber-700">
-                        {/* Display remaining points after applying discount */}
                         {(selectedCustomer.loyaltyPoints || 0) - (appliedPointsDiscount * 10)} Pts
                       </span>
                     </div>
@@ -407,10 +412,8 @@ export default function PaymentProcessingPage() {
                         onChange={(e) => setPointsToRedeem(e.target.value)}
                         placeholder="Points to redeem"
                         className="w-full text-xs px-2 py-1.5 border border-amber-300 rounded outline-none focus:ring-1 focus:ring-amber-400 bg-white disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200"
-                        disabled={appliedPointsDiscount > 0} // Disable input if points are already applied
+                        disabled={appliedPointsDiscount > 0}
                       />
-
-                      {/* Show 'Remove' button if points are applied, otherwise show 'Apply' */}
                       {appliedPointsDiscount > 0 ? (
                         <Button onClick={handleClearPoints} variant="danger" size="sm" className="h-auto py-1 text-white bg-red-500 border-none hover:bg-red-600">
                           Remove
@@ -442,6 +445,12 @@ export default function PaymentProcessingPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2.5 text-sm">
                 <div className="flex justify-between text-slate-600"><span>Subtotal</span><span className="font-medium text-slate-800">Rs. {formatCurrency(subTotal)}</span></div>
+
+                {/* Dynamically show POS Discounts if any */}
+                {posDiscounts > 0 && (
+                  <div className="flex justify-between font-medium text-violet-600"><span>POS Discounts</span><span>- Rs. {formatCurrency(posDiscounts)}</span></div>
+                )}
+
                 <div className="flex justify-between font-medium text-emerald-600"><span>Member Discount</span><span>- Rs. {formatCurrency(memberDiscount)}</span></div>
 
                 {/* Dynamically show points discount if applied */}
@@ -488,7 +497,6 @@ export default function PaymentProcessingPage() {
                 <button key={cust._id} onClick={() => { setSelectedCustomer(cust); setIsCustomerModalOpen(false); }} className="flex items-center justify-between w-full p-3 transition-colors border border-transparent rounded-lg hover:bg-blue-50 hover:border-blue-100">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center w-10 h-10 text-sm font-bold text-blue-700 uppercase bg-blue-100 rounded-full">
-                      {/* Generates initials safely */}
                       {(cust.firstName?.charAt(0) || '') + (cust.lastName?.charAt(0) || '')}
                     </div>
                     <div className="text-left">
