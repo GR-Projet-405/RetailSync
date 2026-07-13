@@ -45,7 +45,7 @@ function useDebouncedValue(value, delay = 350) {
 export default function ProductPage() {
   // ---- Categories for filter dropdown + Add/Edit form ----
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
-  const { data: suppliers = [] } = useSuppliers({ status: 'ACTIVE' });
+  const { data: suppliers = [] } = useSuppliers({ status: 'Active' });
   // const {data:warehouses = []} = useWarehouses();
 
   // ---- Filters / pagination state (Product List + Product Search combined) ----
