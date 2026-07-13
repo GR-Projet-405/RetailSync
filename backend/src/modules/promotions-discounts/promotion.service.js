@@ -42,19 +42,21 @@ class PromotionsDiscountsPageService {
       }
     }
 
-    // 2. Ensure discount percentages don't exceed 100%
-    const rawVal = parseFloat(String(data.discount || '').replace(/^[A-Za-z.\s]+/, '').replace(/[^\d.]/g, '')) || 0;
-    if (data.type === 'Percentage' && rawVal > 100) {
-      const err = new Error('Discount percentage cannot exceed 100%');
-      err.statusCode = 400;
-      throw err;
-    }
+    // 2. Ensure discount validations only run if discount fields are defined
+    if (data.discount && data.type) {
+      const rawVal = parseFloat(String(data.discount || '').replace(/^[A-Za-z.\s]+/, '').replace(/[^\d.]/g, '')) || 0;
+      if (data.type === 'Percentage' && rawVal > 100) {
+        const err = new Error('Discount percentage cannot exceed 100%');
+        err.statusCode = 400;
+        throw err;
+      }
 
-    // 3. Ensure fixed discounts don't exceed the minimum purchase amount (minOrderValue)
-    if (data.type === 'Fixed Amount' && rawVal > (data.minOrderValue || 0)) {
-      const err = new Error('Fixed discount amount cannot exceed the minimum order value');
-      err.statusCode = 400;
-      throw err;
+      // 3. Ensure fixed discounts don't exceed the minimum purchase amount (minOrderValue)
+      if (data.type === 'Fixed Amount' && rawVal > (data.minOrderValue || 0)) {
+        const err = new Error('Fixed discount amount cannot exceed the minimum order value');
+        err.statusCode = 400;
+        throw err;
+      }
     }
 
     // 4. Validate referenced branchId
@@ -219,6 +221,13 @@ class PromotionsDiscountsPageService {
       err.statusCode = 404;
       throw err;
     }
+
+    // Strip immutable / frontend helper properties to prevent Mongoose / MongoDB validation crash
+    delete updateData._id;
+    delete updateData.id;
+    delete updateData.createdAt;
+    delete updateData.updatedAt;
+    delete updateData.__v;
 
     // Merge current and updateData for full validation
     const merged = {

@@ -99,6 +99,13 @@ class DiscountRuleService {
    * @returns {Promise<Object>}
    */
   async updateDiscountRule(id, updateData) {
+    // Strip database internal / frontend helper properties to prevent immutable update error
+    delete updateData._id;
+    delete updateData.id;
+    delete updateData.createdAt;
+    delete updateData.updatedAt;
+    delete updateData.__v;
+
     const rule = await DiscountRule.findByIdAndUpdate(
       id,
       { $set: updateData },
