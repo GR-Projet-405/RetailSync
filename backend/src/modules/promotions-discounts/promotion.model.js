@@ -15,12 +15,11 @@ const promotionSchema = new mongoose.Schema(
     },
     discount: {
       type: String,
-      required: [true, 'Discount value is required'],
       trim: true,
+      default: '',
     },
     type: {
       type: String,
-      required: [true, 'Promotion type is required'],
       enum: {
         values: ['Percentage', 'Fixed Amount', 'Free Shipping'],
         message: 'Type must be either Percentage, Fixed Amount, or Free Shipping',
