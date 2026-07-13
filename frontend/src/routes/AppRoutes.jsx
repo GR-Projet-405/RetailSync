@@ -108,8 +108,13 @@ const POS_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.C
 export const AppRoutes = () => {
   return (
     <Routes>
-      {/* Auth Routes */}
+      {/* Auth Routes — public, no layout wrapper */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/verify-otp" element={<VerifyOTPPage />} />
+      <Route path="/select-role" element={<SelectRolePage />} />
 
       <Route element={
         <ProtectedRoute allowedRoles={POS_ROLES}>

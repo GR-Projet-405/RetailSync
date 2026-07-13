@@ -39,43 +39,43 @@ const BranchListPage = () => {
   const columns = [
     {
       header: 'Branch ID',
-      accessorKey: 'branchCode',
-      cell: (value) => <span className="font-medium text-slate-900">{value}</span>,
+      key: 'branchCode',
+      render: (row) => <span className="font-medium text-slate-900">{row.branchCode}</span>,
     },
     {
       header: 'Branch Name',
-      accessorKey: 'branchName',
-      cell: (value, row) => (
+      key: 'branchName',
+      render: (row) => (
         <div className="flex flex-col">
-          <span className="font-medium text-slate-900">{value}</span>
+          <span className="font-medium text-slate-900">{row.branchName}</span>
           <span className="text-xs text-slate-500">{row.address?.district}</span>
         </div>
       )
     },
     {
       header: 'Branch Manager',
-      accessorKey: 'managerId',
-      cell: (value) => value ? `${value.firstName} ${value.lastName}` : <span className="text-slate-400 italic">Unassigned</span>,
+      key: 'managerId',
+      render: (row) => row.managerId ? `${row.managerId.firstName} ${row.managerId.lastName}` : <span className="text-slate-400 italic">Unassigned</span>,
     },
     {
       header: 'City',
-      accessorKey: 'address',
-      cell: (value) => value?.city || '-',
+      key: 'address',
+      render: (row) => row.address?.city || '-',
     },
     {
       header: 'Employees',
-      accessorKey: 'totalStaff',
-      cell: (value) => value || 0,
+      key: 'totalStaff',
+      render: (row) => row.totalStaff || 0,
     },
     {
       header: 'Monthly Revenue',
-      accessorKey: 'todaySales',
-      cell: (value) => `Rs. ${(value * 30 / 1000000).toFixed(1)}M`, // Mocking monthly based on today
+      key: 'todaySales',
+      render: (row) => `Rs. ${(row.todaySales * 30 / 1000000).toFixed(1)}M`, // Mocking monthly based on today
     },
     {
       header: 'Status',
-      accessorKey: 'status',
-      cell: (value) => <BranchStatusBadge status={value} />,
+      key: 'status',
+      render: (row) => <BranchStatusBadge status={row.status} />,
     },
   ];
 
@@ -132,28 +132,28 @@ const BranchListPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <BranchKpiCard 
           title="Total Branches"
-          value={comparisonData?.totalBranches?.toString().padStart(2, '0') || '00'}
+          value={comparisonData?.data?.totalBranches?.toString().padStart(2, '0') || '00'}
           subtext="Total Branches"
           icon={Icons.Building2}
           variant="primary"
         />
         <BranchKpiCard 
           title="Active Branches"
-          value={comparisonData?.activeBranches?.toString().padStart(2, '0') || '00'}
+          value={comparisonData?.data?.activeBranches?.toString().padStart(2, '0') || '00'}
           subtext="Active Branches"
           icon={Icons.CheckSquare}
           variant="success"
         />
         <BranchKpiCard 
           title="Inactive Branches"
-          value={((comparisonData?.totalBranches || 0) - (comparisonData?.activeBranches || 0)).toString().padStart(2, '0')}
+          value={(comparisonData?.data?.inactiveBranches !== undefined ? comparisonData.data.inactiveBranches : ((comparisonData?.data?.totalBranches || 0) - (comparisonData?.data?.activeBranches || 0))).toString().padStart(2, '0')}
           subtext="Inactive Branches"
           icon={Icons.XSquare}
           variant="warning"
         />
         <BranchKpiCard 
           title="Total Employees"
-          value={branches.reduce((acc, b) => acc + (b.totalStaff || 0), 0) || '0'}
+          value={(comparisonData?.data?.totalEmployees !== undefined ? comparisonData.data.totalEmployees : branches.reduce((acc, b) => acc + (b.totalStaff || 0), 0)).toString()}
           subtext="Total Employees"
           icon={Icons.Users}
         />

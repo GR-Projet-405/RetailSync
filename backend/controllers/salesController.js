@@ -371,7 +371,7 @@ const getTransactions = async (req, res) => {
               },
             },
           },
-          branchName: { $ifNull: ['$branchData.name', ''] },
+          branchName: { $ifNull: ['$branchData.branchName', { $ifNull: ['$branchData.name', ''] }] },
         },
       },
     ];
@@ -425,7 +425,7 @@ const getTransactions = async (req, res) => {
               branch: {
                 _id: '$branchData._id',
                 name: '$branchName',
-                code: '$branchData.code',
+                code: { $ifNull: ['$branchData.branchCode', { $ifNull: ['$branchData.code', ''] }] },
               },
             },
           },
@@ -861,11 +861,11 @@ const buildFilteredSalesPipeline = (req) => {
             },
             branch: {
               _id: '$branchData._id',
-              name: '$branchData.name',
+              name: { $ifNull: ['$branchData.branchName', { $ifNull: ['$branchData.name', ''] }] },
               address: {
                 $ifNull: ['$branchData.location.address', ''],
               },
-              code: '$branchData.code',
+              code: { $ifNull: ['$branchData.branchCode', { $ifNull: ['$branchData.code', ''] }] },
             },
           },
         },
