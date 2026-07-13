@@ -32,47 +32,6 @@ export default function PromotionHeader({
 
       {/* Header Actions */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Branch Selector Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => {
-              if (isBranchLocked) return;
-              setIsBranchOpen(!isBranchOpen);
-              setIsDateOpen(false);
-            }}
-            disabled={isBranchLocked}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-full shadow-sm transition-colors focus:outline-none ${
-              isBranchLocked ? 'opacity-85 cursor-not-allowed bg-slate-50/50' : 'hover:bg-slate-50'
-            }`}
-          >
-            <MapPin className="w-4 h-4 text-slate-400 stroke-[2.25]" />
-            <span>{selectedBranch}</span>
-            {!isBranchLocked && <ChevronDown className="w-4 h-4 text-slate-400" />}
-          </button>
-
-          {isBranchOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setIsBranchOpen(false)} />
-              <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl z-20 py-1.5 overflow-hidden text-xs font-semibold text-slate-700">
-                {branches.map((branch) => (
-                  <button
-                    key={branch}
-                    onClick={() => {
-                      setSelectedBranch(branch);
-                      setIsBranchOpen(false);
-                    }}
-                    className={`w-full text-left px-4 py-2 hover:bg-blue-50/50 hover:text-blue-600 flex items-center gap-2 ${
-                      selectedBranch === branch ? 'text-blue-600 font-bold bg-blue-50/20' : ''
-                    }`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full bg-blue-500 ${selectedBranch === branch ? 'opacity-100' : 'opacity-0'}`} />
-                    {branch}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
 
         {/* Date Range Selector Dropdown */}
         <div className="relative">
