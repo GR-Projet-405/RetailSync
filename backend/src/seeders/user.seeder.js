@@ -24,8 +24,6 @@ const seedUsers = async () => {
     });
 
     const defaultPassword = 'Admin@123';
-    const salt = await bcrypt.genSalt(12);
-    const hashedPassword = await bcrypt.hash(defaultPassword, salt);
 
     const usersToSeed = [
       {
@@ -91,10 +89,6 @@ const seedUsers = async () => {
     for (const userData of usersToSeed) {
       const existingUser = await User.findOne({ email: userData.email });
       if (!existingUser) {
-        // Mongoose pre-save hook normally hashes, but since we are inserting pre-hashed or handling it here:
-        // Wait, the pre-save hook in user.model hashes if `isModified('password')`.
-        // If we use User.create, the pre-save hook will run. So we should pass plain text here,
-        // and let the hook hash it.
         await User.create({
           ...userData,
           password: defaultPassword,
@@ -104,6 +98,34 @@ const seedUsers = async () => {
       } else {
         console.log(`User already exists: ${userData.email}`);
       }
+    }
+
+    // Create 8 specific branch managers and assign them to the branches
+    const managerNames = ['Kasun Perera', 'Nimal Silva', 'Amila Fernando', 'Saman Rathnayake', 'Rajan Jeyaraj', 'Dilani Wicrama', 'Piyal Perera', 'Sunil Santha'];
+    
+    for (let i = 0; i < branches.length; i++) {
+      const branch = branches[i];
+      const nameParts = managerNames[i] ? managerNames[i].split(' ') : ['Manager', `${i+1}`];
+      
+      const email = `manager${i+1}@retailsync.com`;
+      let user = await User.findOne({ email });
+      
+      if (!user) {
+        user = await User.create({
+          firstName: nameParts[0],
+          lastName: nameParts[1] || 'Manager',
+          username: `branchmanager${i+1}`,
+          email: email,
+          roleId: roleMap['BRANCH_MANAGER'],
+          branchId: branch._id,
+          password: defaultPassword,
+          status: 'ACTIVE',
+        });
+        console.log(`Created branch manager: ${email}`);
+      }
+      
+      // Assign manager back to the branch
+      await Branch.findByIdAndUpdate(branch._id, { managerId: user._id });
     }
 
     console.log('User seeding completed successfully.');

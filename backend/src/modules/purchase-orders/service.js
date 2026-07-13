@@ -54,7 +54,8 @@ class PurchaseOrderPageService {
   async fetchById(id) {
     const order = await PurchaseOrderPage.findById(id)
       .populate('supplier')
-      .populate('items.product');
+      .populate('items.product')
+      .populate('createdBy', 'firstName lastName username email');
     if (!order) {
       const err = new Error('Purchase order not found');
       err.statusCode = 404;
@@ -274,7 +275,7 @@ class PurchaseOrderPageService {
     const order = new PurchaseOrderPage({
       ...payload,
       orderDate: new Date(),
-      createdBy: userId,
+      createdBy: userId || null,
     });
     await order.save();
     return order;

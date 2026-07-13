@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import React from 'react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
@@ -8,7 +8,7 @@ import WorkspaceContainer from '../components/WorkspaceContainer';
 export const MainLayout = ({ children }) => {
   return (
     <div
-      className="h-screen flex overflow-hidden relative"
+      className="relative flex h-screen overflow-hidden"
       style={{
         background: `
           radial-gradient(circle at top right, rgba(59,130,246,0.05), transparent 35%),
@@ -20,10 +20,10 @@ export const MainLayout = ({ children }) => {
       <Sidebar />
 
       {/* Main panel */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+      <div className="relative flex flex-col flex-1 min-w-0 overflow-hidden">
         <Navbar />
         {/* Workspace Wrapper */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden relative p-4 sm:p-5 md:p-6">
+        <main className="relative flex-1 p-4 overflow-x-hidden overflow-y-auto sm:p-5 md:p-6">
           {/* Workspace Container — frosted glass surface */}
           {/* Commented out useContainer logic for now
           {useContainer ? (
@@ -34,10 +34,10 @@ export const MainLayout = ({ children }) => {
             <Outlet />
           )}
           */}
-          
+
           {/* Temporary render to make the app work */}
-          {children}
-          
+          {children || <Outlet />}
+
         </main>
       </div>
     </div>

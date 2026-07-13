@@ -70,10 +70,40 @@ const deleteCoupon = asyncHandler(async (req, res) => {
   });
 });
 
+const validateCoupon = asyncHandler(async (req, res) => {
+  const { code, branchId, orderAmount } = req.body;
+  const result = await service.validateCouponCode({ code, branchId, orderAmount });
+
+  res.status(200).json({
+    success: true,
+    message: 'Coupon validated successfully',
+    data: result,
+  });
+});
+
+const recordCouponUsage = asyncHandler(async (req, res) => {
+  const { couponId, promotionId, branchId, orderAmount, discountAmount } = req.body;
+  const result = await service.recordCouponUsage({
+    couponId,
+    promotionId,
+    branchId,
+    orderAmount,
+    discountAmount,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: 'Coupon usage recorded successfully',
+    data: result || null,
+  });
+});
+
 module.exports = {
   getCoupons,
   getCouponById,
   createCoupon,
   updateCoupon,
   deleteCoupon,
+  validateCoupon,
+  recordCouponUsage,
 };

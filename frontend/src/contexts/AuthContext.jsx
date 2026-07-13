@@ -17,7 +17,7 @@ export const AuthProvider = ({ children }) => {
         setBranches(branchNames);
         
         // Default to user's branch if it exists, otherwise Central WH
-        const userBranchName = userData?.branchId?.name;
+        const userBranchName = userData?.branchId?.branchName || userData?.branchId?.name;
         if (userBranchName && branchNames.includes(userBranchName)) {
           setActiveBranch(userBranchName);
         } else if (branchNames.includes('Central WH')) {
