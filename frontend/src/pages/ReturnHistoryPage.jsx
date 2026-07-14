@@ -198,7 +198,15 @@ export default function ReturnHistoryPage() {
                     <td className="px-6 py-4">{row.date}</td>
                     <td className="px-6 py-4 font-semibold text-blue-600">{row.receipt}</td>
                     <td className="px-6 py-4">{row.customer}</td>
-                    <td className="px-6 py-4">{row.cashier}</td>
+                    <td className="px-6 py-4">
+                      {(() => {
+                        const cashierData = row.cashier || row.cashierId;
+                        if (typeof cashierData === 'object' && cashierData !== null) {
+                          return `${cashierData.firstName || ''} ${cashierData.lastName || ''}`.trim();
+                        }
+                        return cashierData || 'Unknown';
+                      })()}
+                    </td>
                     <td className="px-6 py-4 font-bold text-slate-800">
                       Rs. {row.amount ? row.amount.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '0.00'}
                     </td>

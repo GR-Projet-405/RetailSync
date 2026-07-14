@@ -106,8 +106,11 @@ class ReturnsRefundsPageService {
   }
 
   async getReturnHistory() {
-    const returns = await ReturnsRefundsPage.find().sort({ createdAt: -1 }).lean();
-    const history = [];
+  const returns = await ReturnsRefundsPage.find()
+      .populate({ path: 'cashierId', model: LocalUser, select: 'firstName lastName' })
+      .sort({ createdAt: -1 })
+      .lean();
+  const history = [];
 
     for (const ret of returns) {
       let customerName = 'Walk-in Customer';
@@ -140,7 +143,7 @@ class ReturnsRefundsPageService {
         date: new Date(ret.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
         receipt: ret.receiptId,
         customer: customerName,
-        cashier: cashierName,
+        cashier: ret.cashierId ? ret.cashierId : cashierName,
         amount: ret.estimatedRefundTotal,
         status: ret.status
       });
@@ -158,6 +161,36 @@ class ReturnsRefundsPageService {
     let originalPaymentMethod = 'cash';
     let cardLastFourDigits = '';
 
+    let customerDetails = null;
+    let cashierDetails = null;
+
+    if (returnData.cashierId) {
+      try {
+        const user = await LocalUser.findById(returnData.cashierId);
+        if (user) {
+          const fName = user.firstName || user.get('firstName') || '';
+          const lName = user.lastName || user.get('lastName') || '';
+          cashierName = `${fName} ${lName}`.trim() || user.name || user.get('name') || 'System User';
+          
+          let roleName = 'Unknown Role';
+          const roleId = user.roleId || user.get('roleId');
+          if (roleId) {
+            const role = await LocalRole.findById(roleId);
+            if (role) roleName = role.name || role.get('name');
+          }
+
+          cashierDetails = {
+            name: cashierName,
+            phoneNumber: user.phoneNumber || user.phone || user.get('phoneNumber') || 'N/A',
+            employeeId: user.employeeId || user.get('employeeId') || 'N/A',
+            status: user.status || user.get('status') || 'N/A',
+            email: user.email || user.get('email') || 'N/A',
+            role: roleName
+          };
+        }
+      } catch (e) { console.error("Error fetching cashier details:", e); }
+    }
+
     if (returnData.transactionRef) {
       const trans = await LocalTransaction.findById(returnData.transactionRef);
       if (trans) {
@@ -172,14 +205,17 @@ class ReturnsRefundsPageService {
               const fName = cust.firstName || cust.get('firstName') || '';
               const lName = cust.lastName || cust.get('lastName') || '';
               customerName = `${fName} ${lName}`.trim() || cust.name || cust.get('name') || 'Walk-in Customer';
+              
+              customerDetails = {
+                firstName: fName,
+                lastName: lName,
+                name: customerName,
+                email: cust.email || cust.get('email') || 'N/A',
+                phone: cust.phone || cust.phoneNumber || cust.get('phone') || 'N/A',
+                loyaltyPoints: cust.loyaltyPoints || cust.get('loyaltyPoints') || 0
+              };
             }
-          } catch (e) { }
-        }
-        if (trans.get('cashierId')) {
-          try {
-            const user = await LocalUser.findById(trans.get('cashierId'));
-            if (user) cashierName = user.firstName || user.name || user.get('name') || 'System User';
-          } catch (e) { }
+          } catch (e) { console.error("Error fetching customer details:", e); }
         }
       }
     }
@@ -188,12 +224,13 @@ class ReturnsRefundsPageService {
       ...returnData,
       customerName,
       cashierName,
+      customerDetails, 
+      cashierDetails,  
       purchaseDate,
       originalPaymentMethod,
       cardLastFourDigits
     };
   }
-
   async reviewReturnRequest(returnId, status, internalNotes, managerId) {
     const returnRequest = await ReturnsRefundsPage.findOne({ returnId: returnId });
     if (!returnRequest) throw { statusCode: 404, message: 'Return request not found.' };

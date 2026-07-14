@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, ChevronLeft, ChevronRight, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, Image as ImageIcon, Loader2, X, User, Phone, Mail, Award, Briefcase, Hash, Activity } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import api from '../services/api';
@@ -16,6 +16,10 @@ export default function ReviewReturnRequestPage() {
   const [isLoading, setIsLoading] = useState(true);
   
   const [currentEvidenceIndex, setCurrentEvidenceIndex] = useState(0);
+
+  // Modal States
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showCashierModal, setShowCashierModal] = useState(false);
 
   useEffect(() => {
     const fetchRequestDetails = async () => {
@@ -158,7 +162,7 @@ export default function ReviewReturnRequestPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
 
         <div className="space-y-6 lg:col-span-2">
-
+          {/* Items Table */}
           <div className="overflow-hidden bg-white border shadow-sm border-slate-200 rounded-xl">
             <div className="px-6 py-4 border-b border-slate-100">
               <h2 className="text-lg font-bold text-slate-800">Items to Inspect ({totalItems} items)</h2>
@@ -200,6 +204,7 @@ export default function ReviewReturnRequestPage() {
             </div>
           </div>
 
+          {/* Evidence Section */}
           <div className="p-6 bg-white border shadow-sm border-slate-200 rounded-xl">
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
               <h2 className="text-lg font-bold text-slate-800">
@@ -259,11 +264,11 @@ export default function ReviewReturnRequestPage() {
               </div>
             </div>
           </div>
-
         </div>
 
         <div className="space-y-6">
 
+          {/* Transaction Info Section */}
           <div className="p-6 bg-white border shadow-sm border-slate-200 rounded-xl">
             <h2 className="mb-4 text-lg font-bold text-slate-800">Transaction Info</h2>
             <div className="space-y-4">
@@ -271,28 +276,57 @@ export default function ReviewReturnRequestPage() {
                 <span className="text-sm font-medium text-slate-500">Receipt ID</span>
                 <span className="text-sm font-bold text-blue-600">{requestData.receiptId}</span>
               </div>
+              
+              {/* Customer Box + Link */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <span className="text-sm font-medium text-slate-500">Customer</span>
-                <span className="text-sm font-bold text-slate-800">{requestData.customerName}</span>
+                <div className="flex items-center gap-3">
+                  {requestData.customerDetails && (
+                    <button 
+                      onClick={() => setShowCustomerModal(true)} 
+                      className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                    >
+                      <User size={14} /> View
+                    </button>
+                  )}
+                  <span className="px-3 py-1 text-sm font-bold border rounded-md text-slate-700 bg-slate-50 border-slate-200">
+                    {requestData.customerName}
+                  </span>
+                </div>
               </div>
+
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <span className="text-sm font-medium text-slate-500">Purchase Date</span>
                 <span className="text-sm font-bold text-slate-800">
                   {new Date(requestData.purchaseDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </span>
               </div>
+
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <span className="text-sm font-medium text-slate-500">Requested Date</span>
                 <span className="text-sm font-bold text-slate-800">
                   {new Date(requestData.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
+
+              {/* Cashier Box + Link */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <span className="text-sm font-medium text-slate-500">Original Cashier</span>
-                <div className="text-right">
-                  <span className="block text-sm font-bold text-slate-800">{requestData.cashierName}</span>
+                <div className="flex items-center gap-3">
+                  {requestData.cashierDetails && (
+                    <button 
+                      onClick={() => setShowCashierModal(true)} 
+                      className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                    >
+                      <Briefcase size={14} /> View
+                    </button>
+                  )}
+                  <span className="px-3 py-1 text-sm font-bold border rounded-md text-slate-700 bg-slate-50 border-slate-200">
+                    {requestData.cashierName}
+                  </span>
                 </div>
               </div>
+
               <div className="flex items-center justify-between pt-2">
                 <span className="text-sm font-medium text-slate-500">Total Requested Refund</span>
                 <span className="text-base font-extrabold text-blue-600">Rs. {requestData.estimatedRefundTotal?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
@@ -335,6 +369,137 @@ export default function ReviewReturnRequestPage() {
 
         </div>
       </div>
+
+      {/* --- MODALS --- */}
+
+      {/* Customer Information Modal */}
+      {showCustomerModal && requestData.customerDetails && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm transition-all duration-300">
+          <div className="w-full max-w-md overflow-hidden bg-white shadow-2xl rounded-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50">
+              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <User size={20} className="text-blue-600" /> Customer Details
+              </h3>
+              <button onClick={() => setShowCustomerModal(false)} className="p-1 transition-colors rounded-full text-slate-400 hover:bg-slate-200 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-5">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-full text-blue-600">
+                  <User size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase">Full Name</p>
+                  <p className="text-sm font-bold text-slate-800">{requestData.customerDetails.name}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-full text-blue-600">
+                  <Mail size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase">Email Address</p>
+                  <p className="text-sm font-bold text-slate-800">{requestData.customerDetails.email}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-full text-blue-600">
+                  <Phone size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase">Phone Number</p>
+                  <p className="text-sm font-bold text-slate-800">{requestData.customerDetails.phone}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-amber-100 rounded-full text-amber-600">
+                  <Award size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase">Loyalty Points</p>
+                  <p className="text-sm font-bold text-amber-600">{requestData.customerDetails.loyaltyPoints} Points</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cashier Information Modal */}
+      {showCashierModal && requestData.cashierDetails && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm transition-all duration-300">
+          <div className="w-full max-w-md overflow-hidden bg-white shadow-2xl rounded-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50">
+              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Briefcase size={20} className="text-blue-600" /> Cashier Details
+              </h3>
+              <button onClick={() => setShowCashierModal(false)} className="p-1 transition-colors rounded-full text-slate-400 hover:bg-slate-200 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-5">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-full text-blue-600">
+                  <User size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase">Full Name</p>
+                  <p className="text-sm font-bold text-slate-800">{requestData.cashierDetails.name}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-full text-blue-600">
+                  <Hash size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase">Employee ID</p>
+                  <p className="text-sm font-bold text-slate-800">{requestData.cashierDetails.employeeId}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-purple-100 rounded-full text-purple-600">
+                  <Briefcase size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase">System Role</p>
+                  <p className="text-sm font-bold text-slate-800">{requestData.cashierDetails.role}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-full text-blue-600">
+                  <Phone size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase">Phone Number</p>
+                  <p className="text-sm font-bold text-slate-800">{requestData.cashierDetails.phoneNumber}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-full text-blue-600">
+                  <Mail size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase">Email Address</p>
+                  <p className="text-sm font-bold text-slate-800">{requestData.cashierDetails.email}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-green-100 rounded-full text-green-600">
+                  <Activity size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase">Account Status</p>
+                  <span className={`px-2 py-1 text-xs font-bold rounded-md ${requestData.cashierDetails.status.toLowerCase() === 'active' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'}`}>
+                    {requestData.cashierDetails.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
