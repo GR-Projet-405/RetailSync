@@ -25,6 +25,7 @@ const Breadcrumb = ({ tab, supplier }) => {
   if (tab === 'add') crumbs.push('Add Supplier');
   if (tab === 'performance') crumbs.push('Performance Analytics');
   if (tab === 'contacts' && supplier) crumbs.push(supplier.name, 'Contacts');
+  if (tab === 'edit' && supplier) crumbs.push(supplier.name, 'Edit');
 
   return (
     <nav className="flex items-center gap-1.5 text-xs text-slate-400 mb-5">
@@ -89,6 +90,7 @@ export default function SupplierPage() {
             onBack={() => setActiveTab('all')}
             onGoToContacts={() => setActiveTab('contacts')}
             onGoToPerformance={() => setActiveTab('performance')}
+            onEditSupplier={() => setActiveTab('edit')}
           />
         ) : (
           <AllSuppliers
@@ -101,6 +103,24 @@ export default function SupplierPage() {
           <AddSupplier
             onCancel={() => setActiveTab('all')}
             onComplete={() => setActiveTab('all')}
+          />
+        );
+      case 'edit':
+        return selectedSupplier ? (
+          <AddSupplier
+            initialData={selectedSupplier}
+            onCancel={() => setActiveTab('profile')}
+            onComplete={(updatedSupplier) => {
+              if (updatedSupplier && updatedSupplier._id) {
+                setSelectedSupplier(updatedSupplier);
+              }
+              setActiveTab('profile');
+            }}
+          />
+        ) : (
+          <AllSuppliers
+            onAddSupplier={() => setActiveTab('add')}
+            onViewProfile={handleViewProfile}
           />
         );
       case 'performance':
