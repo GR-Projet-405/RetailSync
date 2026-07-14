@@ -1,14 +1,16 @@
-import ReturnStatusPage from './ReturnStatusPage';
 import { useState, useEffect } from 'react';
 import PageHeader from '../components/PageHeader';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/Card';
 import Button from '../components/Button';
-import { Search, Package, AlertCircle, Send, Barcode, HelpCircle, UploadCloud, Check, Save, Trash2, Edit2, Info } from 'lucide-react';
+import { Search, Package, AlertCircle, Send, Barcode, UploadCloud, Check, Save, Trash2, Edit2, Info } from 'lucide-react';
 import api from '../services/api';
 import Swal from 'sweetalert2';
-import toast from '../utils/toast'; 
+import toast from '../utils/toast';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export default function ReturnsRefundsPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [receiptId, setReceiptId] = useState('');
   const [uiState, setUiState] = useState('IDLE');
   const [receiptItems, setReceiptItems] = useState([]);
@@ -18,19 +20,20 @@ export default function ReturnsRefundsPage() {
   const [activeDetailSku, setActiveDetailSku] = useState(null);
   const [formStates, setFormStates] = useState({});
   const [activeCondition, setActiveCondition] = useState('Opened');
-  const [activePhotoFile, setActivePhotoFile] = useState(null); 
+  const [activePhotoFile, setActivePhotoFile] = useState(null);
 
   useEffect(() => {
     if (activeDetailSku) {
       const savedCondition = formStates[activeDetailSku]?.condition;
       const savedPhoto = formStates[activeDetailSku]?.photoFile;
       setActiveCondition(savedCondition || 'Opened');
-      setActivePhotoFile(savedPhoto || null); 
+      setActivePhotoFile(savedPhoto || null);
     }
   }, [activeDetailSku, formStates]);
 
-  const handleVerify = async () => {
-    const cleanId = receiptId.trim().toUpperCase();
+  const handleVerify = async (idToVerify) => {
+    const id = typeof idToVerify === 'string' ? idToVerify : receiptId;
+    const cleanId = id.trim().toUpperCase();
     if (!cleanId) return;
 
     try {
@@ -55,6 +58,15 @@ export default function ReturnsRefundsPage() {
       }
     }
   };
+
+  useEffect(() => {
+    if (location.state?.autoLoadReceiptId) {
+      const passedId = location.state.autoLoadReceiptId;
+      setReceiptId(passedId);
+      handleVerify(passedId);
+      window.history.replaceState({}, document.title);
+    }
+  }, []);
 
   const handleTryAnother = () => {
     setUiState('IDLE');
@@ -147,18 +159,12 @@ export default function ReturnsRefundsPage() {
       const formData = new FormData();
       formData.append('receiptId', receiptId.trim().toUpperCase());
       formData.append('estimatedRefundTotal', calculateRefundTotal());
-      formData.append('items', JSON.stringify(itemsPayload)); 
+      formData.append('items', JSON.stringify(itemsPayload));
 
-      let fileToUpload = null;
       for (const sku of selectedSkus) {
         if (formStates[sku]?.photoFile) {
-          fileToUpload = formStates[sku].photoFile;
-          break; 
+          formData.append('photoProofs', formStates[sku].photoFile);
         }
-      }
-
-      if (fileToUpload) {
-        formData.append('photoProof', fileToUpload); 
       }
 
       const response = await api.post('/returns-refunds/request', formData, {
@@ -170,7 +176,15 @@ export default function ReturnsRefundsPage() {
       if (response.data.success) {
         Swal.close();
         toast.success('Return request submitted successfully.');
-        setUiState('TRACKING');
+        
+        const newReturnId = response.data.data?.returnId || response.data.returnId;
+
+        if (newReturnId) {
+          navigate(`/returns/status/${newReturnId}`);
+        } else {
+          toast.info('Redirecting to returns history...');
+          navigate('/returns-refunds-history');
+        }
       }
 
     } catch (error) {
@@ -181,17 +195,7 @@ export default function ReturnsRefundsPage() {
 
   const activeItemInfo = receiptItems.find(item => item.sku === activeDetailSku);
   const activeFormInfo = formStates[activeDetailSku] || { reason: 'Defective/Damaged Product', condition: 'Opened', comments: '', isSaved: false, photoFile: null };
-
   const availableItemsCount = receiptItems.filter(i => i.availableQty > 0).length;
-
-  if (uiState === 'TRACKING') {
-    return (
-      <ReturnStatusPage
-        returnId="RET-0091"
-        onGoBack={() => setUiState('IDLE')}
-      />
-    );
-  }
 
   return (
     <div className="pt-2 pb-10 space-y-5 fade-up">
@@ -599,7 +603,7 @@ export default function ReturnsRefundsPage() {
                         reasonEl ? reasonEl.value : "Defective/Damaged Product",
                         activeCondition,
                         commentsEl ? commentsEl.value : "",
-                        activePhotoFile 
+                        activePhotoFile
                       );
                     }}
                     className="flex items-center justify-center w-full h-10 gap-2 text-xs font-bold text-white bg-blue-600 rounded-lg shadow-none hover:bg-blue-700"

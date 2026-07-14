@@ -14,6 +14,8 @@ export default function ReviewReturnRequestPage() {
   const [internalNotes, setInternalNotes] = useState('');
   const [requestData, setRequestData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  const [currentEvidenceIndex, setCurrentEvidenceIndex] = useState(0);
 
   useEffect(() => {
     const fetchRequestDetails = async () => {
@@ -112,6 +114,18 @@ export default function ReviewReturnRequestPage() {
     });
   };
 
+  const handleNextEvidence = () => {
+    if (requestData?.items && currentEvidenceIndex < requestData.items.length - 1) {
+      setCurrentEvidenceIndex(prev => prev + 1);
+    }
+  };
+
+  const handlePrevEvidence = () => {
+    if (currentEvidenceIndex > 0) {
+      setCurrentEvidenceIndex(prev => prev - 1);
+    }
+  };
+
   if (isLoading) {
     return <div className="flex items-center justify-center h-screen"><Loader2 className="w-10 h-10 text-blue-500 animate-spin" /></div>;
   }
@@ -120,7 +134,8 @@ export default function ReviewReturnRequestPage() {
     return <div className="p-10 font-bold text-center text-red-500">Invalid Return ID or Data not found.</div>;
   }
 
-  const firstItem = requestData.items?.[0] || {};
+  const currentEvidenceItem = requestData.items?.[currentEvidenceIndex] || {};
+  const totalItems = requestData.items?.length || 0;
 
   return (
     <div className="p-6 mx-auto space-y-6 max-w-7xl fade-up">
@@ -146,7 +161,7 @@ export default function ReviewReturnRequestPage() {
 
           <div className="overflow-hidden bg-white border shadow-sm border-slate-200 rounded-xl">
             <div className="px-6 py-4 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-slate-800">Items to Inspect ({requestData.items?.length || 0} items)</h2>
+              <h2 className="text-lg font-bold text-slate-800">Items to Inspect ({totalItems} items)</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
@@ -162,7 +177,10 @@ export default function ReviewReturnRequestPage() {
                 </thead>
                 <tbody className="font-medium divide-y divide-slate-100">
                   {requestData.items?.map((item, index) => (
-                    <tr key={index} className="transition-colors hover:bg-slate-50">
+                    <tr 
+                      key={index} 
+                      className={`transition-colors hover:bg-slate-50 ${currentEvidenceIndex === index ? 'bg-blue-50/30' : ''}`}
+                    >
                       <td className="px-6 py-4 text-slate-400">{item.sku}</td>
                       <td className="px-6 py-4 text-slate-800">{item.name}</td>
                       <td className="px-6 py-4 text-center">{item.originalQty}</td>
@@ -183,25 +201,58 @@ export default function ReviewReturnRequestPage() {
           </div>
 
           <div className="p-6 bg-white border shadow-sm border-slate-200 rounded-xl">
-            <h2 className="mb-6 text-lg font-bold text-slate-800">Provided Evidence for: <span className="text-blue-600">{firstItem.name}</span></h2>
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+              <h2 className="text-lg font-bold text-slate-800">
+                Provided Evidence for: <span className="text-blue-600">{currentEvidenceItem.name || 'Unknown Item'}</span>
+              </h2>
+              
+              {totalItems > 1 && (
+                <div className="flex items-center gap-3 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+                  <span className="text-xs font-bold text-slate-500 whitespace-nowrap">
+                    ITEM {currentEvidenceIndex + 1} OF {totalItems}
+                  </span>
+                  <div className="flex items-center gap-1 border-l pl-2 border-slate-200">
+                    <button
+                      onClick={handlePrevEvidence}
+                      disabled={currentEvidenceIndex === 0}
+                      className="p-1 rounded text-slate-600 hover:bg-white hover:shadow-sm disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                      title="Previous Item"
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <button
+                      onClick={handleNextEvidence}
+                      disabled={currentEvidenceIndex === totalItems - 1}
+                      className="p-1 rounded text-slate-600 hover:bg-white hover:shadow-sm disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                      title="Next Item"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-
               <div className="space-y-2">
                 <h3 className="text-xs font-bold tracking-wider uppercase text-slate-400">Customer Report</h3>
-                <div className="p-4 text-sm italic border rounded-lg bg-slate-50 border-slate-100 text-slate-700">
-                  "{firstItem.reason} - {firstItem.comments || 'No additional comments provided.'}"
+                <div className="p-4 text-sm italic border rounded-lg bg-slate-50 border-slate-100 text-slate-700 min-h-[100px]">
+                  "{currentEvidenceItem.reason} - {currentEvidenceItem.comments || 'No additional comments provided.'}"
                 </div>
               </div>
 
               <div className="space-y-2">
-                <h3 className="text-xs font-bold tracking-wider uppercase text-slate-400">Attached Photos (1)</h3>
+                <h3 className="text-xs font-bold tracking-wider uppercase text-slate-400">Attached Photos</h3>
                 <div className="flex items-center gap-3">
-                  {firstItem.photoProofUrl ? (
-                    <img src={firstItem.photoProofUrl} alt="Proof" className="object-cover w-16 h-16 border rounded-lg shadow-sm border-slate-200" />
+                  {currentEvidenceItem.photoProofUrl ? (
+                    <img 
+                      src={currentEvidenceItem.photoProofUrl} 
+                      alt="Proof" 
+                      className="object-cover w-24 h-24 border rounded-lg shadow-sm border-slate-200" 
+                    />
                   ) : (
-                    <div className="flex items-center justify-center w-16 h-16 border-2 border-dashed rounded-lg border-slate-200 text-slate-400">
-                      <ImageIcon size={24} />
+                    <div className="flex items-center justify-center w-24 h-24 border-2 border-dashed rounded-lg border-slate-200 text-slate-400 bg-slate-50">
+                      <ImageIcon size={24} className="opacity-50" />
                     </div>
                   )}
                 </div>

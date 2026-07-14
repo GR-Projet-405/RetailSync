@@ -404,6 +404,16 @@ export const NAVIGATION_GROUPS = [
         ],
       },
       {
+        id: "returns-approvals",
+        name: "Manage Return Requests",
+        path: "/returns/approvals",
+        icon: "RotateCcw",
+        allowedRoles: [
+          ROLES.BRANCH_MANAGER,
+        ],
+      },
+
+      {
         id: 'returns-refunds-history',
         name: 'Returns & Refunds History',
         path: '/returns/history',

@@ -24,17 +24,24 @@ const verifyReceiptHandler = asyncHandler(async (req, res) => {
 // 2. Create Return Request 
 const createReturnHandler = asyncHandler(async (req, res) => {
   let returnData = req.body;
+  const cashierId = req.user._id; 
 
   if (typeof returnData.items === 'string') {
     returnData.items = JSON.parse(returnData.items);
   }
 
-  if (req.file && returnData.items && returnData.items.length > 0) {
-    returnData.items[0].photoProofUrl = req.file.path;
-  }
+  if (req.files && req.files.length > 0 && returnData.items) {
+    returnData.items.forEach((item, index) => {
+      if (req.files[index]) {
+        item.photoProofUrl = req.files[index].path;
+      }
+    });
+  } 
 
-  const returnRequest = await service.createReturnRequest(returnData);
-  
+  console.log("Saving Request with ReceiptID:", returnData.receiptId);
+
+  const returnRequest = await service.createReturnRequest(returnData, cashierId);
+
   res.status(201).json({
     success: true,
     message: 'Return request submitted successfully.',

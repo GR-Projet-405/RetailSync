@@ -1,10 +1,12 @@
 const mongoose = require('mongoose');
-//const bcrypt = require('bcryptjs');
+const bcrypt = require('bcryptjs'); 
 const ReturnsRefundsPage = require('./model');
 
+// Models
 const LocalTransaction = mongoose.models.LocalTransaction || mongoose.model('LocalTransaction', new mongoose.Schema({}, { strict: false }), 'transactions');
 const LocalCustomer = mongoose.models.LocalCustomer || mongoose.model('LocalCustomer', new mongoose.Schema({}, { strict: false }), 'customers');
 const LocalUser = mongoose.models.LocalUser || mongoose.model('LocalUser', new mongoose.Schema({}, { strict: false }), 'users');
+const LocalRole = mongoose.models.LocalRole || mongoose.model('LocalRole', new mongoose.Schema({}, { strict: false }), 'roles');
 
 class ReturnsRefundsPageService {
 
@@ -68,8 +70,15 @@ class ReturnsRefundsPageService {
     };
   }
 
-  async createReturnRequest(data) {
-    const { receiptId, items, estimatedRefundTotal } = data;
+  async createReturnRequest(data, cashierId) { 
+    const receiptId = data.receiptId;
+    const items = data.items;
+    const estimatedRefundTotal = data.estimatedRefundTotal;
+
+    if (!receiptId) {
+        console.error("DEBUG ERROR: receiptId is missing in data:", data);
+        throw new Error("Receipt ID is missing!");
+    }
 
     const lastReturn = await ReturnsRefundsPage.findOne().sort({ createdAt: -1 });
     let newReturnIdNumber = 91;
@@ -89,7 +98,8 @@ class ReturnsRefundsPageService {
       transactionRef: transaction ? transaction._id : null,
       items: items,
       estimatedRefundTotal: estimatedRefundTotal,
-      status: 'Pending'
+      status: 'Pending',
+      cashierId: cashierId 
     });
 
     return await newReturnRequest.save();
@@ -109,7 +119,11 @@ class ReturnsRefundsPageService {
           if (trans.get('customerId')) {
             try {
               const cust = await LocalCustomer.findById(trans.get('customerId'));
-              if (cust) customerName = cust.name || cust.get('name');
+              if (cust) {
+                const fName = cust.firstName || cust.get('firstName') || '';
+                const lName = cust.lastName || cust.get('lastName') || '';
+                customerName = `${fName} ${lName}`.trim() || cust.name || cust.get('name') || 'Walk-in Customer';
+              }
             } catch (e) { }
           }
           if (trans.get('cashierId')) {
@@ -154,7 +168,11 @@ class ReturnsRefundsPageService {
         if (trans.get('customerId')) {
           try {
             const cust = await LocalCustomer.findById(trans.get('customerId'));
-            if (cust) customerName = cust.name || cust.get('name');
+            if (cust) {
+              const fName = cust.firstName || cust.get('firstName') || '';
+              const lName = cust.lastName || cust.get('lastName') || '';
+              customerName = `${fName} ${lName}`.trim() || cust.name || cust.get('name') || 'Walk-in Customer';
+            }
           } catch (e) { }
         }
         if (trans.get('cashierId')) {
@@ -187,26 +205,29 @@ class ReturnsRefundsPageService {
     return await returnRequest.save();
   }
 
-  /*async processRefund(returnId, refundMethod, managerEmail, managerPassword, pointsDeducted = 0) {
+  async processRefund(returnId, refundMethod, managerEmail, managerPassword, pointsDeducted = 0) {
+
     if (!managerEmail || !managerPassword) {
       throw { statusCode: 400, message: 'Manager authorization credentials are required.' };
     }
 
-    const manager = await LocalUser.findOne({ email: managerEmail }).populate('roleId');
+    const manager = await LocalUser.findOne({ email: managerEmail });
     if (!manager) {
-      throw { statusCode: 401, message: 'Invalid Manager Email.' };
-    }
-
-    const validRoles = ['BRANCH_MANAGER', 'ADMIN', 'SUPER_ADMIN'];
-    
-    const managerRole = manager.roleId && manager.roleId.name ? manager.roleId.name : manager.role;
-    if (!managerRole || !validRoles.includes(managerRole)) {
-      throw { statusCode: 403, message: 'Access Denied. Only a Manager can authorize refunds.' };
+      throw { statusCode: 401, message: 'Invalid credentials! User not found.' };
     }
 
     const isPasswordMatch = await bcrypt.compare(managerPassword, manager.password);
     if (!isPasswordMatch) {
-      throw { statusCode: 401, message: 'Invalid Manager Password.' };
+      throw { statusCode: 401, message: 'Invalid credentials! Password mismatch.' };
+    }
+
+    if (!manager.roleId) {
+      throw { statusCode: 403, message: 'Access Denied: No role assigned to this user.' };
+    }
+
+    const role = await LocalRole.findById(manager.roleId);
+    if (!role || role.name !== 'BRANCH_MANAGER') {
+      throw { statusCode: 403, message: 'Access Denied: Only a Branch Manager can authorize this.' };
     }
 
     const returnRequest = await ReturnsRefundsPage.findOne({ returnId: returnId });
@@ -214,60 +235,20 @@ class ReturnsRefundsPageService {
 
     if (pointsDeducted > 0 && returnRequest.transactionRef) {
       const trans = await LocalTransaction.findById(returnRequest.transactionRef);
-      
       if (trans && trans.get('customerId')) {
-        const customerId = trans.get('customerId');
-        
-        await LocalCustomer.findByIdAndUpdate(customerId, {
-          $inc: { loyaltyPoints: -pointsDeducted }
-        });
-        console.log(`[SUCCESS] Deducted ${pointsDeducted} points from Customer ID: ${customerId}`);
+        await LocalCustomer.findOneAndUpdate(
+          { _id: trans.get('customerId') },
+          { $inc: { loyaltyPoints: -pointsDeducted } }
+        );
       }
     }
 
-    returnRequest.status = 'Refund Issued';
-    returnRequest.refundMethod = refundMethod;
-    returnRequest.pointsDeducted = pointsDeducted;
-
-    return await returnRequest.save();
-  }*/
-
-  async processRefund(returnId, refundMethod, managerEmail, managerPassword, pointsDeducted = 0) {
-    // 1. Mock Manager Verification
-    if (!managerEmail || !managerPassword) {
-      throw { statusCode: 400, message: 'Manager authorization credentials are required.' };
-    }
-    if (managerEmail !== 'admin@retailsync.com' || managerPassword !== 'Admin@123') {
-      throw { statusCode: 401, message: 'Invalid Manager Credentials!' };
-    }
-
-    // 2. Return Request
-    const returnRequest = await ReturnsRefundsPage.findOne({ returnId: returnId });
-    if (!returnRequest) throw { statusCode: 404, message: 'Return request not found.' };
-
-    
-    if (pointsDeducted > 0 && returnRequest.transactionRef) {
-      const trans = await LocalTransaction.findById(returnRequest.transactionRef);
-      
-      if (trans && trans.get('customerId')) {
-        const customerId = trans.get('customerId');
-        
-       
-        await LocalCustomer.findByIdAndUpdate(customerId, {
-          $inc: { loyaltyPoints: -pointsDeducted }
-        });
-        console.log(`[SUCCESS] Deducted ${pointsDeducted} points from Customer ID: ${customerId}`);
-      }
-    }
-
-    // Update Return Request
     returnRequest.status = 'Refund Issued';
     returnRequest.refundMethod = refundMethod;
     returnRequest.pointsDeducted = pointsDeducted;
 
     return await returnRequest.save();
   }
-  
 }
 
 module.exports = new ReturnsRefundsPageService();

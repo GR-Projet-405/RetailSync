@@ -1,50 +1,53 @@
 import React, { useState, useEffect } from 'react';
-import { Check, Clock, ArrowRight, CheckCircle2, Info, PlusSquare, Trophy, Printer, AlertCircle } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Check, Clock, ArrowRight, CheckCircle2, Info, PlusSquare, Printer, AlertCircle, Trophy } from 'lucide-react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import Spinner from '../components/Spinner';
-import toast from '../utils/toast'; 
+import toast from '../utils/toast';
 
 export default function ReturnStatusPage() {
   const navigate = useNavigate();
+  const location = useLocation(); 
   const { returnId: paramId } = useParams();
 
   const returnId = paramId || "RET-0091";
 
-  const [dbStatus, setDbStatus] = useState('Pending'); 
+  const [dbStatus, setDbStatus] = useState('Pending');
   const [refundAmount, setRefundAmount] = useState(0);
+  const [internalNotes, setInternalNotes] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState(null);
 
-  useEffect(() => {
-    const fetchReturnStatus = async () => {
-      try {
-        setIsLoading(true);
-        const response = await api.get(`/returns-refunds/status/${returnId}`);
+  const fetchReturnStatus = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.get(`/returns-refunds/status/${returnId}`);
 
-        if (response.data && response.data.data) {
-          const returnData = response.data.data;
+      if (response.data && response.data.data) {
+        const returnData = response.data.data;
 
-          if (returnData.status === 'Ready for Refund Processing') {
-            setDbStatus('Pending');
-          } else {
-            setDbStatus(returnData.status); // 'Approved', 'Refund Issued' or 'Rejected'
-          }
-
-          setRefundAmount(returnData.estimatedRefundTotal || 0);
+        if (returnData.status === 'Ready for Refund Processing') {
+          setDbStatus('Pending');
+        } else {
+          setDbStatus(returnData.status);
         }
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Tracking API Error:", error);
-        const errorMsg = error.response?.data?.message || "Failed to load live tracking data.";
-        setApiError(errorMsg);
-        toast.error(errorMsg); 
-        setIsLoading(false);
-      }
-    };
 
+        setRefundAmount(returnData.estimatedRefundTotal || 0);
+        setInternalNotes(returnData.internalNotes || '');
+      }
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Tracking API Error:", error);
+      const errorMsg = error.response?.data?.message || "Failed to load live tracking data.";
+      setApiError(errorMsg);
+      toast.error(errorMsg);
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchReturnStatus();
-  }, [returnId]);
+  }, [returnId, location]);
 
   const isApproved = dbStatus === 'Approved' || dbStatus === 'Refund Issued' || dbStatus === 'Completed';
   const isCompleted = dbStatus === 'Refund Issued' || dbStatus === 'Completed';
@@ -82,6 +85,18 @@ export default function ReturnStatusPage() {
           Live progress tracking for Return ID: <span className="font-bold text-blue-600">{returnId}</span>
         </p>
       </div>
+
+      {dbStatus === 'Rejected' && internalNotes && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex gap-3 animate-in fade-in duration-500">
+          <AlertCircle className="text-red-600 shrink-0" size={24} />
+          <div>
+            <h3 className="text-sm font-bold text-red-800">Action Required: Request Rejected</h3>
+            <p className="text-xs text-red-700 mt-1 leading-relaxed">
+              <span className="font-bold">Manager's Note:</span> {internalNotes}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="relative flex flex-col justify-between p-10 bg-white border shadow-sm border-slate-100 rounded-xl">
 
@@ -159,7 +174,7 @@ export default function ReturnStatusPage() {
         <div className="flex justify-end w-full mt-2">
           <button
             type="button"
-            onClick={() => navigate('/returns/history')} 
+            onClick={() => navigate('/returns/history')}
             className="flex items-center gap-1 text-xs font-bold text-blue-600 transition-colors cursor-pointer hover:text-blue-700 focus:outline-none"
           >
             <span>Go to History</span>
@@ -177,10 +192,10 @@ export default function ReturnStatusPage() {
             </p>
           </div>
 
-            <div
-              onClick={() => navigate(`/returns/slip/${returnId}`)}
-              className="flex items-center justify-center p-5 transition-colors bg-white border-2 border-dashed shadow-sm cursor-pointer border-slate-300 rounded-xl hover:bg-slate-50"
-            >
+          <div
+            onClick={() => navigate(`/returns/slip/${returnId}`)}
+            className="flex items-center justify-center p-5 transition-colors bg-white border-2 border-dashed shadow-sm cursor-pointer border-slate-300 rounded-xl hover:bg-slate-50"
+          >
             <div className="flex items-center gap-2 text-sm font-bold text-blue-600">
               <Printer size={18} />
               <span>Print Return Slip</span>

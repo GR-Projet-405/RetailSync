@@ -1,3 +1,4 @@
+const { verifyToken } = require('../../middleware/auth.middleware'); 
 const express = require('express');
 const router = express.Router();
 const controller = require('./controller');
@@ -7,7 +8,7 @@ const upload = require('./cloudinaryConfig'); // import cloudinary middleware
 router.get('/verify/:receiptId', controller.verifyReceiptHandler);
 
 // 2. Create Return Request 
-router.post('/request', upload.single('photoProof'), controller.createReturnHandler);
+router.post('/request', verifyToken, upload.array('photoProofs', 20), controller.createReturnHandler);
 
 // 3. Get Return Status
 router.get('/status/:returnId', controller.getReturnStatusHandler);
