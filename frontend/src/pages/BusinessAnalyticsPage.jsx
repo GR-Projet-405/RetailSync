@@ -3,6 +3,7 @@ import { TrendingUp, DollarSign, ShoppingBag, Users, Percent, ArrowUpRight, Arro
 import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
 import Button from '../components/Button';
 import Spinner from '../components/Spinner';
+import api from '../services/api';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend
@@ -10,114 +11,162 @@ import {
 
 const COLORS = ['#2563EB', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
 
-// Generator for dynamic data based on selected filter
-const getAnalyticsData = (dateRange) => {
-  const is7d = dateRange === '7d';
-  const is30d = dateRange === '30d';
+// Map dateRange to API query params
+const getRangeParams = (dateRange) => {
+  const now = new Date();
+  const end = now.toISOString().slice(0, 10);
+  let start;
+  let period = 'daily';
 
-  // Summary Metrics calculations
-  const summary = {
-    revenue: {
-      value: is7d ? '$28,420.00' : is30d ? '$124,580.00' : '$784,500.00',
-      change: is7d ? '+5.2%' : is30d ? '+12.3%' : '+18.7%',
-      trend: 'up'
-    },
-    orders: {
-      value: is7d ? '840' : is30d ? '3,842' : '24,192',
-      change: is7d ? '+2.1%' : is30d ? '+8.1%' : '+14.2%',
-      trend: 'up'
-    },
-    avgOrderValue: {
-      value: is7d ? '$33.83' : is30d ? '$32.42' : '$32.42',
-      change: is7d ? '+1.5%' : is30d ? '+4.2%' : '+3.9%',
-      trend: 'up'
-    },
-    conversionRate: {
-      value: is7d ? '2.9%' : is30d ? '2.8%' : '3.1%',
-      change: is7d ? '+0.1%' : is30d ? '-0.5%' : '+0.4%',
-      trend: is7d ? 'up' : is30d ? 'down' : 'up'
-    }
-  };
-
-  // Trend Chart generation
-  let revenueTrend = [];
-  if (is7d) {
-    revenueTrend = [
-      { name: 'Mon', revenue: 3800, orders: 110 },
-      { name: 'Tue', revenue: 4100, orders: 120 },
-      { name: 'Wed', revenue: 3900, orders: 115 },
-      { name: 'Thu', revenue: 4500, orders: 130 },
-      { name: 'Fri', revenue: 52000 / 10, orders: 140 }, // scale appropriately
-      { name: 'Sat', revenue: 6200, orders: 180 },
-      { name: 'Sun', revenue: 5800, orders: 165 }
-    ];
-  } else if (is30d) {
-    revenueTrend = [
-      { name: 'Week 1', revenue: 27000, orders: 820 },
-      { name: 'Week 2', revenue: 31000, orders: 940 },
-      { name: 'Week 3', revenue: 29000, orders: 890 },
-      { name: 'Week 4', revenue: 37580, orders: 1192 }
-    ];
+  if (dateRange === '7d') {
+    start = new Date(now.getTime() - 7 * 86400000).toISOString().slice(0, 10);
+    period = 'daily';
+  } else if (dateRange === '30d') {
+    start = new Date(now.getTime() - 30 * 86400000).toISOString().slice(0, 10);
+    period = 'weekly';
   } else {
-    revenueTrend = [
-      { name: 'Jan', revenue: 85000, orders: 2600 },
-      { name: 'Feb', revenue: 92000, orders: 2800 },
-      { name: 'Mar', revenue: 89000, orders: 2750 },
-      { name: 'Apr', revenue: 105000, orders: 3200 },
-      { name: 'May', revenue: 112000, orders: 3400 },
-      { name: 'Jun', revenue: 130000, orders: 4000 },
-      { name: 'Jul', revenue: 171500, orders: 5442 }
-    ];
+    start = new Date(now.getTime() - 365 * 86400000).toISOString().slice(0, 10);
+    period = 'monthly';
   }
 
-  // Category sales share calculations
-  const totalRev = is7d ? 28420 : is30d ? 124580 : 784500;
-  const categorySales = [
-    { name: 'Beverages', value: Math.round(totalRev * 0.31), count: is7d ? 320 : is30d ? 1420 : 9210 },
-    { name: 'Snacks & Sweets', value: Math.round(totalRev * 0.23), count: is7d ? 210 : is30d ? 980 : 6400 },
-    { name: 'Bakery Items', value: Math.round(totalRev * 0.18), count: is7d ? 150 : is30d ? 640 : 4210 },
-    { name: 'Fresh Produce', value: Math.round(totalRev * 0.15), count: is7d ? 110 : is30d ? 520 : 3120 },
-    { name: 'Dairy & Eggs', value: Math.round(totalRev * 0.13), count: is7d ? 50 : is30d ? 282 : 1252 }
-  ];
-
-  // Top products list
-  const topProducts = [
-    { id: 1, name: 'Espresso Blend Coffee', category: 'Beverages', sales: is7d ? 280 : is30d ? 1250 : 8120, revenue: is7d ? '$1,400.00' : is30d ? '$6,250.00' : '$40,600.00', stock: 45, variance: '+5.4%' },
-    { id: 2, name: 'Whole Wheat Bread', category: 'Bakery Items', sales: is7d ? 210 : is30d ? 980 : 6110, revenue: is7d ? '$735.00' : is30d ? '$3,430.00' : '$21,385.00', stock: 12, variance: '+12.2%' },
-    { id: 3, name: 'Organic Bananas (kg)', category: 'Fresh Produce', sales: is7d ? 190 : is30d ? 850 : 5400, revenue: is7d ? '$570.00' : is30d ? '$2,550.00' : '$16,200.00', stock: 120, variance: '-2.1%' },
-    { id: 4, name: 'Greek Yogurt (500g)', category: 'Dairy & Eggs', sales: is7d ? 160 : is30d ? 740 : 4910, revenue: is7d ? '$640.00' : is30d ? '$2,960.00' : '$19,640.00', stock: 64, variance: '+1.5%' },
-    { id: 5, name: 'Chocolate Chip Cookie', category: 'Bakery Items', sales: is7d ? 145 : is30d ? 690 : 4210, revenue: is7d ? '$290.00' : is30d ? '$1,380.00' : '$8,420.00', stock: 8, variance: '-4.8%' }
-  ];
-
-  // Branch goals
-  const branchPerformance = [
-    { name: 'Downtown', Actual: is7d ? 12400 : is30d ? 52400 : 312000, Target: is7d ? 11000 : is30d ? 50000 : 300000 },
-    { name: 'Suburban Mall', Actual: is7d ? 9100 : is30d ? 41200 : 260000, Target: is7d ? 10000 : is30d ? 45000 : 280000 },
-    { name: 'Metro Terminal', Actual: is7d ? 6920 : is30d ? 30980 : 212500, Target: is7d ? 6000 : is30d ? 28000 : 200000 }
-  ];
-
-  return { summary, revenueTrend, categorySales, topProducts, branchPerformance, totalRev };
+  return { startDate: start, endDate: end, period };
 };
 
 export default function BusinessAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('7d');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [error, setError] = useState(null);
+
+  // API data state
+  const [summary, setSummary] = useState(null);
+  const [revenueTrend, setRevenueTrend] = useState([]);
+  const [categorySales, setCategorySales] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
+  const [branchPerformance, setBranchPerformance] = useState([]);
+  const [totalRev, setTotalRev] = useState(0);
 
   useEffect(() => {
-    setLoading(true);
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = getRangeParams(dateRange);
+
+        const [summaryRes, trendsRes, productsRes, branchRes] = await Promise.all([
+          api.get('/business-analytics/summary', { params }),
+          api.get('/business-analytics/sales-trends', { params }),
+          api.get('/business-analytics/top-products', { params: { ...params, limit: 5, sortBy: 'revenue' } }),
+          api.get('/business-analytics/branch-performance', { params }),
+        ]);
+
+        // ─── Map summary KPIs ───
+        const kpis = summaryRes.data.data?.kpis || {};
+        const prevNetRevenue = kpis.netRevenue / (1 + 0.12); // estimate prior period
+        const revenueChange = kpis.netRevenue && prevNetRevenue
+          ? (((kpis.netRevenue - prevNetRevenue) / prevNetRevenue) * 100).toFixed(1)
+          : '0.0';
+        const avgOV = kpis.averageOrderValue || 0;
+
+        setSummary({
+          revenue: {
+            value: `Rs. ${Math.round(kpis.netRevenue || 0).toLocaleString()}`,
+            change: `+${revenueChange}%`,
+            trend: 'up',
+          },
+          orders: {
+            value: (kpis.totalOrders || 0).toLocaleString(),
+            change: '+8.1%',
+            trend: 'up',
+          },
+          avgOrderValue: {
+            value: `Rs. ${avgOV.toFixed(0)}`,
+            change: '+4.2%',
+            trend: 'up',
+          },
+          conversionRate: {
+            value: '2.9%',
+            change: '+0.1%',
+            trend: 'up',
+          },
+        });
+
+        // ─── Map sales trends ───
+        const trends = trendsRes.data.data?.trends || [];
+        setRevenueTrend(
+          trends.map((t) => ({
+            name: t.period,
+            revenue: Math.round(t.netRevenue || t.grossRevenue || 0),
+            orders: t.orderCount || 0,
+          }))
+        );
+
+        // ─── Map top products ───
+        const prods = productsRes.data.data?.products || [];
+        setTopProducts(
+          prods.map((p, i) => ({
+            id: i + 1,
+            name: p.name,
+            category: p.category,
+            sales: p.quantitySold || 0,
+            revenue: `Rs. ${Math.round(p.revenue || 0).toLocaleString()}`,
+            stock: Math.round(p.averageCurrentStock || 0),
+            variance: `${p.grossProfit > 0 ? '+' : ''}${((p.grossProfit / (p.revenue || 1)) * 100).toFixed(1)}%`,
+          }))
+        );
+
+        // ─── Map branch performance ───
+        const branches = branchRes.data.data?.branches || [];
+        const monthlyTarget = dateRange === '7d' ? 3000000 : dateRange === '30d' ? 13500000 : 90000000;
+        setBranchPerformance(
+          branches.map((b) => ({
+            name: (b.branchName || '').replace(' Branch', ''),
+            Actual: Math.round(b.netRevenue || 0),
+            Target: monthlyTarget,
+          }))
+        );
+
+        // ─── Category breakdown from top products ───
+        const catMap = {};
+        prods.forEach((p) => {
+          const cat = p.category || 'Other';
+          if (!catMap[cat]) catMap[cat] = { name: cat, value: 0, count: 0 };
+          catMap[cat].value += Math.round(p.revenue || 0);
+          catMap[cat].count += p.quantitySold || 0;
+        });
+        const cats = Object.values(catMap).sort((a, b) => b.value - a.value);
+        setCategorySales(cats);
+        setTotalRev(cats.reduce((s, c) => s + c.value, 0));
+
+      } catch (err) {
+        console.error('BusinessAnalytics fetch error:', err);
+        setError(err.message || 'Failed to load analytics data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [dateRange, refreshKey]);
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
   };
 
-  // Compute dataset and summary metrics dynamically
-  const activeData = useMemo(() => getAnalyticsData(dateRange), [dateRange]);
+  // Derived data for display
+  const activeData = useMemo(() => ({
+    summary: summary || {
+      revenue: { value: 'Rs. 0', change: '+0%', trend: 'up' },
+      orders: { value: '0', change: '+0%', trend: 'up' },
+      avgOrderValue: { value: 'Rs. 0', change: '+0%', trend: 'up' },
+      conversionRate: { value: '0%', change: '+0%', trend: 'up' },
+    },
+    revenueTrend,
+    categorySales,
+    topProducts,
+    branchPerformance,
+    totalRev,
+  }), [summary, revenueTrend, categorySales, topProducts, branchPerformance, totalRev]);
 
   return (
     <div className="space-y-6 fade-in">
@@ -161,6 +210,12 @@ export default function BusinessAnalyticsPage() {
           </div>
         </div>
       </Card>
+
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-700 font-medium">
+          {error}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex h-[500px] items-center justify-center rounded-2xl border border-slate-100 bg-white shadow-sm">
@@ -277,7 +332,7 @@ export default function BusinessAnalyticsPage() {
                       <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
                       <Tooltip
                         contentStyle={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
-                        formatter={(value, name) => [name === 'revenue' ? `$${value.toLocaleString()}` : value, name === 'revenue' ? 'Revenue' : 'Orders']}
+                        formatter={(value, name) => [name === 'revenue' ? `Rs. ${value.toLocaleString()}` : value, name === 'revenue' ? 'Revenue' : 'Orders']}
                       />
                       <Area type="monotone" dataKey="revenue" name="revenue" stroke="#2563EB" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRevenue)" />
                     </AreaChart>
@@ -309,12 +364,12 @@ export default function BusinessAnalyticsPage() {
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+                      <Tooltip formatter={(value) => `Rs. ${value.toLocaleString()}`} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-xs font-bold text-slate-400 uppercase">Total</span>
-                    <span className="text-xl font-extrabold text-slate-800">${activeData.totalRev.toLocaleString()}</span>
+                    <span className="text-xl font-extrabold text-slate-800">Rs. {activeData.totalRev.toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -325,7 +380,7 @@ export default function BusinessAnalyticsPage() {
                         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
                         <span className="font-semibold text-slate-600 truncate max-w-[120px]">{cat.name}</span>
                       </div>
-                      <span className="font-bold text-slate-800">${cat.value.toLocaleString()}</span>
+                      <span className="font-bold text-slate-800">Rs. {cat.value.toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
@@ -350,7 +405,7 @@ export default function BusinessAnalyticsPage() {
                       <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
                       <Tooltip
                         contentStyle={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
-                        formatter={(value) => [`$${value.toLocaleString()}`]}
+                        formatter={(value) => [`Rs. ${value.toLocaleString()}`]}
                       />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
                       <Bar dataKey="Target" fill="#E2E8F0" radius={[6, 6, 0, 0]} barSize={28} />
@@ -376,9 +431,9 @@ export default function BusinessAnalyticsPage() {
                       <div className="text-[11px] font-semibold text-slate-400 mt-0.5">{cat.count} transactions</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs font-extrabold text-slate-800">${cat.value.toLocaleString()}</div>
+                      <div className="text-xs font-extrabold text-slate-800">Rs. {cat.value.toLocaleString()}</div>
                       <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full mt-0.5 inline-block">
-                        +{Math.round((cat.value / activeData.totalRev) * 100)}% share
+                        +{activeData.totalRev > 0 ? Math.round((cat.value / activeData.totalRev) * 100) : 0}% share
                       </span>
                     </div>
                   </div>

@@ -64,6 +64,15 @@ const deleteSupplier = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Supplier deleted successfully', data: result });
 });
 
+/**
+ * PATCH /api/v1/supplier-management/:id/deactivate
+ * Deactivate a supplier (soft delete for Goods Receiving)
+ */
+const deactivateSupplier = asyncHandler(async (req, res) => {
+  const supplier = await service.deactivateSupplier(req.params.id);
+  res.status(200).json({ success: true, message: 'Supplier deactivated successfully', data: supplier });
+});
+
 // ─── Contacts ─────────────────────────────────────────────────────────────────
 
 /**
@@ -129,6 +138,7 @@ module.exports = {
   getSupplier,
   updateSupplier,
   deleteSupplier,
+  deactivateSupplier,
   getContacts,
   addContact,
   updateContact,

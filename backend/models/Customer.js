@@ -7,11 +7,6 @@ const customerSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
-    fullName: {
-      type: String,
-      trim: true,
-      default: null,
-    },
     firstName: {
       type: String,
       trim: true,
@@ -33,6 +28,10 @@ const customerSchema = new mongoose.Schema(
       lowercase: true,
       default: null,
     },
+    loyaltyPoints: {
+      type: Number,
+      default: 0
+    }
   },
   {
     timestamps: true,

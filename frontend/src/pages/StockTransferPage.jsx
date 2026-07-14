@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { TrendingUp,Clock,Bookmark,Search,Trash2,Edit3,ChevronDown,ChevronUp,Check,Truck,MoreHorizontal,X,Highlighter} from 'lucide-react';
 import * as stockTransferService from '../services/stockTransferService';
 
@@ -37,6 +37,7 @@ export default function StockTransferPage() {
 
   const [highlightedRows, setHighlightedRows] = useState([]);
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [expandedHistoryId, setExpandedHistoryId] = useState(null);
   const [deletedIds, setDeletedIds] = useState([]);
   const [statusFilter, setStatusFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('All');
@@ -948,18 +949,17 @@ export default function StockTransferPage() {
                       {getPendingTransfers().map((t) => {
                         const isExpanded = expandedTransferId === t._id;
                         return (
-                          <>
+                          <React.Fragment key={t._id}>
                             {/* Main row */}
                             <tr 
-                              key={t._id} 
                               onClick={() => setExpandedTransferId(isExpanded ? null : t._id)}
                               className="hover:bg-slate-50/40 cursor-pointer transition-all"
                             >
                               <td className="py-4 px-4 font-bold text-slate-800">{t.transferNumber}</td>
                               <td className="py-4 px-4">
                                 <div className="flex flex-col">
-                                  <span className="font-semibold text-slate-700 text-xs">{formatDateString(t.requestedDate || t.createdAt)}</span>
-                                  <span className="text-[10px] text-slate-400">{new Date(t.requestedDate || t.createdAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true})}</span>
+                                  <span className="font-semibold text-slate-700 text-xs">{formatDateString(t.createdAt)}</span>
+                                  <span className="text-[10px] text-slate-400">{new Date(t.createdAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true})}</span>
                                 </div>
                               </td>
                               <td className="py-4 px-4">
@@ -1015,7 +1015,7 @@ export default function StockTransferPage() {
                                           <tr key={idx} className="py-2.5">
                                             <td className="py-2 font-bold text-slate-500">{item.productId?.sku || 'SKU-0001'}</td>
                                             <td className="py-2 text-slate-700">{item.productId?.name || 'Wireless Mouse'}</td>
-                                            <td className="py-2 text-center text-slate-500">15</td>
+                                            <td className="py-2 text-center text-slate-500">{item.currentStock ?? '-'}</td>
                                             <td className="py-2 text-center text-slate-900">{item.quantityTransferred}</td>
                                           </tr>
                                         ))}
@@ -1025,7 +1025,7 @@ export default function StockTransferPage() {
                                 </td>
                               </tr>
                             )}
-                          </>
+                          </React.Fragment>
                         );
                       })}
                       {getPendingTransfers().length === 0 && (
@@ -1395,6 +1395,7 @@ export default function StockTransferPage() {
                         <th className="pb-3 px-4">To</th>
                         <th className="pb-3 px-4 text-center">Quantity</th>
                         <th className="pb-3 px-4">Status</th>
+                        <th className="pb-3 px-4 text-center">Items</th>
                         <th className="pb-3 px-4 text-right"></th>
                       </tr>
                     </thead>
@@ -1402,111 +1403,153 @@ export default function StockTransferPage() {
                       {getPaginatedHistoryTransfers().map((row) => {
                         const isHighlighted = highlightedRows.includes(row._id);
                         const isMenuOpen = openMenuId === row._id;
+                        const isExpanded = expandedHistoryId === row._id;
                         return (
-                          <tr
-                            key={row._id}
-                            className={`transition-colors duration-150 ${
-                              isHighlighted
-                                ? 'bg-yellow-50 border-l-4 border-l-yellow-400'
-                                : 'hover:bg-slate-50/40'
-                            }`}
-                          >
-                            {/* Date */}
-                            <td className="py-4 px-4 font-semibold text-slate-500">{formatDateString(row.createdAt)}</td>
+                          <React.Fragment key={row._id}>
+                            <tr
+                              onClick={() => setExpandedHistoryId(isExpanded ? null : row._id)}
+                              className={`cursor-pointer transition-colors duration-150 ${
+                                isHighlighted
+                                  ? 'bg-yellow-50 border-l-4 border-l-yellow-400'
+                                  : isExpanded ? 'bg-blue-50/30' : 'hover:bg-slate-50/40'
+                              }`}
+                            >
+                              {/* Date */}
+                              <td className="py-4 px-4 font-semibold text-slate-500">{formatDateString(row.createdAt)}</td>
 
-                            {/* Source */}
-                            <td className="py-4 px-4 font-bold text-slate-800">{row.sourceBranch?.name}</td>
+                              {/* Source */}
+                              <td className="py-4 px-4 font-bold text-slate-800">{row.sourceBranch?.name}</td>
 
-                            {/* Destination */}
-                            <td className="py-4 px-4 font-bold text-slate-800">{row.destinationBranch?.name}</td>
+                              {/* Destination */}
+                              <td className="py-4 px-4 font-bold text-slate-800">{row.destinationBranch?.name}</td>
 
-                            {/* Quantity */}
-                            <td className="py-4 px-4 font-bold text-center text-slate-950">
-                              {row.items.reduce((sum, item) => sum + item.quantityTransferred, 0)}
-                            </td>
+                              {/* Quantity */}
+                              <td className="py-4 px-4 font-bold text-center text-slate-950">
+                                {row.items.reduce((sum, item) => sum + item.quantityTransferred, 0)}
+                              </td>
 
-                            {/* Status Badges */}
-                            <td className="py-4 px-4">
-                              {row.status === 'DELIVERED' ? (
-                                <span className="px-2.5 py-1 text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100 rounded-md uppercase">
-                                  Delivered
-                                </span>
-                              ) : row.status === 'CANCELLED' ? (
-                                <span className="px-2.5 py-1 text-[10px] font-bold bg-red-50 text-red-600 border border-red-100 rounded-md uppercase">
-                                  Cancelled
-                                </span>
-                              ) : (
-                                <span className="px-2.5 py-1 text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-100 rounded-md uppercase">
-                                  {row.status}
-                                </span>
-                              )}
-                            </td>
-
-                            {/* Action Menu */}
-                            <td className="py-4 px-4 text-right">
-                              <div className="relative inline-block">
-                                <button
-                                  onClick={() => setOpenMenuId(isMenuOpen ? null : row._id)}
-                                  className={`p-1.5 rounded-lg transition-colors duration-150 ${
-                                    isMenuOpen
-                                      ? 'bg-slate-100 text-slate-700'
-                                      : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
-                                  }`}
-                                >
-                                  <MoreHorizontal className="w-4 h-4" />
-                                </button>
-
-                                {/* Dropdown Panel */}
-                                {isMenuOpen && (
-                                  <>
-                                    {/* Click-away overlay */}
-                                    <div
-                                      className="fixed inset-0 z-10"
-                                      onClick={() => setOpenMenuId(null)}
-                                    />
-                                    <div className="absolute right-0 mt-1.5 w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 overflow-hidden fade-in">
-                                      {/* Highlight Option */}
-                                      <button
-                                        onClick={() => {
-                                          setHighlightedRows(prev =>
-                                            prev.includes(row._id)
-                                              ? prev.filter(id => id !== row._id)
-                                              : [...prev, row._id]
-                                          );
-                                          setOpenMenuId(null);
-                                        }}
-                                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-yellow-50 hover:text-yellow-700 transition-colors duration-150"
-                                      >
-                                        <Highlighter className="w-3.5 h-3.5 text-yellow-500" />
-                                        {isHighlighted ? 'Remove Highlight' : 'Highlight Row'}
-                                      </button>
-
-                                      {/* Divider */}
-                                      <div className="my-1 border-t border-slate-100" />
-
-                                      {/* Delete Option */}
-                                      <button
-                                        onClick={() => {
-                                          setDeletedIds(prev => [...prev, row._id]);
-                                          setHighlightedRows(prev => prev.filter(id => id !== row._id));
-                                          setOpenMenuId(null);
-                                        }}
-                                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors duration-150"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                        Delete Log
-                                      </button>
-                                    </div>
-                                  </>
+                              {/* Status Badges */}
+                              <td className="py-4 px-4">
+                                {row.status === 'DELIVERED' ? (
+                                  <span className="px-2.5 py-1 text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100 rounded-md uppercase">
+                                    Delivered
+                                  </span>
+                                ) : row.status === 'CANCELLED' ? (
+                                  <span className="px-2.5 py-1 text-[10px] font-bold bg-red-50 text-red-600 border border-red-100 rounded-md uppercase">
+                                    Cancelled
+                                  </span>
+                                ) : (
+                                  <span className="px-2.5 py-1 text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-100 rounded-md uppercase">
+                                    {row.status}
+                                  </span>
                                 )}
-                              </div>
-                            </td>
-                          </tr>
+                              </td>
+
+                              {/* Expand chevron */}
+                              <td className="py-4 px-4 text-center">
+                                <span className="text-slate-400">
+                                  {isExpanded ? <ChevronUp className="w-4 h-4 inline" /> : <ChevronDown className="w-4 h-4 inline" />}
+                                </span>
+                              </td>
+
+                              {/* Action Menu */}
+                              <td className="py-4 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                <div className="relative inline-block">
+                                  <button
+                                    onClick={() => setOpenMenuId(isMenuOpen ? null : row._id)}
+                                    className={`p-1.5 rounded-lg transition-colors duration-150 ${
+                                      isMenuOpen
+                                        ? 'bg-slate-100 text-slate-700'
+                                        : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                                    }`}
+                                  >
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </button>
+
+                                  {/* Dropdown Panel */}
+                                  {isMenuOpen && (
+                                    <>
+                                      {/* Click-away overlay */}
+                                      <div
+                                        className="fixed inset-0 z-10"
+                                        onClick={() => setOpenMenuId(null)}
+                                      />
+                                      <div className="absolute right-0 mt-1.5 w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 overflow-hidden fade-in">
+                                        {/* Highlight Option */}
+                                        <button
+                                          onClick={() => {
+                                            setHighlightedRows(prev =>
+                                              prev.includes(row._id)
+                                                ? prev.filter(id => id !== row._id)
+                                                : [...prev, row._id]
+                                            );
+                                            setOpenMenuId(null);
+                                          }}
+                                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-yellow-50 hover:text-yellow-700 transition-colors duration-150"
+                                        >
+                                          <Highlighter className="w-3.5 h-3.5 text-yellow-500" />
+                                          {isHighlighted ? 'Remove Highlight' : 'Highlight Row'}
+                                        </button>
+
+                                        {/* Divider */}
+                                        <div className="my-1 border-t border-slate-100" />
+
+                                        {/* Delete Option */}
+                                        <button
+                                          onClick={() => {
+                                            setDeletedIds(prev => [...prev, row._id]);
+                                            setHighlightedRows(prev => prev.filter(id => id !== row._id));
+                                            setOpenMenuId(null);
+                                          }}
+                                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors duration-150"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                          Delete Log
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+
+                            {/* Expandable Item Breakdown Row */}
+                            {isExpanded && (
+                              <tr className="bg-blue-50/40">
+                                <td colSpan="7" className="p-0 border-t border-slate-100">
+                                  <div className="px-10 py-5 space-y-4">
+                                    <table className="w-full text-left">
+                                      <thead>
+                                        <tr className="border-b border-blue-100/50 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                          <th className="pb-2">SKU</th>
+                                          <th className="pb-2">Item Name</th>
+                                          <th className="pb-2 text-center">Qty Transferred</th>
+                                          {row.status === 'DELIVERED' && <th className="pb-2 text-center">Qty Received</th>}
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-blue-50/30 text-xs font-semibold text-slate-700">
+                                        {row.items.map((item, idx) => (
+                                          <tr key={idx} className="py-2.5">
+                                            <td className="py-2 font-bold text-slate-500">{item.productId?.sku || '-'}</td>
+                                            <td className="py-2 text-slate-700">{item.productId?.name || '-'}</td>
+                                            <td className="py-2 text-center text-slate-900">{item.quantityTransferred}</td>
+                                            {row.status === 'DELIVERED' && (
+                                              <td className="py-2 text-center text-emerald-700">{item.quantityReceived ?? '-'}</td>
+                                            )}
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
                         );
                       })}
                       {getFilteredHistoryTransfers().filter(row => !deletedIds.includes(row._id)).length === 0 && (
                         <tr>
-                          <td colSpan="6" className="py-16 text-center text-slate-400 font-semibold text-sm">
+                          <td colSpan="7" className="py-16 text-center text-slate-400 font-semibold text-sm">
                             No matching transfer history records found.
                           </td>
                         </tr>
@@ -1625,7 +1668,7 @@ export default function StockTransferPage() {
                 onClick={() => setSuccessModal(null)}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow-lg shadow-emerald-600/20 transition-all duration-150"
               >
-                Okay, Done
+                Done
               </button>
             </div>
           </div>

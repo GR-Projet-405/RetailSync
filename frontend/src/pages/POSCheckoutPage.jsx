@@ -13,13 +13,15 @@ import Button from '../components/Button';
 import SearchInput from '../components/SearchInput';
 import Modal from '../components/Modal';
 import { useCustomers } from '../features/customer-management/hooks/useCustomers';
+import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 
-const currency = new Intl.NumberFormat('en-LK', {
-  style: 'currency',
-  currency: 'LKR',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
+const currency = {
+  format: (value) => `Rs. ${Number(value || 0).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`,
+};
 
 const getTierColor = (tier) => {
   const colors = {
@@ -35,6 +37,7 @@ const getTierColor = (tier) => {
 export default function POSCheckoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
 
   const state = location.state || {};
   const {
@@ -47,7 +50,7 @@ export default function POSCheckoutPage() {
     totalUnits = 0,
     orderDiscount = '',
     orderDiscountMode = 'none',
-    taxRate = 8,
+    taxRate = 0,
   } = state;
 
   const [customerSearch, setCustomerSearch] = useState('');
@@ -62,16 +65,16 @@ export default function POSCheckoutPage() {
   const [notes, setNotes] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Round total to nearest integer for display and calculations
-  const roundedTotal = Math.round(total);
-  
+  // Keep total with 2 decimal places for display and calculations
+  const roundedTotal = Math.round(total * 100) / 100;
+
   // Parse the amount received, default to 0 if invalid
   const numReceived = parseFloat(amountReceived) || 0;
-  
+
   // Calculate change, shortfall, and exact status using rounded values
   const changeDue = numReceived > roundedTotal ? numReceived - roundedTotal : 0;
   const shortfall = numReceived > 0 && numReceived < roundedTotal ? roundedTotal - numReceived : 0;
-  
+
   // FIXED: Exact amount check - only true when received amount equals rounded total
   const isExact = numReceived > 0 && numReceived === roundedTotal;
 
@@ -92,46 +95,62 @@ export default function POSCheckoutPage() {
 
   const handleCompletePayment = async () => {
     if (paymentMethod === 'cash' && numReceived < roundedTotal) return;
-    
+
     setIsProcessing(true);
     // Simulate payment processing
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    navigate('/pos-receipt', { 
-      state: { 
-        ...state, 
-        paymentMethod, 
-        amountReceived: numReceived, 
-        changeDue, 
+
+    navigate('/pos-receipt', {
+      state: {
+        ...state,
+        paymentMethod,
+        amountReceived: numReceived,
+        changeDue,
         customer: selectedCustomer,
-        invoiceNumber: `INV-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`,
+        invoiceNumber: `INV-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`,
         date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
         time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-        cashierName: 'Nipuni Perera',
+        cashierName: user 
+          ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || user.email 
+          : 'Nipuni Perera',
         counterNumber: '01'
-      } 
+      }
     });
   };
 
+  const [showCancelModal, setShowCancelModal] = useState(false);
+
   const handleNewSale = () => {
-    if (window.confirm('Are you sure you want to cancel this transaction?')) {
-      navigate('/pos-billing', {
-        state: {
-          orderDiscount: state.orderDiscount || '',
-          orderDiscountMode: state.orderDiscountMode || 'none',
-          taxRate: state.taxRate || 8
-        }
-      });
+    setShowCancelModal(true);
+  };
+
+  const confirmCancelSale = async () => {
+    try {
+      if (cart.length > 0) {
+        const adjustments = cart.map(item => ({ productId: item.id || item._id, delta: item.quantity }));
+        await api.post('/pos-billing/adjust-stock', { adjustments });
+      }
+    } catch (error) {
+      console.error('Failed to restore stock on cancel:', error);
     }
+    setShowCancelModal(false);
+    navigate('/pos-billing', {
+      state: {
+        cart: [],
+        orderDiscount: '',
+        orderDiscountMode: 'none',
+        taxRate: 0
+      }
+    });
   };
 
   // Quick amount buttons for cash payment
   const quickAmounts = [1000, 2000, 5000, 10000];
 
-  // Helper function to set exact amount - FIXED: properly round to whole number
+  // Helper function to set exact amount - formatted to 2 decimals
   const setExactAmount = () => {
-    const exactAmount = Math.round(total);
-    setAmountReceived(exactAmount.toString());
+    const exactAmount = Math.round(total * 100) / 100;
+    setAmountReceived(exactAmount.toFixed(2));
   };
 
   // Helper function to add quick amount
@@ -281,24 +300,21 @@ export default function POSCheckoutPage() {
                         setPaymentMethod(id);
                         if (id !== 'cash') {
                           // For card and wallet, auto-fill the total amount
-                          setAmountReceived(Math.round(total).toString());
+                          setAmountReceived(total.toFixed(2));
                         } else {
                           // For cash, clear the amount
                           setAmountReceived('');
                         }
                       }}
-                      className={`relative group rounded-2xl border-2 p-4 text-center transition-all duration-300 ${
-                        paymentMethod === id
+                      className={`relative group rounded-2xl border-2 p-4 text-center transition-all duration-300 ${paymentMethod === id
                           ? `border-${color}-500 bg-${color}-50 shadow-lg shadow-${color}-500/20 scale-105`
                           : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md'
-                      }`}
+                        }`}
                     >
-                      <Icon className={`w-6 h-6 mx-auto mb-2 ${
-                        paymentMethod === id ? `text-${color}-600` : 'text-slate-400'
-                      }`} />
-                      <span className={`text-sm font-semibold ${
-                        paymentMethod === id ? `text-${color}-700` : 'text-slate-600'
-                      }`}>
+                      <Icon className={`w-6 h-6 mx-auto mb-2 ${paymentMethod === id ? `text-${color}-600` : 'text-slate-400'
+                        }`} />
+                      <span className={`text-sm font-semibold ${paymentMethod === id ? `text-${color}-700` : 'text-slate-600'
+                        }`}>
                         {label}
                       </span>
                       {paymentMethod === id && (
@@ -395,11 +411,10 @@ export default function POSCheckoutPage() {
                             <button
                               key={type}
                               onClick={() => setCardType(type)}
-                              className={`px-4 py-3 rounded-xl border-2 text-sm font-semibold transition-all ${
-                                cardType === type
+                              className={`px-4 py-3 rounded-xl border-2 text-sm font-semibold transition-all ${cardType === type
                                   ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
                                   : 'border-slate-200 hover:border-slate-300 text-slate-600'
-                              }`}
+                                }`}
                             >
                               {type}
                             </button>
@@ -438,11 +453,10 @@ export default function POSCheckoutPage() {
                             <button
                               key={wallet}
                               onClick={() => setWalletType(wallet)}
-                              className={`px-4 py-3 rounded-xl border-2 text-sm font-semibold transition-all ${
-                                walletType === wallet
+                              className={`px-4 py-3 rounded-xl border-2 text-sm font-semibold transition-all ${walletType === wallet
                                   ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-md'
                                   : 'border-slate-200 hover:border-slate-300 text-slate-600'
-                              }`}
+                                }`}
                             >
                               {wallet}
                             </button>
@@ -496,21 +510,21 @@ export default function POSCheckoutPage() {
                     <span className="text-slate-500">Subtotal</span>
                     <span className="font-medium text-slate-800">{currency.format(subtotal)}</span>
                   </div>
-                  
+
                   {itemSavings > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-emerald-600">Product Discount</span>
                       <span className="font-medium text-emerald-600">−{currency.format(itemSavings)}</span>
                     </div>
                   )}
-                  
+
                   {orderDiscountAmount > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-violet-600">Cart Discount</span>
                       <span className="font-medium text-violet-600">−{currency.format(orderDiscountAmount)}</span>
                     </div>
                   )}
-                  
+
                   <div className="flex justify-between text-sm border-b border-slate-200 pb-3">
                     <span className="text-slate-500">Tax (VAT)</span>
                     <span className="font-medium text-slate-800">{currency.format(tax)}</span>
@@ -591,19 +605,19 @@ export default function POSCheckoutPage() {
                     )}
                   </span>
                 </Button>
-                
+
                 <div className="grid grid-cols-2 gap-3">
                   <Button
                     type="button"
                     variant="outline"
                     className="rounded-xl border-slate-200 bg-white text-slate-700 hover:bg-slate-50 h-12 font-semibold"
-                    onClick={() => navigate('/pos-billing', { 
-                      state: { 
+                    onClick={() => navigate('/pos-billing', {
+                      state: {
                         cart,
                         orderDiscount: state.orderDiscount || '',
                         orderDiscountMode: state.orderDiscountMode || 'none',
-                        taxRate: state.taxRate || 8
-                      } 
+                        taxRate: state.taxRate ?? 0
+                      }
                     })}
                   >
                     Cart
@@ -697,6 +711,36 @@ export default function POSCheckoutPage() {
           </div>
         </div>
       )}
+
+      {/* Cancel Transaction Confirmation Modal */}
+      <Modal isOpen={showCancelModal} onClose={() => setShowCancelModal(false)} title="Cancel Transaction" size="sm">
+        <div className="space-y-4">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600">
+            <AlertCircle className="h-6 w-6 animate-bounce" />
+          </div>
+          <div className="space-y-2 text-center">
+            <h4 className="font-bold text-slate-800 text-lg">Cancel Current Sale?</h4>
+            <p className="text-sm text-slate-500">
+              This will cancel the current transaction and clear the shopping cart, including any applied discounts and tax rates. This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="outline"
+              className="flex-1 rounded-xl h-11 border-slate-200 text-slate-700 font-semibold"
+              onClick={() => setShowCancelModal(false)}
+            >
+              Go Back
+            </Button>
+            <Button
+              className="flex-1 rounded-xl h-11 bg-red-600 hover:bg-red-700 text-white font-semibold"
+              onClick={confirmCancelSale}
+            >
+              Yes, Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
