@@ -1018,17 +1018,7 @@ export default function POSBillingPage() {
                             : 'border-slate-200/80 hover:border-blue-300/80 hover:shadow-[0_12px_24px_-8px_rgba(59,130,246,0.12)] hover:-translate-y-1'
                             }`}
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${catStyle.bg} ${catStyle.text}`}>
-                                <span className={`h-1.5 w-1.5 rounded-full ${catStyle.dot}`} />
-                                {product.category}
-                              </div>
-                              <h3 className="text-sm font-semibold text-slate-900 mt-1.5 leading-snug">{product.name}</h3>
-                            </div>
-                            <div className="flex-shrink-0 text-right">
-                              <div className="text-sm font-bold text-[#2563EB]">{currency.format(product.price)}</div>
-                              <div className="text-[10px] text-slate-400">/{product.unit}</div>
+
                           {/* Row 1: Category & SKU */}
                           <div className="flex items-center justify-between gap-2">
                             <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 ${catStyle.bg} ${catStyle.text} border-transparent`}>
