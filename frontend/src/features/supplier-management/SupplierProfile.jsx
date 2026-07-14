@@ -89,7 +89,7 @@ const activityIconMap = {
 };
 
 // ─── Supplier Profile Page ───────────────────────────────────────────────────────────────────
-<<<<<<< HEAD
+
 const SupplierProfile = ({ supplier, onBack, onGoToContacts, onGoToPerformance, onEditSupplier }) => {
   // localStatus is initialized from prop ONCE (on mount).
   // The parent uses key={supplier._id} so this component remounts
@@ -116,10 +116,10 @@ const SupplierProfile = ({ supplier, onBack, onGoToContacts, onGoToPerformance, 
   };
 
   // All other data comes directly from the supplier prop
-=======
+
 const SupplierProfile = ({ supplier, onBack, onGoToContacts, onGoToPerformance }) => {
   // Use contacts embedded in supplier document from the API
->>>>>>> dev
+
   const contacts = supplier?.contacts ?? [];
   const primaryContact = contacts.find(c => c.isPrimary) ?? contacts[0];
   const recentDocs = supplier?.documents ?? [];
