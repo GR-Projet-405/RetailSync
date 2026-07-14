@@ -56,6 +56,19 @@ const updateSupplier = asyncHandler(async (req, res) => {
 });
 
 /**
+ * PATCH /api/v1/supplier-management/:id/status
+ * Update a supplier's status
+ */
+const updateStatus = asyncHandler(async (req, res) => {
+  const { status } = req.body;
+  if (!status) {
+    return res.status(400).json({ success: false, message: 'Status is required' });
+  }
+  const supplier = await service.updateStatus(req.params.id, status);
+  res.status(200).json({ success: true, message: 'Status updated successfully', data: supplier });
+});
+
+/**
  * DELETE /api/v1/supplier-management/:id
  * Delete a supplier
  */
@@ -128,6 +141,7 @@ module.exports = {
   getStats,
   getSupplier,
   updateSupplier,
+  updateStatus,
   deleteSupplier,
   getContacts,
   addContact,

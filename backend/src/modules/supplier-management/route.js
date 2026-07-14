@@ -11,6 +11,7 @@ router.post('/',   controller.createSupplier);  // POST /api/v1/supplier-managem
 
 router.get('/:id',    controller.getSupplier);    // GET    /api/v1/supplier-management/:id
 router.put('/:id',    controller.updateSupplier); // PUT    /api/v1/supplier-management/:id
+router.patch('/:id/status', controller.updateStatus); // PATCH /api/v1/supplier-management/:id/status
 router.delete('/:id', controller.deleteSupplier); // DELETE /api/v1/supplier-management/:id
 
 // ─── Contacts ─────────────────────────────────────────────────────────────────

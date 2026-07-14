@@ -56,6 +56,15 @@ export const updateSupplier = async (id, payload) => {
 };
 
 /**
+ * Update supplier status only
+ * Uses the proven PUT /:id endpoint with just the status field
+ */
+export const updateSupplierStatus = async (id, status) => {
+  const { data } = await api.put(`${BASE}/${id}`, { status });
+  return data;
+};
+
+/**
  * DELETE /api/v1/supplier-management/:id
  */
 export const deleteSupplier = async (id) => {

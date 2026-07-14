@@ -5,19 +5,36 @@ import {
   Edit, Building2, Clock, AlertCircle, Package
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { updateSupplierStatus } from '../../services/supplierService';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const StatusBadge = ({ status }) => {
+const EditableStatusBadge = ({ status, onChange, saving }) => {
   const map = {
     Active:   'bg-emerald-50 text-emerald-700 border border-emerald-200',
     Inactive: 'bg-red-50 text-red-700 border border-red-200',
     Pending:  'bg-amber-50 text-amber-700 border border-amber-200',
   };
   const dot = { Active: 'bg-emerald-500', Inactive: 'bg-red-500', Pending: 'bg-amber-500' };
+
   return (
-    <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold', map[status])}>
-      <span className={cn('w-1.5 h-1.5 rounded-full', dot[status])} />{status}
-    </span>
+    <div className={cn('relative inline-flex items-center', saving && 'opacity-70')}>
+      <select
+        value={status || 'Active'}
+        disabled={saving}
+        onChange={(e) => { e.stopPropagation(); onChange(e.target.value); }}
+        onClick={(e) => e.stopPropagation()}
+        className={cn(
+          'appearance-none pl-6 pr-7 py-0.5 rounded-full text-xs font-semibold outline-none transition-colors border',
+          saving ? 'cursor-wait' : 'cursor-pointer',
+          map[status] || 'bg-slate-100 text-slate-700 border-slate-200'
+        )}
+      >
+        <option value="Active">Active</option>
+        <option value="Inactive">Inactive</option>
+        <option value="Pending">Pending</option>
+      </select>
+      <span className={cn('absolute left-2.5 w-1.5 h-1.5 rounded-full pointer-events-none', dot[status] || 'bg-slate-400')} />
+      <span className="absolute right-2 text-[10px] pointer-events-none opacity-50">▾</span>
+    </div>
   );
 };
 
@@ -73,7 +90,31 @@ const activityIconMap = {
 
 // ─── Supplier Profile Page ───────────────────────────────────────────────────────────────────
 const SupplierProfile = ({ supplier, onBack, onGoToContacts, onGoToPerformance, onEditSupplier }) => {
-  // Use contacts embedded in supplier document from the API
+  // localStatus is initialized from prop ONCE (on mount).
+  // The parent uses key={supplier._id} so this component remounts
+  // when navigating to a different supplier, giving a fresh initial value.
+  const [localStatus, setLocalStatus] = useState(supplier?.status || 'Active');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+
+  const handleStatusChange = async (newStatus) => {
+    if (saving || newStatus === localStatus) return;
+    const prevStatus = localStatus;
+    setSaving(true);
+    setSaveError(null);
+    setLocalStatus(newStatus); // optimistic update - UI changes immediately
+    try {
+      await updateSupplierStatus(supplier._id, newStatus);
+    } catch (err) {
+      console.error('Status update failed:', err);
+      setSaveError('Failed to save');
+      setLocalStatus(prevStatus); // rollback
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // All other data comes directly from the supplier prop
   const contacts = supplier?.contacts ?? [];
   const primaryContact = contacts.find(c => c.isPrimary) ?? contacts[0];
   const recentDocs = supplier?.documents ?? [];
@@ -95,7 +136,8 @@ const SupplierProfile = ({ supplier, onBack, onGoToContacts, onGoToPerformance, 
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-xl font-bold text-slate-900">{supplier.name}</h1>
-              <StatusBadge status={supplier.status} />
+              <EditableStatusBadge status={localStatus} onChange={handleStatusChange} saving={saving} />
+              {saveError && <span className="text-xs text-red-500">{saveError}</span>}
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
               {supplier.supplierId} · <span className="text-amber-500 font-semibold">★ {(supplier.rating ?? 0).toFixed(1)}</span> · <span className="text-slate-500">New Member</span>

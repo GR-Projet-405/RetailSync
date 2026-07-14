@@ -51,6 +51,24 @@ class SupplierService {
     return supplier;
   }
 
+  // ─── Update supplier status ───────────────────────────────────────────────
+  async updateStatus(id, status) {
+    const VALID = ['Active', 'Inactive', 'Pending'];
+    if (!VALID.includes(status)) {
+      throw Object.assign(new Error(`Invalid status: ${status}`), { statusCode: 400 });
+    }
+    // runValidators is intentionally omitted — Mongoose enum validators
+    // behave unreliably on findByIdAndUpdate in some versions.
+    // We validate manually above instead.
+    const supplier = await Supplier.findByIdAndUpdate(
+      id,
+      { $set: { status } },
+      { new: true }
+    ).select('-payment.accountNumber -payment.routingNumber');
+    if (!supplier) throw Object.assign(new Error('Supplier not found'), { statusCode: 404 });
+    return supplier;
+  }
+
   // ─── Delete supplier ──────────────────────────────────────────────────────
   async deleteSupplier(id) {
     const supplier = await Supplier.findByIdAndDelete(id);

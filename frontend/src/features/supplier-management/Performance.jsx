@@ -244,7 +244,24 @@ const Performance = () => {
       }
     };
     loadKpis();
-  }, []);
+  }, [quarter]);
+
+  const handleExport = () => {
+    if (!ranking || ranking.length === 0) return;
+    const headers = ['Rank', 'Supplier Name', 'Rating', 'Score'];
+    const rows = ranking.map(s => [s.rank, s.name, s.rating, s.score]);
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(',') + "\n" 
+      + rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join("\n");
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `performance_ranking_${quarter.replace(' ', '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const fmt = (v) => v ?? '—';
   const spendLabel = kpis?.totalSpendYTD
@@ -260,12 +277,21 @@ const Performance = () => {
           <p className="text-sm text-slate-500 mt-0.5">Analytics and KPI tracking across all registered suppliers</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2 rounded-xl transition-colors">
-            <Calendar className="w-4 h-4" />
-            {quarter}
-            <span className="text-slate-400">▾</span>
-          </button>
-          <button className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2 rounded-xl transition-colors">
+          <div className="relative inline-flex items-center">
+            <Calendar className="w-4 h-4 text-slate-500 absolute left-3 pointer-events-none" />
+            <select
+              value={quarter}
+              onChange={(e) => setQuarter(e.target.value)}
+              className="appearance-none pl-9 pr-8 py-2 text-sm font-medium text-slate-700 border border-slate-300 bg-white hover:bg-slate-50 rounded-xl transition-colors outline-none cursor-pointer"
+            >
+              <option value="Q1 2026">Q1 2026</option>
+              <option value="Q2 2026">Q2 2026</option>
+              <option value="Q3 2026">Q3 2026</option>
+              <option value="Q4 2026">Q4 2026</option>
+            </select>
+            <span className="absolute right-3 text-slate-400 pointer-events-none text-xs">▾</span>
+          </div>
+          <button onClick={handleExport} className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2 rounded-xl transition-colors">
             <Download className="w-4 h-4" /> Export
           </button>
         </div>

@@ -86,6 +86,7 @@ export default function SupplierPage() {
       case 'profile':
         return selectedSupplier ? (
           <SupplierProfile
+            key={selectedSupplier._id}
             supplier={selectedSupplier}
             onBack={() => setActiveTab('all')}
             onGoToContacts={() => setActiveTab('contacts')}
