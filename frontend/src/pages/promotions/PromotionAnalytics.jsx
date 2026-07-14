@@ -14,18 +14,17 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
 export default function PromotionAnalyticsPage() {
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, activeBranch } = useAuth();
   const isBranchManager = hasRole('BRANCH_MANAGER');
   const navigate = useNavigate();
 
   // Filter States
-  const [selectedBranch, setSelectedBranch] = useState('All Branches');
+  const selectedBranch = activeBranch || 'All Branches';
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [selectedDateRange, setSelectedDateRange] = useState('All Time');
   const [searchTerm, setSearchTerm] = useState('');
   
   // Dropdown Open States
-  const [isBranchOpen, setIsBranchOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isDateOpen, setIsDateOpen] = useState(false);
 
@@ -106,7 +105,8 @@ export default function PromotionAnalyticsPage() {
       // 2. Branch filter
       const matchesBranch = 
         selectedBranch === 'All Branches' || 
-        promo.branch === selectedBranch;
+        promo.branch === selectedBranch ||
+        promo.branch === 'All Branches';
 
       // 3. Status filter
       const matchesStatus = 
@@ -221,43 +221,6 @@ export default function PromotionAnalyticsPage() {
         description="Monitor campaign performance, coupon usage, revenue generation, and ROI across all promotions."
         actions={
           <div className="flex flex-wrap items-center gap-3">
-            {/* Branch Filter */}
-            <div className="relative">
-              <button
-                disabled={isBranchManager}
-                onClick={() => setIsBranchOpen(!isBranchOpen)}
-                className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl transition-all shadow-sm focus:outline-none ${
-                  isBranchManager ? 'opacity-75 cursor-not-allowed' : 'hover:bg-slate-50'
-                }`}
-              >
-                <MapPin size={14} className="text-slate-400" />
-                <span>{selectedBranch}</span>
-                {!isBranchManager && <ChevronDown size={14} className="text-slate-400" />}
-              </button>
-
-              {isBranchOpen && !isBranchManager && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setIsBranchOpen(false)} />
-                  <div className="absolute right-0 mt-1.5 w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 overflow-hidden text-xs font-semibold select-none">
-                    {branchOptions.map((opt) => (
-                      <button
-                        key={opt}
-                        onClick={() => {
-                          setSelectedBranch(opt);
-                          setIsBranchOpen(false);
-                          setCurrentPage(1);
-                        }}
-                        className={`w-full text-left px-3.5 py-2.5 hover:bg-slate-50 transition-colors ${
-                          selectedBranch === opt ? 'text-blue-600 font-bold bg-blue-50/20' : 'text-slate-600'
-                        }`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
 
             {/* Date Range Selector */}
             <div className="relative">

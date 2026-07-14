@@ -4,6 +4,7 @@ import { cn } from '../../utils/cn';
 import Button from '../../components/Button';
 import { useBranches } from '../../hooks/useBranches';
 import { useRoles } from '../../hooks/useRoles';
+
 import api from '../../services/api'; // Safe centralized Axios instance wrapper
 
 const STATUSES = [
@@ -164,6 +165,7 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
 
   // Sync initialData cleanly
   useEffect(() => {
+
     if (initialData) {
       setForm({
         firstName: '',
@@ -213,7 +215,6 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
       roleId: resolvedRoleId,
       branchId: resolvedBranchId
     };
-
     if (isEdit && !formCopy.password) delete formCopy.password;
     if (!formCopy.branchId) formCopy.branchId = '';
     if (!formCopy.phoneNumber) formCopy.phoneNumber = '';
@@ -230,6 +231,7 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
     } else if (form.profileImage) {
       payload.append('profileImage', form.profileImage);
     }
+
 
     onSubmit(payload);
   };
@@ -389,7 +391,23 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
                 </Select>
               </Field>
             </>
-          ) : null}
+          ) : (
+            <Field label="Role" required error={(touched.roleId || touched.role) && errors.roleId}>
+              <Select
+                icon={Shield}
+                value={form.roleId || form.role || ''}
+                onChange={set('roleId')}
+                error={(touched.roleId || touched.role) && errors.roleId}
+              >
+                <option value="">Select role...</option>
+                {roles.map((r) => (
+                  <option key={r._id} value={r._id}>
+                    {r.name.replace('_', ' ')}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
         </div>
 
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
