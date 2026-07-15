@@ -183,7 +183,7 @@ export default function ReturnsRefundsPage() {
           navigate(`/returns/status/${newReturnId}`);
         } else {
           toast.info('Redirecting to returns history...');
-          navigate('/returns-refunds-history');
+          navigate('/returns/history');
         }
       }
 

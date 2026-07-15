@@ -2,17 +2,18 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs'); 
 const ReturnsRefundsPage = require('./model');
 
-// Models
-const LocalTransaction = mongoose.models.LocalTransaction || mongoose.model('LocalTransaction', new mongoose.Schema({}, { strict: false }), 'transactions');
-const LocalCustomer = mongoose.models.LocalCustomer || mongoose.model('LocalCustomer', new mongoose.Schema({}, { strict: false }), 'customers');
-const LocalUser = mongoose.models.LocalUser || mongoose.model('LocalUser', new mongoose.Schema({}, { strict: false }), 'users');
-const LocalRole = mongoose.models.LocalRole || mongoose.model('LocalRole', new mongoose.Schema({}, { strict: false }), 'roles');
+// Canonical Models
+const Customer = mongoose.models.Customer || require('../customer-management/model');
+const { Transaction } = mongoose.models.Transaction ? { Transaction: mongoose.models.Transaction } : require('../payment-processing/model');
+const User = mongoose.models.User || require('../user-management/user.model');
+const Role = mongoose.models.Role || require('../role-management/role.model');
+
 
 class ReturnsRefundsPageService {
 
   async verifyReceipt(receiptId) {
     const cleanId = receiptId.trim().toUpperCase();
-    const transaction = await LocalTransaction.findOne({ receiptId: cleanId });
+    const transaction = await Transaction.findOne({ receiptId: cleanId });
 
     if (!transaction) {
       throw { statusCode: 404, message: 'Receipt ID not found in the local system.', isExpired: false };
@@ -90,7 +91,7 @@ class ReturnsRefundsPageService {
       }
     }
     const generatedReturnId = `RET-${String(newReturnIdNumber).padStart(4, '0')}`;
-    const transaction = await LocalTransaction.findOne({ receiptId: receiptId });
+    const transaction = await Transaction.findOne({ receiptId: receiptId });
 
     const newReturnRequest = new ReturnsRefundsPage({
       returnId: generatedReturnId,
@@ -107,7 +108,7 @@ class ReturnsRefundsPageService {
 
   async getReturnHistory() {
   const returns = await ReturnsRefundsPage.find()
-      .populate({ path: 'cashierId', model: LocalUser, select: 'firstName lastName' })
+      .populate({ path: 'cashierId', model: User, select: 'firstName lastName' })
       .sort({ createdAt: -1 })
       .lean();
   const history = [];
@@ -117,11 +118,11 @@ class ReturnsRefundsPageService {
       let cashierName = 'System / Unknown';
 
       if (ret.transactionRef) {
-        const trans = await LocalTransaction.findById(ret.transactionRef);
+        const trans = await Transaction.findById(ret.transactionRef);
         if (trans) {
           if (trans.get('customerId')) {
             try {
-              const cust = await LocalCustomer.findById(trans.get('customerId'));
+              const cust = await Customer.findById(trans.get('customerId'));
               if (cust) {
                 const fName = cust.firstName || cust.get('firstName') || '';
                 const lName = cust.lastName || cust.get('lastName') || '';
@@ -131,7 +132,7 @@ class ReturnsRefundsPageService {
           }
           if (trans.get('cashierId')) {
             try {
-              const user = await LocalUser.findById(trans.get('cashierId'));
+              const user = await User.findById(trans.get('cashierId'));
               if (user) cashierName = user.firstName || user.name || user.get('name') || 'System User';
             } catch (e) { }
           }
@@ -166,7 +167,7 @@ class ReturnsRefundsPageService {
 
     if (returnData.cashierId) {
       try {
-        const user = await LocalUser.findById(returnData.cashierId);
+        const user = await User.findById(returnData.cashierId);
         if (user) {
           const fName = user.firstName || user.get('firstName') || '';
           const lName = user.lastName || user.get('lastName') || '';
@@ -175,7 +176,7 @@ class ReturnsRefundsPageService {
           let roleName = 'Unknown Role';
           const roleId = user.roleId || user.get('roleId');
           if (roleId) {
-            const role = await LocalRole.findById(roleId);
+            const role = await Role.findById(roleId);
             if (role) roleName = role.name || role.get('name');
           }
 
@@ -192,7 +193,7 @@ class ReturnsRefundsPageService {
     }
 
     if (returnData.transactionRef) {
-      const trans = await LocalTransaction.findById(returnData.transactionRef);
+      const trans = await Transaction.findById(returnData.transactionRef);
       if (trans) {
         purchaseDate = trans.get('createdAt');
         originalPaymentMethod = trans.get('paymentMethod') || 'cash';
@@ -200,7 +201,7 @@ class ReturnsRefundsPageService {
 
         if (trans.get('customerId')) {
           try {
-            const cust = await LocalCustomer.findById(trans.get('customerId'));
+            const cust = await Customer.findById(trans.get('customerId'));
             if (cust) {
               const fName = cust.firstName || cust.get('firstName') || '';
               const lName = cust.lastName || cust.get('lastName') || '';
@@ -248,7 +249,7 @@ class ReturnsRefundsPageService {
       throw { statusCode: 400, message: 'Manager authorization credentials are required.' };
     }
 
-    const manager = await LocalUser.findOne({ email: managerEmail });
+    const manager = await User.findOne({ email: managerEmail });
     if (!manager) {
       throw { statusCode: 401, message: 'Invalid credentials! User not found.' };
     }
@@ -262,7 +263,7 @@ class ReturnsRefundsPageService {
       throw { statusCode: 403, message: 'Access Denied: No role assigned to this user.' };
     }
 
-    const role = await LocalRole.findById(manager.roleId);
+    const role = await Role.findById(manager.roleId);
     if (!role || role.name !== 'BRANCH_MANAGER') {
       throw { statusCode: 403, message: 'Access Denied: Only a Branch Manager can authorize this.' };
     }
@@ -271,9 +272,9 @@ class ReturnsRefundsPageService {
     if (!returnRequest) throw { statusCode: 404, message: 'Return request not found.' };
 
     if (pointsDeducted > 0 && returnRequest.transactionRef) {
-      const trans = await LocalTransaction.findById(returnRequest.transactionRef);
+      const trans = await Transaction.findById(returnRequest.transactionRef);
       if (trans && trans.get('customerId')) {
-        await LocalCustomer.findOneAndUpdate(
+        await Customer.findOneAndUpdate(
           { _id: trans.get('customerId') },
           { $inc: { loyaltyPoints: -pointsDeducted } }
         );
