@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { ShoppingCart, Eye, EyeOff, Loader2 } from 'lucide-react';
 
@@ -25,6 +25,8 @@ const LoginPage = () => {
     setIsSubmitting(true);
     const result = await login(email, password);
     setIsSubmitting(false);
+
+    console.log('Login result:', result);
 
     if (result.success) {
       navigate('/dashboard', { replace: true });
@@ -84,7 +86,7 @@ const LoginPage = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full appearance-none rounded-lg border border-slate-300 px-3 py-2.5 pr-10 placeholder-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm"
-                  placeholder="••••••••"
+                  placeholder="********"
                   disabled={isSubmitting}
                 />
                 <button
@@ -116,9 +118,9 @@ const LoginPage = () => {
               </div>
 
               <div className="text-sm">
-                <a href="#" className="font-medium text-blue-600 hover:text-blue-500 transition-colors">
+                <Link to="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500 transition-colors">
                   Forgot your password?
-                </a>
+                </Link>
               </div>
             </div>
 
@@ -140,12 +142,19 @@ const LoginPage = () => {
             </div>
           </form>
 
-          <div className="mt-8 text-center text-xs text-slate-500">
-            &copy; 2026 RetailSync Inc. All rights reserved.
+            <div className="mt-6 text-center text-sm text-slate-600">
+              Do not have an account?
+              <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
+                Register here
+              </Link>
+            </div>
+
+            <div className="mt-4 text-center text-xs text-slate-500">
+              &copy; 2026 RetailSync Inc. All rights reserved.
+            </div>
           </div>
         </div>
       </div>
-    </div>
   );
 };
 

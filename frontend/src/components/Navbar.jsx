@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Menu, Bell, LogOut, ShieldAlert } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Menu, Bell, LogOut, ShieldAlert, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import { ROLES, ROLE_LABELS } from '../config/roles';
 import BranchSelector from './BranchSelector';
 
-export const Navbar = () => {
+export const Navbar = ({ hideSidebarToggle = false }) => {
   const { user, logout } = useAuth();
   const { toggleSidebar } = useSidebar();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -13,17 +14,26 @@ export const Navbar = () => {
 
   return (
     <header
-      className="h-16 border-b border-blue-700/30 flex items-center justify-between px-6 z-20 shrink-0 sticky top-0"
+      className="h-16 border-b border-blue-700/30 flex items-center justify-between px-6 z-20 shrink-0 sticky top-0 print:hidden"
       style={{ background: 'linear-gradient(90deg, #2563EB, #3B82F6, #60A5FA)' }}
     >
       {/* Left — menu toggle + branch selector */}
       <div className="flex items-center gap-4">
-        <button
-          onClick={toggleSidebar}
-          className="p-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors duration-150"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+        {hideSidebarToggle ? (
+          <Link
+            to="/dashboard"
+            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors duration-150"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+        ) : (
+          <button
+            onClick={toggleSidebar}
+            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors duration-150"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
         <BranchSelector />
       </div>
 
