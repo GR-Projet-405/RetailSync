@@ -1,38 +1,18 @@
-import { useEffect, useState } from "react";
-
+import { useState } from "react";
 import Breadcrumb from "../components/Breadcrumb";
 import PageHeader from "../components/PageHeader";
-
 import ApprovalBanner from "../components/ai-reordering/ApprovalBanner";
 import ApprovalQueue from "../components/ai-reordering/ApprovalQueue";
 import RecommendationDetailsModal from "../components/ai-reordering/RecommendationDetailsModal";
 
-import { getRecommendations } from "../services/aiReorderingService";
+import { useAIRecommendations } from "../hooks/useAIReordering";
 
 export default function AIApprovalWorkflowPage() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-
   const [selectedRecommendation, setSelectedRecommendation] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  useEffect(() => {
-    loadRecommendations();
-  }, []);
-
-  const loadRecommendations = async () => {
-    try {
-      const response = await getRecommendations();
-
-      console.log("Approval Items:", response.data.recommendations);
-
-      setItems(response.data.recommendations);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: response, isLoading: loading } = useAIRecommendations();
+  const items = response?.data?.recommendations || [];
 
   const handleViewDetails = (recommendation) => {
     setSelectedRecommendation(recommendation);
