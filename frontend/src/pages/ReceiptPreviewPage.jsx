@@ -63,6 +63,7 @@ export default function ReceiptPreviewPage() {
       storeLogo: s.storeLogo || '🛒',
       couponCode: s.couponCode || null,
       couponDiscountAmount: s.couponDiscountAmount || 0,
+      notes: s.notes || '',
     };
   });
 
@@ -71,7 +72,8 @@ export default function ReceiptPreviewPage() {
     paymentMethod, amountReceived, changeDue, customer,
     invoiceNumber, date, time, cashierName, counterNumber,
     storeName, storeAddress, storePhone, storeEmail, storeBranch,
-    taxNumber, receiptFooter, storeLogo, couponCode, couponDiscountAmount
+    taxNumber, receiptFooter, storeLogo, couponCode, couponDiscountAmount,
+    notes
   } = meta;
 
   const finalGrandTotal = Math.max(0, total - couponDiscountAmount);
@@ -111,6 +113,7 @@ export default function ReceiptPreviewPage() {
         cart, subtotal,
         discounts: itemSavings + orderDiscountAmount + couponDiscountAmount,
         tax, total: finalGrandTotal, customer,
+        notes,
       });
 
       const result = data?.data || {};
@@ -171,6 +174,7 @@ ${couponDiscountAmount > 0 ? `<div class="row"><span>Coupon (${couponCode})</spa
 <div class="dashed"></div>
 <div class="row bold" style="font-size:14px"><span>TOTAL</span><span>${currency.format(finalGrandTotal)}</span></div>
 <div class="dashed"></div>
+${notes ? `<div style="font-size:10px;margin-top:4px;font-style:italic">Note: ${notes}</div><div class="dashed"></div>` : ''}
 <div class="center" style="font-size:10px;margin-top:6px">${receiptFooter}</div>
 </body></html>`;
 
@@ -329,6 +333,13 @@ ${couponDiscountAmount > 0 ? `<div class="row"><span>Coupon (${couponCode})</spa
             <span>Total</span><span>{currency.format(finalGrandTotal)}</span>
           </div>
         </div>
+
+        {notes && (
+          <div className="bg-amber-50/50 border border-amber-200/60 rounded-xl p-4">
+            <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-1">Notes / Instructions</p>
+            <p className="text-sm text-slate-700 italic">{notes}</p>
+          </div>
+        )}
 
         {sendPanel}
       </div>
@@ -573,6 +584,14 @@ ${couponDiscountAmount > 0 ? `<div class="row"><span>Coupon (${couponCode})</spa
               </div>
             </div>
           </div>
+
+          {/* Notes / Special Instructions */}
+          {notes && (
+            <div className="bg-amber-50/50 border border-amber-200/60 rounded-xl p-4 print:p-3 print:border print:border-amber-200">
+              <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-1">Notes / Instructions</p>
+              <p className="text-sm text-slate-700 italic print:text-xs">{notes}</p>
+            </div>
+          )}
 
           {/* Footer */}
           <div className="text-center pt-4 border-t border-slate-100 print:pt-3 print:border-t print:border-slate-200">
