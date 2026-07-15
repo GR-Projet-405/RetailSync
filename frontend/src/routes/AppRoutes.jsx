@@ -1,23 +1,25 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { ProtectedRoute } from './ProtectedRoute';
 import { ROLES } from '../config/roles';
 
 // Layouts
 import MainLayout from '../layouts/MainLayout';
-import POSLayout from '../layouts/POSLayout';
 
 // Page Imports
 import DashboardPage from '../pages/DashboardPage';
 import AuthPage from '../pages/AuthPage';
 import VerifyOTPPage from '../features/auth/VerifyOTPPage';
 import LoginPage from '../features/auth/LoginPage';
-import RegisterPage from '../features/auth/RegisterPage'; 
+import RegisterPage from '../features/auth/RegisterPage';
 import SelectRolePage from '../features/auth/SelectRolePage';
 import ForgotPasswordPage from '../features/auth/ForgotPasswordPage';
 import ResetPasswordPage from '../features/auth/ResetPasswordPage';
 import NotificationsPage from '../pages/NotificationsPage';
 import ProfileSettingsPage from '../pages/ProfileSettingsPage';
-import BranchPage from '../pages/BranchPage';
+import BranchListPage from '../pages/admin/BranchListPage';
+import BranchDetailsPage from '../pages/admin/BranchDetailsPage';
+import BranchDashboard from '../pages/manager/BranchDashboard';
 import EmployeePage from '../pages/EmployeePage';
 import CustomerPage from '../pages/CustomerPage';
 import SupplierPage from '../pages/SupplierPage';
@@ -34,6 +36,8 @@ import PurchaseOrderPage from '../pages/PurchaseOrderPage';
 import GoodsReceivingPage from '../pages/GoodsReceivingPage';
 import StockTransferPage from '../pages/StockTransferPage';
 import POSBillingPage from '../pages/POSBillingPage';
+import POSCheckoutPage from '../pages/POSCheckoutPage';
+import ReceiptPreviewPage from '../pages/ReceiptPreviewPage';
 import PaymentProcessingPage from '../pages/PaymentProcessingPage';
 import SalesHistoryPage from '../pages/SalesHistoryPage';
 import SalesDashboardPage from '../pages/SalesDashboardPage';
@@ -42,24 +46,67 @@ import SalesDetails from '../pages/sales/SalesDetails';
 import FiltersSearch from '../pages/sales/FiltersSearch';
 import ExportReports from '../pages/sales/ExportReports';
 import ReturnsRefundsPage from '../pages/ReturnsRefundsPage';
+import ReturnStatusPage from '../pages/ReturnStatusPage';
+import ReturnHistoryPage from '../pages/ReturnHistoryPage';
+import ReviewReturnRequestPage from '../pages/ReviewReturnRequestPage';
+import ReturnApprovalsPage from '../pages/ReturnApprovalsPage';
+import ProcessRefundPage from '../pages/ProcessRefundPage';
+import ReturnSlipPage from '../pages/ReturnSlipPage'; 
 import PromotionsDiscountsPage from '../pages/promotions/PromotionsDashboard';
 import DiscountRulesPage from '../pages/promotions/DiscountRules';
 import CouponManagementPage from '../pages/promotions/CouponManagement';
 import PromotionAnalyticsPage from '../pages/promotions/PromotionAnalytics';
-import ReportsPage from '../pages/ReportsPage';
+import ReportsPage from '../pages/reports/ReportsPage';
+import BranchManagerReportsPage from '../pages/reports/BranchManagerReportsPage';
+import ReportConfigPage from '../pages/reports/ReportConfigPage';
+import ReportViewPage from '../pages/reports/ReportViewPage';
 import BusinessAnalyticsPage from '../pages/BusinessAnalyticsPage';
 import AIForecastingPage from '../pages/AIForecastingPage';
 import AIReorderingPage from '../pages/AIReorderingPage';
 import AIAssistantPage from '../pages/AIAssistantPage';
+import AIAlertsPage from '../pages/AIAlertsPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
+import SystemEventsPage from '../features/system-events/SystemEventsPage';
+import AuditDashboardPage from '../pages/AuditDashboardPage';
+import ActivityLogsPage from '../pages/ActivityLogsPage';
 import HelpSupportPage from '../pages/HelpSupportPage';
+import HelpCenterDashboard from '../pages/help-center/HelpCenterDashboard';
+import GoodsReceiptForm from '../features/Goods-receiving/GoodsReceiptForm';
+import ReceivingItemsHistory from '../features/Goods-receiving/ReceivedItemsHistory';
+import VerificationScreen from '../features/Goods-receiving/VerificationScreen';
+import PaymentSuccessPage from '../pages/PaymentSuccessPage';
+import TransactionDetailsPage from '../pages/TransactionDetailsPage';
+import ReceiptPage from '../pages/ReceiptPage';
+import PaymentHistoryPage from '../pages/PaymentHistoryPage';
+import SuggestedPurchaseListPage from '../pages/SuggestedPurchaseListPage';
+import AIApprovalWorkflowPage from "../pages/AIApprovalWorkflowPage";
+import ReorderHistoryPage from '../pages/ReorderHistoryPage';
+import InventoryPredictionPage from '../pages/InventoryPredictionPage';
+import ContactSupportPage from '../pages/ContactSupportPage';
+import CreatePurchaseOrderPage from "../pages/CreatePurchaseOrderPage";
+import ApprovalWorkflowPage from "../pages/ApprovalWorkflowPage";
+import PurchaseOrderTrackingPage from "../pages/PurchaseOrderTrackingPage";
+import SupplierOrderDetailsPage from '../pages/SupplierOrderDetailsPage';
+import FAQPage from '../pages/FaqPage';
+import UserActionsPage from '../pages/UserActionsPage';
 import KnowledgeBasePage from '../pages/KnowledgeBasePage';
 import AddCustomerPage from '../pages/AddCustomerPage';
 import CustomerProfilePage from '../pages/CustomerProfilePage';
 import CustomerHistoryPage from '../pages/CustomerHistoryPage';
 import CustomerSearchPage from '../pages/CustomerSearchPage';
+import ManagerDashboard from '../pages/ManagerDashboard';
 
 
+
+// Renders the correct reports dashboard based on the logged-in user's role
+// user.roleId.name holds the role string (e.g. "BRANCH_MANAGER")
+function ReportsRouter() {
+  const { user } = useAuth();
+  if (user?.roleId?.name === ROLES.BRANCH_MANAGER) {
+    return <BranchManagerReportsPage />;
+  }
+  return <ReportsPage />;
+}
 
 // Convenience arrays
 const ALL_ROLES = Object.values(ROLES);
@@ -70,28 +117,32 @@ const SALES_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES
 const POS_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER];
 
 export const AppRoutes = () => {
+  const { user } = useAuth();
+
   return (
     <Routes>
-      {/* Auth Routes */}
+      {/* Auth Routes — public, no layout wrapper */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/verify-otp" element={<VerifyOTPPage />} />
-      <Route path="/select-role" element={<SelectRolePage />} /> 
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
-      {/* POS Billing Route - Full-screen layout */}
+      <Route path="/verify-otp" element={<VerifyOTPPage />} />
+      <Route path="/select-role" element={<SelectRolePage />} />
+
       <Route element={
         <ProtectedRoute allowedRoles={POS_ROLES}>
-          <POSLayout />
+          <MainLayout />
         </ProtectedRoute>
       }>
         <Route path="/pos-billing" element={<POSBillingPage />} />
+        <Route path="/pos-checkout" element={<POSCheckoutPage />} />
+        <Route path="/pos-receipt" element={<ReceiptPreviewPage />} />
       </Route>
 
       {/* Main Dashboard Panel Layout */}
       <Route element={<MainLayout />}>
-        {/* Redirect empty paths to dashboard */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        {/* Redirect empty paths to login if unauthenticated, otherwise dashboard */}
+        <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
 
         {/* Dashboard */}
         <Route path="/dashboard" element={
@@ -107,10 +158,31 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
+        {/* Help Center Dashboard */}
+        <Route path="/help-center/dashboard" element={
+          <ProtectedRoute allowedRoles={ALL_ROLES}>
+            <HelpCenterDashboard />
+          </ProtectedRoute>
+        } />
+
         {/* Help & Support */}
         <Route path="/help-support" element={
           <ProtectedRoute allowedRoles={ALL_ROLES}>
             <HelpSupportPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Contact Support */}
+        <Route path="/help-support/contact" element={
+          <ProtectedRoute allowedRoles={ALL_ROLES}>
+            <ContactSupportPage />
+          </ProtectedRoute>
+        } />
+
+        {/* FAQ Page */}
+        <Route path="/faq" element={
+          <ProtectedRoute allowedRoles={ALL_ROLES}>
+            <FAQPage />
           </ProtectedRoute>
         } />
 
@@ -120,7 +192,6 @@ export const AppRoutes = () => {
             <KnowledgeBasePage />
           </ProtectedRoute>
         } />
-
         {/* Profile & Settings */}
         <Route path="/profile-settings" element={
           <ProtectedRoute allowedRoles={ALL_ROLES}>
@@ -142,7 +213,33 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
-        {/* User & Role Management */}
+        {/* System Events */}
+        <Route path="/system-events" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
+            <SystemEventsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* User Actions */}
+        <Route path="/user-actions" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
+            <UserActionsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Audit Dashboard */}
+        <Route path="/audit-dashboard" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
+            <AuditDashboardPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Activity Logs */}
+        <Route path="/activity-logs" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
+            <ActivityLogsPage />
+          </ProtectedRoute>
+        } />
         <Route path="/users-roles" element={
           <ProtectedRoute allowedRoles={ADMIN_ROLES}>
             <UserRolePage />
@@ -156,10 +253,23 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
-        {/* Branch Management */}
-        <Route path="/branches" element={
+        {/* Branch Management (Admin) */}
+        <Route path="/admin/branches" element={
           <ProtectedRoute allowedRoles={ADMIN_ROLES}>
-            <BranchPage />
+            <BranchListPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/admin/branches/:id" element={
+          <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+            <BranchDetailsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Branch Dashboard (Manager) */}
+        <Route path="/branch/dashboard" element={
+          <ProtectedRoute allowedRoles={[ROLES.BRANCH_MANAGER, ROLES.SUPER_ADMIN]}>
+            <BranchDashboard />
           </ProtectedRoute>
         } />
 
@@ -228,8 +338,44 @@ export const AppRoutes = () => {
 
         {/* Purchase Orders */}
         <Route path="/purchase-orders" element={
-          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]}>
             <PurchaseOrderPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Create Purchase Order */}
+        <Route path="/purchase-orders/create" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]}>
+            <CreatePurchaseOrderPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Edit an existing DRAFT purchase order — reuses the wizard,
+            opens straight on Step 3 (Review & Submit) */}
+        <Route path="/purchase-orders/:id/edit" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]}>
+            <CreatePurchaseOrderPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Purchase Order Tracking */}
+        <Route path="/purchase-orders/:id/tracking" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]}>
+            <PurchaseOrderTrackingPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Supplier Order Details */}
+        <Route path="/purchase-orders/:id" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]}>
+            <SupplierOrderDetailsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Approval Workflow */}
+        <Route path="/purchase-orders/:id/approval" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]}>
+            <ApprovalWorkflowPage />
           </ProtectedRoute>
         } />
 
@@ -237,6 +383,25 @@ export const AppRoutes = () => {
         <Route path="/goods-receiving" element={
           <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
             <GoodsReceivingPage />
+          </ProtectedRoute>
+        } />
+        {/* Goods Receipt Form */}
+        <Route path="/GoodsReceiptForm" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <GoodsReceiptForm />
+          </ProtectedRoute>
+        } />
+        {/* Goods Received Items History */}
+        <Route path="/ReceivingItemsHistory" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <ReceivingItemsHistory />
+          </ProtectedRoute>
+        } />
+
+        {/* Verification Screen */}
+        <Route path="/goods-receiving/verify/:id" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <VerificationScreen />
           </ProtectedRoute>
         } />
 
@@ -249,10 +414,33 @@ export const AppRoutes = () => {
 
         {/* Payment Processing */}
         <Route path="/payment-processing" element={
-          <ProtectedRoute allowedRoles={SALES_ROLES}>
-            <PaymentProcessingPage />
-          </ProtectedRoute>
+
+          <PaymentProcessingPage />
+
         } />
+
+        {/* Payment Success */}
+        <Route path="/payment-success" element={
+          <PaymentSuccessPage />
+        } />
+
+        {/* Transaction Details */}
+        <Route path="/transaction-details" element={
+          <TransactionDetailsPage />
+        } />
+
+        {/* Receipt */}
+        <Route path="/receipt" element={
+          <ReceiptPage />
+        } />
+
+        {/* Payment History */}
+        <Route path="/payment-history" element={
+          //<ProtectedRoute allowedRoles={SALES_ROLES}>
+          <PaymentHistoryPage />
+          //</ProtectedRoute>
+        } />
+
 
         {/* Sales History Module */}
         <Route
@@ -274,9 +462,50 @@ export const AppRoutes = () => {
 
         {/* Returns & Refunds */}
         <Route path="/returns-refunds" element={
-          <ProtectedRoute allowedRoles={SALES_ROLES}>
+          //<ProtectedRoute allowedRoles={SALES_ROLES}>
             <ReturnsRefundsPage />
-          </ProtectedRoute>
+          //</ProtectedRoute>
+        } />
+
+        {/* Track Return Status */}
+        <Route path="/returns/status/:returnId" element={
+          //<ProtectedRoute allowedRoles={SALES_ROLES}>
+            <ReturnStatusPage />
+          //</ProtectedRoute>
+        } />
+
+        {/* Process Refund */}
+        <Route path="/returns/process-refund/:returnId" element={
+          //<ProtectedRoute allowedRoles={SALES_ROLES}>
+            <ProcessRefundPage />
+          //</ProtectedRoute>
+        } />
+
+        {/* Return History */}
+        <Route path="/returns/history" element={
+          //<ProtectedRoute allowedRoles={SALES_ROLES}>
+            <ReturnHistoryPage />
+          //</ProtectedRoute>
+        } />
+
+        {/* Manager's Pending Approvals List */}
+        <Route path="/returns/approvals" element={
+          //<ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]}>
+            <ReturnApprovalsPage />
+          //</ProtectedRoute>
+        } />
+
+        {/* Manager's Detailed Review Page */}
+        <Route path="/returns/approval/:returnId" element={
+          //<ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER]}>
+            <ReviewReturnRequestPage />
+          //</ProtectedRoute>
+        } />
+
+        <Route path="/returns/slip/:returnId" element={
+          //<ProtectedRoute allowedRoles={SALES_ROLES}>
+            <ReturnSlipPage />
+          //</ProtectedRoute>
         } />
 
         {/* Promotions & Discounts */}
@@ -334,10 +563,24 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
-        {/* Reports */}
+        {/* Reports — Admin sees ReportsPage, Branch Manager sees BranchManagerReportsPage */}
         <Route path="/reports" element={
           <ProtectedRoute allowedRoles={[...MANAGEMENT_ROLES, ROLES.AUDITOR]}>
-            <ReportsPage />
+            <ReportsRouter />
+          </ProtectedRoute>
+        } />
+
+        {/* Report Configuration */}
+        <Route path="/reports/configure/:reportType" element={
+          <ProtectedRoute allowedRoles={[...MANAGEMENT_ROLES, ROLES.AUDITOR]}>
+            <ReportConfigPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Report View */}
+        <Route path="/reports/view/:reportType" element={
+          <ProtectedRoute allowedRoles={[...MANAGEMENT_ROLES, ROLES.AUDITOR]}>
+            <ReportViewPage />
           </ProtectedRoute>
         } />
 
@@ -356,11 +599,52 @@ export const AppRoutes = () => {
         } />
 
         {/* AI Reordering */}
-        <Route path="/ai-reordering" element={
-          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
-            <AIReorderingPage />
-          </ProtectedRoute>
-        } />
+        <Route
+          path="/ai-reordering/recommendation"
+          element={
+            <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+              <AIReorderingPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/ai-reordering/purchase-list"
+          element={
+            <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+              <SuggestedPurchaseListPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/ai-reordering/approval-workflow"
+          element={
+            <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+              <AIApprovalWorkflowPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/ai-reordering/history"
+          element={
+            <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+              <ReorderHistoryPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/ai-reordering/inventory-prediction"
+          element={
+            <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+              <InventoryPredictionPage />
+            </ProtectedRoute>
+          }
+        />
+
+
 
         {/* AI Assistant */}
         <Route path="/ai-assistant" element={
@@ -368,10 +652,17 @@ export const AppRoutes = () => {
             <AIAssistantPage />
           </ProtectedRoute>
         } />
+
+        {/* AI Anomalies & Alerts */}
+        <Route path="/ai-alerts" element={
+          <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
+            <AIAlertsPage />
+          </ProtectedRoute>
+        } />
       </Route>
 
-      {/* Fallback to Dashboard */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      {/* Fallback to login if unauthenticated, otherwise dashboard */}
+      <Route path="*" element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
     </Routes>
   );
 };

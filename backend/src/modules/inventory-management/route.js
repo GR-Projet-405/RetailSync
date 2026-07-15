@@ -1,14 +1,8 @@
+const controller = require('./controller');
 const express = require('express');
 const router = express.Router();
-const controller = require('./controller');
-const { verifyToken, hasRole } = require('../../middleware/auth.middleware');
-const {
-  reorderLevelSchema,
-  recordMovementSchema,
-  createAdjustmentSchema,
-  rejectAdjustmentSchema,
-  validate,
-} = require('./validation');
+const { verifyToken, hasRole, validate } = require('../../middleware/auth.middleware');
+//const reorderLevelSchema = require('./validation/reorderLevel.validation');
 
 // Roles allowed to access inventory module
 const INVENTORY_ROLES = ['SUPER_ADMIN', 'ADMIN', 'BRANCH_MANAGER', 'INVENTORY_MANAGER'];
@@ -31,7 +25,7 @@ router.get('/stock-levels',                hasRole(...INVENTORY_ROLES), controll
 router.get('/stock-levels/:id',            hasRole(...INVENTORY_ROLES), controller.getStockLevelById);
 router.patch('/stock-levels/:id/reorder-level',
   hasRole(...INVENTORY_ROLES),
-  validate(reorderLevelSchema),
+  //validate(reorderLevelSchema),
   controller.updateReorderLevel
 );
 
@@ -41,7 +35,7 @@ router.get('/stock-movements/kpis',        hasRole(...INVENTORY_ROLES), controll
 router.get('/stock-movements',             hasRole(...INVENTORY_ROLES), controller.getMovements);
 router.post('/stock-movements',
   hasRole(...INVENTORY_ROLES),
-  validate(recordMovementSchema),
+  //validate(recordMovementSchema),
   controller.recordMovement
 );
 
@@ -49,7 +43,7 @@ router.post('/stock-movements',
 router.get('/stock-adjustments',           hasRole(...INVENTORY_ROLES), controller.getAdjustments);
 router.post('/stock-adjustments',
   hasRole(...INVENTORY_ROLES),
-  validate(createAdjustmentSchema),
+  //validate(createAdjustmentSchema),
   controller.createAdjustment
 );
 router.patch('/stock-adjustments/:id/approve',
@@ -58,7 +52,7 @@ router.patch('/stock-adjustments/:id/approve',
 );
 router.patch('/stock-adjustments/:id/reject',
   hasRole(...APPROVER_ROLES),
-  validate(rejectAdjustmentSchema),
+  //validate(rejectAdjustmentSchema),
   controller.rejectAdjustment
 );
 
@@ -66,5 +60,25 @@ router.patch('/stock-adjustments/:id/reject',
 // /stats before /:id to avoid collision
 router.get('/low-stock-alerts/stats',      hasRole(...INVENTORY_ROLES), controller.getLowStockStats);
 router.get('/low-stock-alerts',            hasRole(...INVENTORY_ROLES), controller.getLowStockAlerts);
+
+module.exports = router;
+
+// ==========================================
+// NEW ROUTE: GET Inventory Stats for Dashboard
+// ==========================================
+router.get('/stats', (req, res) => {
+  // NOTE: In the future, you will use Mongoose to count real database documents
+  // Example: const totalProducts = await Product.countDocuments();
+  
+  const inventoryStats = {
+    totalProducts: 100,
+    totalStockUnits: 2456,
+    lowStockItems: 20,
+    returnItems: 15,
+    pendingOrders: 10
+  };
+
+  res.status(200).json(inventoryStats);
+});
 
 module.exports = router;

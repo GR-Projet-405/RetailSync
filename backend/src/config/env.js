@@ -1,5 +1,13 @@
 const dotenv = require('dotenv');
 const path = require('path');
+const dns = require('dns');
+
+// Configure DNS fallback/resolution for MongoDB SRV records (fixes querySrv ECONNREFUSED in local/restricted environments)
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (err) {
+  console.warn('Warning: Could not set DNS servers, default resolver will be used.', err.message);
+}
 
 // Load environment variables from .env file
 dotenv.config({ path: path.join(__dirname, '../../.env') });
@@ -12,4 +20,7 @@ module.exports = {
 
   EMAIL_USER: process.env.EMAIL_USER,
   EMAIL_PASS: process.env.EMAIL_PASS,
+  EMAIL_HOST: process.env.EMAIL_HOST,
+  EMAIL_PORT: process.env.EMAIL_PORT,
+  EMAIL_SECURE: process.env.EMAIL_SECURE,
 };

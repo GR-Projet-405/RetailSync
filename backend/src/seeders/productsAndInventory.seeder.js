@@ -1,7 +1,12 @@
 const User = require('../modules/user-management/user.model');
+require('../modules/role-management/role.model');
+const Category = require('../modules/category-management/model');
+require('../modules/supplier-management/model');
 const Branch = require('../modules/branch-management/branch.model');
+const Warehouse = require('../modules/warehouse-management/model');
 const Product = require('../modules/product-management/model');
 const Inventory = require('../modules/inventory-management/model');
+const InventoryItem = require('../modules/inventory-management/inventoryItem.model');
 const StockTransfer = require('../modules/stock-transfers/model');
 
 const seedProductsAndInventory = async () => {
@@ -33,61 +38,174 @@ const seedProductsAndInventory = async () => {
       { name: 'Retail 14', code: 'R-014', location: { city: 'Metropolis', country: 'USA' }, status: 'ACTIVE' },
     ];
 
+    // Clear existing warehouses and inventory items
+    console.log('Clearing old warehouses and inventory items...');
+    await Warehouse.deleteMany({});
+    await InventoryItem.deleteMany({});
+
     const branchMap = {};
+    const warehouseMap = {};
     for (const bData of branchesToSeed) {
-      let branch = await Branch.findOne({ name: bData.name });
+      let branch = await Branch.findOne({ branchName: bData.name });
       if (!branch) {
-        branch = await Branch.create(bData);
+        branch = await Branch.create({
+          branchName: bData.name,
+          branchCode: bData.code,
+          address: {
+            line1: 'No. 1, Main Street',
+            city: bData.location?.city || 'Metropolis',
+            district: 'Western'
+          },
+          phone: '+94 77 123 4567',
+          openingDate: new Date('2020-01-01'),
+          status: bData.status || 'ACTIVE'
+        });
         console.log(`Created branch: ${bData.name}`);
       }
       branchMap[bData.name] = branch._id;
+
+      // Seed corresponding Warehouse for each branch
+      const warehouse = await Warehouse.create({
+        name: bData.name,
+        code: bData.code,
+        branchId: branch._id,
+        status: 'ACTIVE',
+        location: {
+          address: 'No. 1, Main Street',
+          city: bData.location?.city || 'Metropolis',
+          country: 'Sri Lanka'
+        }
+      });
+      console.log(`Created warehouse mapping: ${bData.name} (${bData.code})`);
+      warehouseMap[bData.name] = warehouse._id;
     }
 
+    // Get categories to map string name to ObjectId
+    const categoriesList = await Category.find({});
+    const categoryMap = {};
+    for (const cat of categoriesList) {
+      categoryMap[cat.name] = cat._id;
+    }
+
+    // Clear existing products and inventory to make seed clean
+    console.log('Clearing old products and legacy inventory records...');
+    await Product.deleteMany({});
+    await Inventory.deleteMany({});
+
     const productsToSeed = [
-      { sku: 'SKU-0001', name: 'Wireless Mouse', price: 29.99, costPrice: 15.00, category: 'Accessories', status: 'ACTIVE' },
-      { sku: 'SKU-0002', name: 'Mechanical Keyboard', price: 79.99, costPrice: 40.00, category: 'Accessories', status: 'ACTIVE' },
-      { sku: 'SKU-0003', name: 'Gaming Monitor', price: 249.99, costPrice: 150.00, category: 'Electronics', status: 'ACTIVE' },
-      { sku: 'SKU-0004', name: 'USB-C Adapter', price: 19.99, costPrice: 8.00, category: 'Accessories', status: 'ACTIVE' },
-      { sku: 'SKU-0005', name: 'Bluetooth Speaker', price: 49.99, costPrice: 25.00, category: 'Electronics', status: 'ACTIVE' },
+      { sku: 'SKU-0001', name: 'Wireless Mouse', price: 2990, costPrice: 1500, category: 'Accessories', status: 'ACTIVE', barcode: 'BAR-0001' },
+      { sku: 'SKU-0002', name: 'Mechanical Keyboard', price: 7990, costPrice: 4000, category: 'Accessories', status: 'ACTIVE', barcode: 'BAR-0002' },
+      { sku: 'SKU-0003', name: 'Gaming Monitor', price: 24990, costPrice: 15000, category: 'Electronics', status: 'ACTIVE', barcode: 'BAR-0003' },
+      { sku: 'SKU-0004', name: 'USB-C Adapter', price: 1990, costPrice: 800, category: 'Accessories', status: 'ACTIVE', barcode: 'BAR-0004' },
+      { sku: 'SKU-0005', name: 'Bluetooth Speaker', price: 4990, costPrice: 2500, category: 'Electronics', status: 'ACTIVE', barcode: 'BAR-0005' },
+      
+      { sku: 'AP-MDS-001', name: 'Slim Fit Denim Shirt', price: 2450, costPrice: 1200, category: "Men's Wear", status: 'ACTIVE', barcode: 'BAR-0006' },
+      { sku: 'AP-WFD-002', name: 'Floral Summer Dress', price: 3800, costPrice: 1800, category: "Women's Wear", status: 'ACTIVE', barcode: 'BAR-0007' },
+      { sku: 'AP-KCP-003', name: 'Kids Cotton Pajama Set', price: 1500, costPrice: 700, category: "Kids Wear", status: 'ACTIVE', barcode: 'BAR-0008' },
+      
+      { sku: 'EL-ASX-001', name: 'AeroPhone X10', price: 95000, costPrice: 75000, category: 'Smartphones', status: 'ACTIVE', barcode: 'BAR-0009' },
+      { sku: 'EL-LZP-002', name: 'ZenBook Pro 14', price: 185000, costPrice: 150000, category: 'Laptops', status: 'ACTIVE', barcode: 'BAR-0010' },
+      { sku: 'EL-ABP-003', name: 'AeroBuds Pro', price: 8500, costPrice: 4000, category: 'Electronic Accessories', status: 'ACTIVE', barcode: 'BAR-0011' },
+      
+      { sku: 'FW-CCS-001', name: 'Classic Canvas Sneakers', price: 4200, costPrice: 2000, category: 'Casual Shoes', status: 'ACTIVE', barcode: 'BAR-0012' },
+      { sku: 'FW-OLS-002', name: 'Oxford Leather Shoes', price: 8900, costPrice: 4500, category: 'Formal Shoes', status: 'ACTIVE', barcode: 'BAR-0013' },
+      { sku: 'FW-ARV-003', name: 'AeroRunner V2', price: 12500, costPrice: 6000, category: 'Sports Shoes', status: 'ACTIVE', barcode: 'BAR-0014' },
+      
+      { sku: 'SC-HAC-001', name: 'Hydrating Aloe Cream', price: 1800, costPrice: 900, category: 'Moisturizers', status: 'ACTIVE', barcode: 'BAR-0015' },
+      { sku: 'SC-UVS-002', name: 'UV Shield SPF 50', price: 2200, costPrice: 1100, category: 'Sunscreen', status: 'ACTIVE', barcode: 'BAR-0016' },
+      
+      { sku: 'EW-CAS-001', name: 'Classic Aviator Sunglasses', price: 3500, costPrice: 1500, category: 'Sunglasses', status: 'ACTIVE', barcode: 'BAR-0017' },
+      { sku: 'EW-ABF-002', name: 'Anti-Blue Light Frames', price: 4800, costPrice: 2000, category: 'Prescription Glasses', status: 'ACTIVE', barcode: 'BAR-0018' },
     ];
 
     const productMap = {};
     for (const pData of productsToSeed) {
-      let product = await Product.findOne({ sku: pData.sku });
-      if (!product) {
-        product = await Product.create(pData);
-        console.log(`Created product: ${pData.sku} - ${pData.name}`);
-      }
+      const product = await Product.create({
+        sku: pData.sku,
+        name: pData.name,
+        description: pData.name,
+        category: categoryMap[pData.category] || categoriesList[0]?._id,
+        pricing: {
+          sellingPrice: pData.price,
+          costPrice: pData.costPrice || 0
+        },
+        branch: branchMap['Central WH'],
+        status: pData.status || 'ACTIVE',
+        barcode: pData.barcode || null,
+        createdBy: admin._id
+      });
+      console.log(`Created product: ${pData.sku} - ${pData.name}`);
       productMap[pData.sku] = product._id;
     }
 
     // Format: { [branchName]: { [sku]: quantity } }
     const inventoryToSeed = {
-      'Central WH': { 'SKU-0001': 15, 'SKU-0002': 10, 'SKU-0003': 8, 'SKU-0004': 30, 'SKU-0005': 45 },
-      'West WH': { 'SKU-0001': 25, 'SKU-0002': 18, 'SKU-0003': 12, 'SKU-0004': 10, 'SKU-0005': 15 },
-      'South WH': { 'SKU-0001': 30, 'SKU-0002': 12, 'SKU-0003': 5, 'SKU-0004': 25, 'SKU-0005': 20 },
-      'East WH': { 'SKU-0001': 50, 'SKU-0002': 50, 'SKU-0003': 50, 'SKU-0004': 50, 'SKU-0005': 50 },
+      'Central WH': {
+        'SKU-0001': 15, 'SKU-0002': 10, 'SKU-0003': 8, 'SKU-0004': 30, 'SKU-0005': 45,
+        'AP-MDS-001': 20, 'AP-WFD-002': 15, 'AP-KCP-003': 25, 'EL-ASX-001': 10, 'EL-LZP-002': 5,
+        'EL-ABP-003': 30, 'FW-CCS-001': 12, 'FW-OLS-002': 8, 'FW-ARV-003': 14, 'SC-HAC-001': 40,
+        'SC-UVS-002': 35, 'EW-CAS-001': 20, 'EW-ABF-002': 18
+      },
+      'West WH': {
+        'SKU-0001': 25, 'SKU-0002': 18, 'SKU-0003': 12, 'SKU-0004': 10, 'SKU-0005': 15,
+        'AP-MDS-001': 12, 'AP-WFD-002': 10, 'AP-KCP-003': 18, 'EL-ASX-001': 6, 'EL-LZP-002': 3,
+        'EL-ABP-003': 15, 'FW-CCS-001': 10, 'FW-OLS-002': 6, 'FW-ARV-003': 8, 'SC-HAC-001': 20,
+        'SC-UVS-002': 15, 'EW-CAS-001': 10, 'EW-ABF-002': 8
+      },
+      'South WH': {
+        'SKU-0001': 30, 'SKU-0002': 12, 'SKU-0003': 5, 'SKU-0004': 25, 'SKU-0005': 20,
+        'AP-MDS-001': 15, 'AP-WFD-002': 8, 'AP-KCP-003': 12, 'EL-ASX-001': 4, 'EL-LZP-002': 2,
+        'EL-ABP-003': 20, 'FW-CCS-001': 8, 'FW-OLS-002': 4, 'FW-ARV-003': 6, 'SC-HAC-001': 18,
+        'SC-UVS-002': 12, 'EW-CAS-001': 8, 'EW-ABF-002': 6
+      },
+      'East WH': {
+        'SKU-0001': 50, 'SKU-0002': 50, 'SKU-0003': 50, 'SKU-0004': 50, 'SKU-0005': 50,
+        'AP-MDS-001': 30, 'AP-WFD-002': 30, 'AP-KCP-003': 30, 'EL-ASX-001': 20, 'EL-LZP-002': 15,
+        'EL-ABP-003': 40, 'FW-CCS-001': 25, 'FW-OLS-002': 20, 'FW-ARV-003': 25, 'SC-HAC-001': 45,
+        'SC-UVS-002': 40, 'EW-CAS-001': 30, 'EW-ABF-002': 25
+      },
     };
 
     for (const [branchName, items] of Object.entries(inventoryToSeed)) {
       const branchId = branchMap[branchName];
-      if (!branchId) continue;
+      const warehouseId = warehouseMap[branchName];
+      if (!branchId || !warehouseId) continue;
 
       for (const [sku, quantity] of Object.entries(items)) {
         const productId = productMap[sku];
         if (!productId) continue;
 
-        // Upsert inventory record
+        // Seed legacy Inventory model
         await Inventory.findOneAndUpdate(
           { productId, branchId },
           { quantity, reorderLevel: 5 },
+          { upsert: true, new: true }
+        );
+
+        // Seed modern InventoryItem model (used by low-stock-alerts and stock-levels endpoints)
+        // Ensure some items have very low stock to trigger low-stock alerts
+        // Set reorderLevel dynamically based on quantity to trigger low stock alerts for some items
+        let reorderLevel = 10;
+        if (quantity < 10) {
+          reorderLevel = 15; // quantity < reorderLevel => alert triggered!
+        } else if (quantity > 30) {
+          reorderLevel = 5; // healthy stock
+        }
+
+        await InventoryItem.findOneAndUpdate(
+          { productId, warehouseId },
+          {
+            currentStock: quantity,
+            reservedStock: Math.floor(quantity * 0.1), // 10% reserved
+            reorderLevel,
+            lastMovementAt: new Date()
+          },
           { upsert: true, new: true }
         );
       }
     }
     console.log('Inventory levels seeded.');
 
-    
     await StockTransfer.deleteMany({});
     console.log('Cleared existing stock transfers.');
 
@@ -106,6 +224,9 @@ const seedProductsAndInventory = async () => {
         ],
         notes: 'Replenishment for promotional event',
         createdAt: new Date('2026-06-10T10:00:00Z'),
+        statusHistory: [
+          { status: 'PENDING', updatedBy: admin._id, updatedAt: new Date('2026-06-10T10:00:00Z'), notes: 'Stock transfer request created.' }
+        ]
       },
       {
         transferNumber: '#2',
@@ -120,6 +241,9 @@ const seedProductsAndInventory = async () => {
         ],
         notes: 'Regular restock',
         createdAt: new Date('2026-06-09T14:30:00Z'),
+        statusHistory: [
+          { status: 'PENDING', updatedBy: admin._id, updatedAt: new Date('2026-06-09T14:30:00Z'), notes: 'Stock transfer request created.' }
+        ]
       },
       {
         transferNumber: '#3',
@@ -133,8 +257,10 @@ const seedProductsAndInventory = async () => {
         ],
         notes: 'Urgent keyboard requests',
         createdAt: new Date('2026-06-08T09:15:00Z'),
+        statusHistory: [
+          { status: 'PENDING', updatedBy: admin._id, updatedAt: new Date('2026-06-08T09:15:00Z'), notes: 'Stock transfer request created.' }
+        ]
       },
-
       {
         transferNumber: '#TR-001',
         sourceBranch: branchMap['Central WH'],
@@ -153,6 +279,11 @@ const seedProductsAndInventory = async () => {
           { productId: productMap['SKU-0003'], quantityTransferred: 2 },
         ],
         createdAt: new Date('2026-06-23T08:00:00Z'),
+        statusHistory: [
+          { status: 'PENDING', updatedBy: admin._id, updatedAt: new Date('2026-06-23T08:00:00Z'), notes: 'Stock transfer request created.' },
+          { status: 'APPROVED', updatedBy: admin._id, updatedAt: new Date('2026-06-23T08:30:00Z'), notes: 'Request approved by manager.' },
+          { status: 'PICKED_UP', updatedBy: admin._id, updatedAt: new Date('2026-06-23T09:00:00Z'), notes: 'Stock picked up by driver.' }
+        ]
       },
       {
         transferNumber: '#TR-002',
@@ -170,6 +301,12 @@ const seedProductsAndInventory = async () => {
           { productId: productMap['SKU-0001'], quantityTransferred: 20 },
         ],
         createdAt: new Date('2026-06-23T09:30:00Z'),
+        statusHistory: [
+          { status: 'PENDING', updatedBy: admin._id, updatedAt: new Date('2026-06-23T09:30:00Z'), notes: 'Stock transfer request created.' },
+          { status: 'APPROVED', updatedBy: admin._id, updatedAt: new Date('2026-06-23T10:00:00Z'), notes: 'Request approved by manager.' },
+          { status: 'PICKED_UP', updatedBy: admin._id, updatedAt: new Date('2026-06-23T10:30:00Z'), notes: 'Stock picked up by driver.' },
+          { status: 'IN_TRANSIT', updatedBy: admin._id, updatedAt: new Date('2026-06-23T10:45:00Z'), notes: 'Shipment is in transit.' }
+        ]
       },
       {
         transferNumber: '#TR-003',
@@ -187,6 +324,12 @@ const seedProductsAndInventory = async () => {
           { productId: productMap['SKU-0003'], quantityTransferred: 5 },
         ],
         createdAt: new Date('2026-06-23T10:15:00Z'),
+        statusHistory: [
+          { status: 'PENDING', updatedBy: admin._id, updatedAt: new Date('2026-06-23T10:15:00Z'), notes: 'Stock transfer request created.' },
+          { status: 'APPROVED', updatedBy: admin._id, updatedAt: new Date('2026-06-23T10:30:00Z'), notes: 'Request approved by manager.' },
+          { status: 'PICKED_UP', updatedBy: admin._id, updatedAt: new Date('2026-06-23T11:00:00Z'), notes: 'Stock picked up by driver.' },
+          { status: 'IN_TRANSIT', updatedBy: admin._id, updatedAt: new Date('2026-06-23T11:15:00Z'), notes: 'Shipment is in transit.' }
+        ]
       },
       {
         transferNumber: '#TR-004',
@@ -204,6 +347,12 @@ const seedProductsAndInventory = async () => {
           { productId: productMap['SKU-0004'], quantityTransferred: 15 },
         ],
         createdAt: new Date('2026-06-23T11:00:00Z'),
+        statusHistory: [
+          { status: 'PENDING', updatedBy: admin._id, updatedAt: new Date('2026-06-23T11:00:00Z'), notes: 'Stock transfer request created.' },
+          { status: 'APPROVED', updatedBy: admin._id, updatedAt: new Date('2026-06-23T11:15:00Z'), notes: 'Request approved by manager.' },
+          { status: 'PICKED_UP', updatedBy: admin._id, updatedAt: new Date('2026-06-23T11:30:00Z'), notes: 'Stock picked up by driver.' },
+          { status: 'IN_TRANSIT', updatedBy: admin._id, updatedAt: new Date('2026-06-23T11:45:00Z'), notes: 'Shipment is in transit.' }
+        ]
       },
       {
         transferNumber: '#TR-005',
@@ -221,8 +370,12 @@ const seedProductsAndInventory = async () => {
           { productId: productMap['SKU-0005'], quantityTransferred: 10 },
         ],
         createdAt: new Date('2026-06-23T11:45:00Z'),
+        statusHistory: [
+          { status: 'PENDING', updatedBy: admin._id, updatedAt: new Date('2026-06-23T11:45:00Z'), notes: 'Stock transfer request created.' },
+          { status: 'APPROVED', updatedBy: admin._id, updatedAt: new Date('2026-06-23T12:00:00Z'), notes: 'Request approved by manager.' },
+          { status: 'PICKED_UP', updatedBy: admin._id, updatedAt: new Date('2026-06-23T12:30:00Z'), notes: 'Stock picked up by driver.' }
+        ]
       },
-
       {
         transferNumber: '#TR-HIST-001',
         sourceBranch: branchMap['Central WH'],
@@ -234,6 +387,13 @@ const seedProductsAndInventory = async () => {
           { productId: productMap['SKU-0001'], quantityTransferred: 10, quantityReceived: 10 },
         ],
         createdAt: new Date('2026-05-10T12:00:00Z'),
+        statusHistory: [
+          { status: 'PENDING', updatedBy: admin._id, updatedAt: new Date('2026-05-10T12:00:00Z'), notes: 'Stock transfer request created.' },
+          { status: 'APPROVED', updatedBy: admin._id, updatedAt: new Date('2026-05-10T12:30:00Z'), notes: 'Request approved by manager.' },
+          { status: 'PICKED_UP', updatedBy: admin._id, updatedAt: new Date('2026-05-10T13:00:00Z'), notes: 'Stock picked up by driver.' },
+          { status: 'IN_TRANSIT', updatedBy: admin._id, updatedAt: new Date('2026-05-10T13:15:00Z'), notes: 'Shipment is in transit.' },
+          { status: 'DELIVERED', updatedBy: admin._id, updatedAt: new Date('2026-05-10T14:00:00Z'), notes: 'Stock delivered successfully.' }
+        ]
       },
       {
         transferNumber: '#TR-HIST-002',
@@ -246,6 +406,13 @@ const seedProductsAndInventory = async () => {
           { productId: productMap['SKU-0001'], quantityTransferred: 20, quantityReceived: 20 },
         ],
         createdAt: new Date('2026-05-18T15:30:00Z'),
+        statusHistory: [
+          { status: 'PENDING', updatedBy: admin._id, updatedAt: new Date('2026-05-18T15:30:00Z'), notes: 'Stock transfer request created.' },
+          { status: 'APPROVED', updatedBy: admin._id, updatedAt: new Date('2026-05-18T16:00:00Z'), notes: 'Request approved by manager.' },
+          { status: 'PICKED_UP', updatedBy: admin._id, updatedAt: new Date('2026-05-18T16:30:00Z'), notes: 'Stock picked up by driver.' },
+          { status: 'IN_TRANSIT', updatedBy: admin._id, updatedAt: new Date('2026-05-18T16:45:00Z'), notes: 'Shipment is in transit.' },
+          { status: 'DELIVERED', updatedBy: admin._id, updatedAt: new Date('2026-05-18T17:30:00Z'), notes: 'Stock delivered successfully.' }
+        ]
       },
       {
         transferNumber: '#TR-HIST-003',
@@ -258,6 +425,10 @@ const seedProductsAndInventory = async () => {
           { productId: productMap['SKU-0002'], quantityTransferred: 5, quantityReceived: 0 },
         ],
         createdAt: new Date('2026-04-18T09:00:00Z'),
+        statusHistory: [
+          { status: 'PENDING', updatedBy: admin._id, updatedAt: new Date('2026-04-18T09:00:00Z'), notes: 'Stock transfer request created.' },
+          { status: 'CANCELLED', updatedBy: admin._id, updatedAt: new Date('2026-04-18T10:00:00Z'), notes: 'Transfer cancelled.' }
+        ]
       },
       {
         transferNumber: '#TR-HIST-004',
@@ -270,6 +441,13 @@ const seedProductsAndInventory = async () => {
           { productId: productMap['SKU-0003'], quantityTransferred: 8, quantityReceived: 8 },
         ],
         createdAt: new Date('2026-05-11T10:45:00Z'),
+        statusHistory: [
+          { status: 'PENDING', updatedBy: admin._id, updatedAt: new Date('2026-05-11T10:45:00Z'), notes: 'Stock transfer request created.' },
+          { status: 'APPROVED', updatedBy: admin._id, updatedAt: new Date('2026-05-11T11:15:00Z'), notes: 'Request approved by manager.' },
+          { status: 'PICKED_UP', updatedBy: admin._id, updatedAt: new Date('2026-05-11T11:45:00Z'), notes: 'Stock picked up by driver.' },
+          { status: 'IN_TRANSIT', updatedBy: admin._id, updatedAt: new Date('2026-05-11T12:00:00Z'), notes: 'Shipment is in transit.' },
+          { status: 'DELIVERED', updatedBy: admin._id, updatedAt: new Date('2026-05-11T12:45:00Z'), notes: 'Stock delivered successfully.' }
+        ]
       },
       {
         transferNumber: '#TR-HIST-005',
@@ -282,6 +460,13 @@ const seedProductsAndInventory = async () => {
           { productId: productMap['SKU-0004'], quantityTransferred: 40, quantityReceived: 40 },
         ],
         createdAt: new Date('2026-04-17T11:00:00Z'),
+        statusHistory: [
+          { status: 'PENDING', updatedBy: admin._id, updatedAt: new Date('2026-04-17T11:00:00Z'), notes: 'Stock transfer request created.' },
+          { status: 'APPROVED', updatedBy: admin._id, updatedAt: new Date('2026-04-17T11:30:00Z'), notes: 'Request approved by manager.' },
+          { status: 'PICKED_UP', updatedBy: admin._id, updatedAt: new Date('2026-04-17T12:00:00Z'), notes: 'Stock picked up by driver.' },
+          { status: 'IN_TRANSIT', updatedBy: admin._id, updatedAt: new Date('2026-04-17T12:15:00Z'), notes: 'Shipment is in transit.' },
+          { status: 'DELIVERED', updatedBy: admin._id, updatedAt: new Date('2026-04-17T13:00:00Z'), notes: 'Stock delivered successfully.' }
+        ]
       },
       {
         transferNumber: '#TR-HIST-006',
@@ -294,6 +479,13 @@ const seedProductsAndInventory = async () => {
           { productId: productMap['SKU-0005'], quantityTransferred: 3, quantityReceived: 3 },
         ],
         createdAt: new Date('2026-05-13T14:00:00Z'),
+        statusHistory: [
+          { status: 'PENDING', updatedBy: admin._id, updatedAt: new Date('2026-05-13T14:00:00Z'), notes: 'Stock transfer request created.' },
+          { status: 'APPROVED', updatedBy: admin._id, updatedAt: new Date('2026-05-13T14:30:00Z'), notes: 'Request approved by manager.' },
+          { status: 'PICKED_UP', updatedBy: admin._id, updatedAt: new Date('2026-05-13T15:00:00Z'), notes: 'Stock picked up by driver.' },
+          { status: 'IN_TRANSIT', updatedBy: admin._id, updatedAt: new Date('2026-05-13T15:15:00Z'), notes: 'Shipment is in transit.' },
+          { status: 'DELIVERED', updatedBy: admin._id, updatedAt: new Date('2026-05-13T16:00:00Z'), notes: 'Stock delivered successfully.' }
+        ]
       },
       {
         transferNumber: '#TR-HIST-007',
@@ -306,6 +498,13 @@ const seedProductsAndInventory = async () => {
           { productId: productMap['SKU-0002'], quantityTransferred: 16, quantityReceived: 16 },
         ],
         createdAt: new Date('2026-06-07T16:00:00Z'),
+        statusHistory: [
+          { status: 'PENDING', updatedBy: admin._id, updatedAt: new Date('2026-06-07T16:00:00Z'), notes: 'Stock transfer request created.' },
+          { status: 'APPROVED', updatedBy: admin._id, updatedAt: new Date('2026-06-07T16:30:00Z'), notes: 'Request approved by manager.' },
+          { status: 'PICKED_UP', updatedBy: admin._id, updatedAt: new Date('2026-06-07T17:00:00Z'), notes: 'Stock picked up by driver.' },
+          { status: 'IN_TRANSIT', updatedBy: admin._id, updatedAt: new Date('2026-06-07T17:15:00Z'), notes: 'Shipment is in transit.' },
+          { status: 'DELIVERED', updatedBy: admin._id, updatedAt: new Date('2026-06-07T18:00:00Z'), notes: 'Stock delivered successfully.' }
+        ]
       },
       {
         transferNumber: '#TR-HIST-008',
@@ -318,11 +517,17 @@ const seedProductsAndInventory = async () => {
           { productId: productMap['SKU-0001'], quantityTransferred: 25, quantityReceived: 25 },
         ],
         createdAt: new Date('2026-06-04T13:20:00Z'),
+        statusHistory: [
+          { status: 'PENDING', updatedBy: admin._id, updatedAt: new Date('2026-06-04T13:20:00Z'), notes: 'Stock transfer request created.' },
+          { status: 'APPROVED', updatedBy: admin._id, updatedAt: new Date('2026-06-04T13:50:00Z'), notes: 'Request approved by manager.' },
+          { status: 'PICKED_UP', updatedBy: admin._id, updatedAt: new Date('2026-06-04T14:20:00Z'), notes: 'Stock picked up by driver.' },
+          { status: 'IN_TRANSIT', updatedBy: admin._id, updatedAt: new Date('2026-06-04T14:40:00Z'), notes: 'Shipment is in transit.' },
+          { status: 'DELIVERED', updatedBy: admin._id, updatedAt: new Date('2026-05-10T14:00:00Z'), notes: 'Stock delivered successfully.' }
+        ]
       },
     ];
 
     for (const tData of transfersToSeed) {
-      // Create transfer
       await StockTransfer.create(tData);
     }
 

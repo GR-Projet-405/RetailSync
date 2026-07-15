@@ -12,7 +12,6 @@ router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password', authController.resetPassword);
 router.post('/login', authController.login);
 
-//   Role selection routes (public for now, can be protected later)
 router.get('/available-roles', authController.getAvailableRoles);
 router.post('/select-role', authController.selectRole);
 
