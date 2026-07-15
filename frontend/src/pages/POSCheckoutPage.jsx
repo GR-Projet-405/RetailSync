@@ -14,6 +14,10 @@ import SearchInput from '../components/SearchInput';
 import Modal from '../components/Modal';
 import { useCustomers } from '../features/customer-management/hooks/useCustomers';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
+import { AddCustomerForm } from '../features/customer-management/components/AddCustomerForm';
+import customerService from '../features/customer-management/services/customerService';
+import toast from '../utils/toast';
 
 const currency = {
   format: (value) => `Rs. ${Number(value || 0).toLocaleString('en-US', {
@@ -56,6 +60,29 @@ export default function POSCheckoutPage() {
   const [isWalkIn, setIsWalkIn] = useState(true);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+
+  const handleAddCustomerSubmit = async (customerData) => {
+    try {
+      const newCustomer = await customerService.createCustomer(customerData);
+      const mappedCustomer = {
+        id: newCustomer._id || newCustomer.id,
+        name: newCustomer.name || `${newCustomer.firstName || ''} ${newCustomer.lastName || ''}`.trim(),
+        phone: newCustomer.phone,
+        email: newCustomer.email,
+        points: newCustomer.loyaltyPoints ?? 0,
+        tier: newCustomer.customerType ?? 'Regular',
+      };
+      setSelectedCustomer(mappedCustomer);
+      setIsWalkIn(false);
+      setShowAddCustomerModal(false);
+      toast.success('Customer created and selected successfully!');
+    } catch (error) {
+      console.error('Failed to create customer:', error);
+      toast.error(error.response?.data?.message || error.message || 'Failed to create customer.');
+    }
+  };
+
 
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [amountReceived, setAmountReceived] = useState('');
@@ -64,8 +91,149 @@ export default function POSCheckoutPage() {
   const [notes, setNotes] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponError, setCouponError] = useState('');
+  const [couponSuccess, setCouponSuccess] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+
+  const [availableCoupons, setAvailableCoupons] = useState([]);
+  const [showCouponsList, setShowCouponsList] = useState(false);
+  const [fetchingCoupons, setFetchingCoupons] = useState(false);
+
+  useEffect(() => {
+    const fetchAvailableCoupons = async () => {
+      setFetchingCoupons(true);
+      try {
+        const response = await api.get('/promotions-discounts/coupons', {
+          params: { status: 'Active', limit: 100 }
+        });
+        if (response.data?.success) {
+          const list = response.data.data.coupons || [];
+          const userBranchId = user?.branchId?._id || user?.branchId;
+          const filtered = list.filter(c => {
+            if (c.status !== 'Active') return false;
+            const now = new Date();
+            if (now < new Date(c.startDate) || now > new Date(c.endDate)) return false;
+            if (c.branchId) {
+              const cBranchId = c.branchId._id || c.branchId;
+              if (userBranchId && String(cBranchId) !== String(userBranchId)) return false;
+            }
+            return true;
+          });
+          setAvailableCoupons(filtered);
+        }
+      } catch (error) {
+        console.error('Failed to retrieve available coupons:', error);
+      } finally {
+        setFetchingCoupons(false);
+      }
+    };
+    fetchAvailableCoupons();
+  }, [user]);
+
+  const getPerCustomerLimit = (code) => {
+    const coupon = availableCoupons.find(c => c.code.toUpperCase() === code.toUpperCase());
+    return coupon ? (coupon.perCustomerLimit ?? 1) : 1;
+  };
+
+  const handleSelectCoupon = async (code) => {
+    if (selectedCustomer && !isWalkIn) {
+      const history = JSON.parse(localStorage.getItem('retailsync_coupon_usage_history') || '{}');
+      const customerHistory = history[selectedCustomer.id] || {};
+      const usageCount = customerHistory[code.toUpperCase()] || 0;
+      const limit = getPerCustomerLimit(code);
+      if (usageCount >= limit) {
+        setCouponError(`Customer ${selectedCustomer.name} has reached the limit of ${limit} use(s) for coupon ${code.toUpperCase()}.`);
+        return;
+      }
+    }
+
+    setCouponLoading(true);
+    setCouponError('');
+    setCouponSuccess('');
+    try {
+      const response = await api.post('/promotions-discounts/coupons/validate', {
+        code: code,
+        branchId: user?.branchId?._id || user?.branchId || null,
+        orderAmount: total
+      });
+
+      if (response.data?.success) {
+        const couponData = response.data.data;
+        setAppliedCoupon({
+          ...couponData,
+          code: code.toUpperCase()
+        });
+        setCouponSuccess(response.data.message || 'Coupon applied successfully.');
+        setCouponCode('');
+      } else {
+        setCouponError(response.data?.message || 'Failed to validate coupon.');
+      }
+    } catch (error) {
+      console.error('Coupon validation error:', error);
+      setCouponError(error.response?.data?.message || error.message || 'Failed to validate coupon.');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+
+    const code = couponCode.trim().toUpperCase();
+    if (selectedCustomer && !isWalkIn) {
+      const history = JSON.parse(localStorage.getItem('retailsync_coupon_usage_history') || '{}');
+      const customerHistory = history[selectedCustomer.id] || {};
+      const usageCount = customerHistory[code] || 0;
+      const limit = getPerCustomerLimit(code);
+      if (usageCount >= limit) {
+        setCouponError(`Customer ${selectedCustomer.name} has reached the limit of ${limit} use(s) for coupon ${code}.`);
+        return;
+      }
+    }
+
+    setCouponLoading(true);
+    setCouponError('');
+    setCouponSuccess('');
+
+    try {
+      const response = await api.post('/promotions-discounts/coupons/validate', {
+        code: code,
+        branchId: user?.branchId?._id || user?.branchId || null,
+        orderAmount: total
+      });
+
+      if (response.data?.success) {
+        const couponData = response.data.data;
+        setAppliedCoupon({
+          ...couponData,
+          code: code
+        });
+        setCouponSuccess(response.data.message || 'Coupon applied successfully.');
+        setCouponCode('');
+      } else {
+        setCouponError(response.data?.message || 'Failed to validate coupon.');
+      }
+    } catch (error) {
+      console.error('Coupon validation error:', error);
+      setCouponError(error.response?.data?.message || error.message || 'Failed to validate coupon.');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponSuccess('');
+    setCouponError('');
+  };
+
+  const couponDiscountAmount = appliedCoupon ? appliedCoupon.discountAmount : 0;
+  const currentTotal = Math.max(0, total - couponDiscountAmount);
+
   // Keep total with 2 decimal places for display and calculations
-  const roundedTotal = Math.round(total * 100) / 100;
+  const roundedTotal = Math.round(currentTotal * 100) / 100;
 
   // Parse the amount received, default to 0 if invalid
   const numReceived = parseFloat(amountReceived) || 0;
@@ -96,6 +264,43 @@ export default function POSCheckoutPage() {
     if (paymentMethod === 'cash' && numReceived < roundedTotal) return;
 
     setIsProcessing(true);
+
+    if (appliedCoupon) {
+      try {
+        await api.post('/promotions-discounts/coupons/use', {
+          couponId: appliedCoupon.couponId,
+          promotionId: appliedCoupon.promotionId,
+          branchId: user?.branchId?._id || user?.branchId || null,
+          orderAmount: total,
+          discountAmount: appliedCoupon.discountAmount
+        });
+
+        if (selectedCustomer && !isWalkIn) {
+          const history = JSON.parse(localStorage.getItem('retailsync_coupon_usage_history') || '{}');
+          const custId = selectedCustomer.id;
+          if (!history[custId]) {
+            history[custId] = {};
+          }
+          const code = appliedCoupon.code.toUpperCase();
+          history[custId][code] = (history[custId][code] || 0) + 1;
+          localStorage.setItem('retailsync_coupon_usage_history', JSON.stringify(history));
+        }
+      } catch (error) {
+        console.error('Failed to record coupon usage:', error);
+      }
+    }
+
+    // Deduct database stock for all purchased items upon successful payment
+    try {
+      const adjustments = cart.map(item => ({ productId: item.id || item._id, delta: -item.quantity }));
+      await api.post('/pos-billing/adjust-stock', { adjustments });
+    } catch (error) {
+      console.error('Failed to deduct stock on completion:', error);
+      setIsProcessing(false);
+      alert(error.response?.data?.message || error.message || 'Failed to update database stock levels. Checkout aborted.');
+      return;
+    }
+
     // Simulate payment processing
     await new Promise(resolve => setTimeout(resolve, 1500));
 
@@ -112,7 +317,10 @@ export default function POSCheckoutPage() {
         cashierName: user 
           ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || user.email 
           : 'Nipuni Perera',
-        counterNumber: '01'
+        counterNumber: '01',
+        couponCode: appliedCoupon ? appliedCoupon.code : null,
+        couponDiscountAmount,
+        notes: notes.trim()
       }
     });
   };
@@ -207,7 +415,17 @@ export default function POSCheckoutPage() {
                       />
                       Walk-in
                     </label>
-                    {!isWalkIn && (
+                    {isWalkIn ? (
+                      <button
+                        onClick={() => {
+                          setIsWalkIn(false);
+                          setShowCustomerSearch(true);
+                        }}
+                        className="text-xs bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Select Customer
+                      </button>
+                    ) : (
                       <button
                         onClick={() => setShowCustomerSearch(true)}
                         className="text-xs bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition-colors"
@@ -215,6 +433,12 @@ export default function POSCheckoutPage() {
                         Change
                       </button>
                     )}
+                    <button
+                      onClick={() => setShowAddCustomerModal(true)}
+                      className="text-xs bg-emerald-600 text-white px-3 py-1 rounded-lg hover:bg-emerald-700 transition-colors font-medium flex items-center gap-1"
+                    >
+                      + Add New
+                    </button>
                   </div>
                 </div>
               </div>
@@ -262,7 +486,24 @@ export default function POSCheckoutPage() {
                       <User className="w-8 h-8 text-slate-400" />
                     </div>
                     <p className="font-medium text-slate-700">Walk-in Customer</p>
-                    <p className="text-xs text-slate-400 mt-1">No loyalty points will be awarded</p>
+                    <p className="text-xs text-slate-400 mt-1 mb-4">No loyalty points will be awarded</p>
+                    <div className="flex justify-center gap-3">
+                      <button
+                        onClick={() => {
+                          setIsWalkIn(false);
+                          setShowCustomerSearch(true);
+                        }}
+                        className="text-xs border border-blue-200 text-blue-600 bg-blue-50/50 hover:bg-blue-50 px-4 py-2 rounded-xl transition-all font-semibold"
+                      >
+                        Select Customer
+                      </button>
+                      <button
+                        onClick={() => setShowAddCustomerModal(true)}
+                        className="text-xs border border-emerald-250 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-50 px-4 py-2 rounded-xl transition-all font-semibold"
+                      >
+                        + Add New Customer
+                      </button>
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -520,6 +761,176 @@ export default function POSCheckoutPage() {
                     <span className="text-slate-500">Tax (VAT)</span>
                     <span className="font-medium text-slate-800">{currency.format(tax)}</span>
                   </div>
+
+                  {couponDiscountAmount > 0 && (
+                    <div className="flex justify-between text-sm animate-in fade-in duration-200">
+                      <span className="text-emerald-600 flex items-center gap-1 font-medium">
+                        <Sparkles className="w-3.5 h-3.5" /> Coupon Discount ({appliedCoupon?.code})
+                      </span>
+                      <span className="font-semibold text-emerald-600">−{currency.format(couponDiscountAmount)}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Coupon Code Section */}
+                <div className="border-t border-slate-100 pt-3 pb-2 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Apply Coupon
+                    </label>
+                    {availableCoupons.length > 0 && !appliedCoupon && (
+                      <button
+                        type="button"
+                        onClick={() => setShowCouponsList(!showCouponsList)}
+                        className="text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 transition-colors"
+                      >
+                        <Gift className="w-3.5 h-3.5" />
+                        {showCouponsList ? 'Hide Available' : `View Available (${availableCoupons.length})`}
+                      </button>
+                    )}
+                  </div>
+
+                  {showCouponsList && !appliedCoupon && availableCoupons.length > 0 && (
+                    <div className="mt-2 space-y-2 max-h-48 overflow-y-auto pr-1 border border-slate-150 rounded-xl p-2 bg-slate-50/50 animate-in fade-in slide-in-from-top-2 duration-300">
+                      {availableCoupons.map((coupon) => {
+                        const isEligibleAmount = total >= (coupon.minPurchaseAmount || 0);
+                        
+                        let reachedCustomerLimit = false;
+                        let usageCount = 0;
+                        const limit = coupon.perCustomerLimit ?? 1;
+                        if (selectedCustomer && !isWalkIn) {
+                          const history = JSON.parse(localStorage.getItem('retailsync_coupon_usage_history') || '{}');
+                          const customerHistory = history[selectedCustomer.id] || {};
+                          usageCount = customerHistory[coupon.code.toUpperCase()] || 0;
+                          reachedCustomerLimit = usageCount >= limit;
+                        }
+
+                        const isEligible = isEligibleAmount && !reachedCustomerLimit;
+
+                        return (
+                          <button
+                            key={coupon._id}
+                            type="button"
+                            disabled={!isEligible}
+                            onClick={() => handleSelectCoupon(coupon.code)}
+                            className={`w-full text-left relative flex items-center border rounded-xl overflow-hidden transition-all p-3 ${
+                              isEligible
+                                ? 'bg-white border-blue-100 hover:border-blue-300 hover:shadow-sm cursor-pointer'
+                                : 'bg-slate-100/70 border-slate-200 opacity-60 cursor-not-allowed'
+                            }`}
+                          >
+                            {/* Ticket cutouts */}
+                            <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-slate-50 border-r border-slate-200" />
+                            <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-slate-50 border-l border-slate-200" />
+
+                            <div className="flex-1 pl-2 pr-2 border-r border-dashed border-slate-200">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-sm text-slate-800 uppercase tracking-wide">
+                                  {coupon.code}
+                                </span>
+                                {isEligible ? (
+                                  <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                                    Eligible
+                                  </span>
+                                ) : reachedCustomerLimit ? (
+                                  <span className="bg-red-50 text-red-600 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                                    Limit Reached
+                                  </span>
+                                ) : (
+                                  <span className="bg-amber-50 text-amber-600 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                                    Locked
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                                {coupon.discountType === 'Percentage'
+                                  ? `${coupon.discountValue}% Off your order`
+                                  : `Rs. ${coupon.discountValue} Flat Discount`}
+                              </p>
+                              <div className="flex flex-wrap gap-x-2 mt-0.5 text-[10px] text-slate-400">
+                                {coupon.minPurchaseAmount > 0 && (
+                                  <span>Min spend: Rs. {coupon.minPurchaseAmount.toLocaleString()}</span>
+                                )}
+                                {selectedCustomer && !isWalkIn && (
+                                  <span className={reachedCustomerLimit ? 'text-red-500 font-semibold' : 'text-slate-400'}>
+                                    · Limit: {usageCount}/{limit} used
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="pl-3 pr-1 text-center flex flex-col justify-center items-center">
+                              {isEligible ? (
+                                <span className="text-xs font-bold text-blue-600 hover:underline">Apply</span>
+                              ) : reachedCustomerLimit ? (
+                                <span className="text-[10px] font-medium text-red-500">Max Uses</span>
+                              ) : (
+                                <span className="text-[10px] font-medium text-slate-400">
+                                  Need Rs. {((coupon.minPurchaseAmount || 0) - total).toFixed(0)} more
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {!appliedCoupon ? (
+                    <div className="space-y-1">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter coupon code..."
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value)}
+                          className="flex-1 rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:bg-white transition-all uppercase"
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleApplyCoupon}
+                          disabled={couponLoading || !couponCode.trim()}
+                          className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2 text-xs font-bold transition-all"
+                        >
+                          {couponLoading ? 'Applying...' : 'Apply'}
+                        </Button>
+                      </div>
+                      {couponError && (
+                        <p className="text-xs text-red-500 flex items-center gap-1 mt-1 animate-in fade-in duration-200">
+                          <AlertCircle className="w-3 h-3 flex-shrink-0" /> {couponError}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 animate-in fade-in duration-200">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-emerald-600 animate-pulse" />
+                        <div>
+                          <span className="font-bold text-xs text-emerald-800 uppercase tracking-wide">
+                            {appliedCoupon.code}
+                          </span>
+                          <p className="text-[10px] text-emerald-600 font-medium">
+                            {appliedCoupon.discountType === 'Percentage'
+                              ? `${appliedCoupon.discountValue}% off applied`
+                              : `Rs. ${appliedCoupon.discountValue} discount applied`}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRemoveCoupon}
+                        className="p-1 rounded-lg hover:bg-emerald-100 text-emerald-600 hover:text-emerald-800 transition-colors"
+                        title="Remove Coupon"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                  {couponSuccess && (
+                    <p className="text-xs text-emerald-600 flex items-center gap-1 mt-1 animate-in fade-in duration-200">
+                      <CheckCircle2 className="w-3 h-3 flex-shrink-0" /> {couponSuccess}
+                    </p>
+                  )}
                 </div>
 
                 <div className="relative">
@@ -637,12 +1048,23 @@ export default function POSCheckoutPage() {
                 <h3 className="font-bold text-slate-800">Search Customer</h3>
                 <p className="text-sm text-slate-500">Find customer by name or phone number</p>
               </div>
-              <button
-                onClick={() => setShowCustomerSearch(false)}
-                className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setShowCustomerSearch(false);
+                    setShowAddCustomerModal(true);
+                  }}
+                  className="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                >
+                  + Add New Customer
+                </button>
+                <button
+                  onClick={() => setShowCustomerSearch(false)}
+                  className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             <div className="p-6">
               <div className="flex gap-3 mb-4">
@@ -665,7 +1087,16 @@ export default function POSCheckoutPage() {
                   </div>
                 ) : filteredCustomers.length === 0 ? (
                   <div className="py-8 text-center text-slate-500 text-sm">
-                    No customers found matching search.
+                    <p className="mb-3 text-slate-500">No customers found matching search.</p>
+                    <button
+                      onClick={() => {
+                        setShowCustomerSearch(false);
+                        setShowAddCustomerModal(true);
+                      }}
+                      className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition"
+                    >
+                      + Add New Customer
+                    </button>
                   </div>
                 ) : (
                   filteredCustomers.map(customer => (
@@ -730,6 +1161,16 @@ export default function POSCheckoutPage() {
               Yes, Cancel
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Add New Customer Modal */}
+      <Modal isOpen={showAddCustomerModal} onClose={() => setShowAddCustomerModal(false)} title="Add New Customer" size="lg">
+        <div className="max-h-[70vh] overflow-y-auto p-1">
+          <AddCustomerForm
+            onSubmit={handleAddCustomerSubmit}
+            onCancel={() => setShowAddCustomerModal(false)}
+          />
         </div>
       </Modal>
     </div>

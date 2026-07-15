@@ -1,4 +1,4 @@
-import React from 'react';
+/*import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { branchApi } from '../services/branchApi';
 import { useAuth } from '../contexts/AuthContext';
@@ -85,5 +85,53 @@ export default function DashboardPage() {
       )}
     </div>
   );
-}
+}*/
+import React from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { ROLES } from '../config/roles';
+import AdminDashboard from './AdminDashboard';
+import ManagerDashboard from './ManagerDashboard';
+import EmployeeDashboard from './EmployeeDashboard';
 
+export default function DashboardPage() {
+  const { hasRole, user } = useAuth();
+
+  // Debug
+  console.log("Current user role:", user?.role);
+
+  // Show loading
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-500">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Route to correct dashboard
+  if (hasRole(ROLES.SUPER_ADMIN, ROLES.ADMIN)) {
+    return <AdminDashboard />;
+  }
+
+  if (hasRole(ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER)) {
+    return <ManagerDashboard />;
+  }
+
+  if (hasRole(ROLES.EMPLOYEE)) {
+    return <EmployeeDashboard />;
+  }
+
+  // No valid role
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-red-600">Access Denied</h2>
+        <p className="text-gray-500 mt-2">You don't have permission to view this page.</p>
+        <p className="text-gray-400 text-sm mt-4">Role: {user?.role || 'Unknown'}</p>
+      </div>
+    </div>
+  );
+}
