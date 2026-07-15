@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginPage({ onLoginSuccess }) {
   const [email, setEmail] = useState('');
@@ -8,6 +8,7 @@ export default function LoginPage({ onLoginSuccess }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -15,24 +16,13 @@ export default function LoginPage({ onLoginSuccess }) {
     setError('');
 
     try {
-      // 1. Send the login request to your backend
-      const res = await axios.post('http://localhost:5000/api/v1/auth/login', { 
-        email, 
-        password 
-      });
+      const result = await login(email, password);
 
-      // 2. Save the Token and Role to the browser
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('userRole', res.data.user.role);
-      
-      // 3. Tell App.jsx to update the user role immediately
-      if (onLoginSuccess) {
-        onLoginSuccess(res.data.user.role);
+      if (result.success) {
+        navigate('/dashboard');
+      } else {
+        setError(result.message || 'Login failed');
       }
-
-      // 4. Navigate to the dashboard
-      navigate('/dashboard');
-
     } catch (err) {
       setError('Invalid email or password. Please try again.');
     } finally {
@@ -143,6 +133,27 @@ export default function LoginPage({ onLoginSuccess }) {
               </button>
             </div>
           </form>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="bg-white px-2 text-gray-500">Or</span>
+              </div>
+            </div>
+
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => navigate('/register')}
+                className="font-medium text-blue-600 hover:text-blue-500"
+              >
+                Register Here
+              </button>
+            </div>
+          </div>
 
           <div className="mt-6 text-center text-xs text-gray-500">
             © 2026 RetailSync Inc. All rights reserved.

@@ -32,11 +32,7 @@ export default function CouponManagementPage() {
   };
   
   // Stateful coupons list
-  const [coupons, setCoupons] = useState([
-    { id: 1, code: 'WELCOME20', discount: '20% OFF', type: 'Percentage', limit: '500 Usages', perCustomer: '1', minPurchase: 'Rs. 500', used: 142, status: 'Active', branch: 'All Branches' },
-    { id: 2, code: 'WINTER500', discount: 'Rs. 500 OFF', type: 'Fixed Amount', limit: '100 Usages', perCustomer: '2', minPurchase: 'Rs. 2,000', used: 100, status: 'Expired', branch: 'Downtown Flagship' },
-    { id: 3, code: 'FREESHIP', discount: 'Free Shipping', type: 'Free Shipping', limit: 'Unlimited', perCustomer: 'Unlimited', minPurchase: 'Rs. 1,000', used: 843, status: 'Active', branch: 'All Branches' },
-  ]);
+  const [coupons, setCoupons] = useState([]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -75,11 +71,14 @@ export default function CouponManagementPage() {
   };
 
   const fetchCoupons = async () => {
+    console.log('[DEBUG] fetchCoupons started');
     setLoading(true);
     setError(null);
     try {
       const response = await api.get('/promotions-discounts/coupons', { params: { limit: 1000 }, timeout: 45000 });
+      console.log('[DEBUG] fetchCoupons response received:', response.status, response.data);
       const fetchedData = response.data?.data?.coupons || [];
+      console.log('[DEBUG] fetchedData count:', fetchedData.length);
       const mappedData = fetchedData.map(c => {
         let discountLabel = '';
         if (c.discountType === 'Percentage') {
@@ -90,24 +89,30 @@ export default function CouponManagementPage() {
           discountLabel = 'Free Shipping';
         }
 
-        return {
-          ...c,
-          id: c._id,
-          code: c.code,
-          discount: discountLabel,
-          type: c.discountType,
-          limit: c.usageLimit !== null && c.usageLimit !== undefined ? `${c.usageLimit} Usages` : 'Unlimited',
-          perCustomer: c.perCustomerLimit !== null && c.perCustomerLimit !== undefined ? c.perCustomerLimit.toString() : 'Unlimited',
-          minPurchase: c.minPurchaseAmount ? `Rs. ${c.minPurchaseAmount}` : 'Rs. 0',
-          used: c.usageCount || 0,
-          branch: c.branchId ? c.branchId.name : 'All Branches',
-          startDate: c.startDate ? new Date(c.startDate).toISOString().split('T')[0] : '',
-          endDate: c.endDate ? new Date(c.endDate).toISOString().split('T')[0] : ''
-        };
+        try {
+          return {
+            ...c,
+            id: c._id,
+            code: c.code,
+            discount: discountLabel,
+            type: c.discountType,
+            limit: c.usageLimit !== null && c.usageLimit !== undefined ? `${c.usageLimit} Usages` : 'Unlimited',
+            perCustomer: c.perCustomerLimit !== null && c.perCustomerLimit !== undefined ? c.perCustomerLimit.toString() : 'Unlimited',
+            minPurchase: c.minPurchaseAmount ? `Rs. ${c.minPurchaseAmount}` : 'Rs. 0',
+            used: c.usageCount || 0,
+            branch: c.branchId ? c.branchId.name : 'All Branches',
+            startDate: c.startDate ? new Date(c.startDate).toISOString().split('T')[0] : '',
+            endDate: c.endDate ? new Date(c.endDate).toISOString().split('T')[0] : ''
+          };
+        } catch (mapErr) {
+          console.error('[DEBUG] Error mapping coupon:', c, mapErr);
+          throw mapErr;
+        }
       });
+      console.log('[DEBUG] mappedData successfully created:', mappedData);
       setCoupons(mappedData);
     } catch (err) {
-      console.error('Failed to fetch coupons:', err);
+      console.error('[DEBUG] Failed to fetch coupons error caught:', err);
       setError(err.message || 'Failed to fetch coupons');
     } finally {
       setLoading(false);
@@ -196,28 +201,8 @@ export default function CouponManagementPage() {
     if (data.startDate && data.endDate) {
       const start = new Date(data.startDate);
       const end = new Date(data.endDate);
-      if (end <= start) {
-        errs.endDate = "End date must be after the start date";
-      }
-
-      if (data.promotionId) {
-        const selectedPromo = promotions.find(p => p._id === data.promotionId || p.id === data.promotionId);
-        if (selectedPromo) {
-          const promoStart = new Date(selectedPromo.startDate);
-          const promoEnd = new Date(selectedPromo.endDate);
-
-          const pStart = new Date(promoStart.getFullYear(), promoStart.getMonth(), promoStart.getDate());
-          const pEnd = new Date(promoEnd.getFullYear(), promoEnd.getMonth(), promoEnd.getDate());
-          const cStart = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-          const cEnd = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-
-          if (cStart < pStart) {
-            errs.startDate = `Start date cannot be earlier than promotion start date (${pStart.toISOString().split('T')[0]})`;
-          }
-          if (cEnd > pEnd) {
-            errs.endDate = `End date cannot be later than promotion end date (${pEnd.toISOString().split('T')[0]})`;
-          }
-        }
+      if (end < start) {
+        errs.endDate = "End date must be on or after the start date";
       }
     }
 
@@ -236,6 +221,34 @@ export default function CouponManagementPage() {
   React.useEffect(() => {
     setFormErrors(getCouponFormErrors(formData));
   }, [formData, promotions]);
+
+  // Sync inherited values (dates, minPurchase) from selected promotion
+  React.useEffect(() => {
+    if (formData.promotionId) {
+      const selectedPromo = promotions.find(p => p._id === formData.promotionId || p.id === formData.promotionId);
+      if (selectedPromo) {
+        const startD = selectedPromo.startDate ? new Date(selectedPromo.startDate).toISOString().split('T')[0] : '';
+        const endD = selectedPromo.endDate ? new Date(selectedPromo.endDate).toISOString().split('T')[0] : '';
+        
+        // Format minOrderValue clean as numeric string (layout renders Rs. prefix via prefix span)
+        const minVal = selectedPromo.minOrderValue !== undefined && selectedPromo.minOrderValue !== null
+          ? selectedPromo.minOrderValue.toString()
+          : '0';
+
+        setFormData(prev => {
+          if (prev.startDate !== startD || prev.endDate !== endD || prev.minPurchase !== minVal) {
+            return {
+              ...prev,
+              startDate: startD,
+              endDate: endD,
+              minPurchase: minVal
+            };
+          }
+          return prev;
+        });
+      }
+    }
+  }, [formData.promotionId, promotions]);
 
   // BR-SALE-002: Coupon threshold warning memo
   const showThresholdWarning = useMemo(() => {
@@ -361,6 +374,12 @@ export default function CouponManagementPage() {
     }
   };
 
+  const handleFormKeyDown = (e) => {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+      e.preventDefault();
+    }
+  };
+
   const handleSaveCoupon = async (e) => {
     e.preventDefault();
     if (Object.keys(formErrors).length > 0) {
@@ -415,12 +434,12 @@ export default function CouponManagementPage() {
       setLoading(true);
       let response;
       if (editMode) {
-        response = await api.put(`/promotions-discounts/coupons/${currentCoupon.id}`, payload);
+        response = await api.put(`/promotions-discounts/coupons/${currentCoupon.id}`, payload, { timeout: 45000 });
         const updatedId = response.data?.data?._id || currentCoupon.id;
         setHighlightedCouponId(updatedId);
         setTimeout(() => setHighlightedCouponId(null), 5000);
       } else {
-        response = await api.post('/promotions-discounts/coupons', payload);
+        response = await api.post('/promotions-discounts/coupons', payload, { timeout: 45000 });
         const newCouponId = response.data?.data?._id;
         if (newCouponId) {
           setHighlightedCouponId(newCouponId);
@@ -587,16 +606,7 @@ export default function CouponManagementPage() {
                 >
                   <Eye size={14} />
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => toggleStatus(coupon)}
-                  className="text-slate-600 hover:text-blue-600"
-                  title={coupon.status === 'Active' ? 'Deactivate/Pause Coupon' : 'Activate Coupon'}
-                >
-                  {coupon.status === 'Active' ? <Pause size={14} className="mr-1" /> : <Play size={14} className="mr-1" />}
-                  {coupon.status === 'Active' ? 'Pause' : 'Activate'}
-                </Button>
+
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -623,6 +633,36 @@ export default function CouponManagementPage() {
         })}
       </div>
 
+      {loading && (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="border border-slate-100 rounded-2xl p-6 bg-white shadow-sm space-y-4 animate-pulse select-none">
+              <div className="flex items-center justify-between">
+                <div className="w-10 h-10 bg-slate-100 rounded-xl" />
+                <div className="w-16 h-5 bg-slate-100 rounded-full" />
+              </div>
+              <div className="h-12 bg-slate-50 border border-slate-100 rounded-xl" />
+              <div className="h-6 bg-slate-100 rounded w-2/3" />
+              <div className="grid grid-cols-2 gap-2.5 h-12 bg-slate-50 border border-slate-50 rounded-xl" />
+              <div className="flex justify-between items-center pt-2">
+                <div className="w-1/3 h-4 bg-slate-100 rounded" />
+                <div className="w-1/4 h-4 bg-slate-100 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && filteredCoupons.length === 0 && (
+        <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl shadow-sm select-none">
+          <Ticket className="mx-auto w-12 h-12 text-slate-300 mb-3 animate-pulse" />
+          <h3 className="text-sm font-bold text-slate-800">No Coupons Found</h3>
+          <p className="text-xs text-slate-400 max-w-xs mx-auto mt-1 font-medium leading-relaxed">
+            Generate your first checkout coupon code or select another promotion campaign filter to display coupons.
+          </p>
+        </div>
+      )}
+
       {/* Spec Mockup-Aligned Create Coupon Modal */}
       <Modal
         isOpen={isCreateModalOpen}
@@ -630,7 +670,7 @@ export default function CouponManagementPage() {
         title={editMode ? 'Edit Coupon' : 'Create Coupon'}
         size="md"
       >
-        <form onSubmit={handleSaveCoupon} className="space-y-5 text-xs font-bold text-slate-700">
+        <form onSubmit={handleSaveCoupon} onKeyDown={handleFormKeyDown} className="space-y-5 text-xs font-bold text-slate-700">
           
           {/* Promotion Campaign dropdown */}
           <div className="space-y-1">
@@ -877,17 +917,30 @@ export default function CouponManagementPage() {
 
           {/* Minimum purchase Amount */}
           <div className="space-y-1">
-            <label className="block text-slate-600 font-semibold select-none">Minimum purchase Amount</label>
+            <div className="flex items-center gap-1">
+              <label className="block text-slate-600 font-semibold select-none">Minimum purchase Amount</label>
+              {formData.promotionId && <Lock size={12} className="text-slate-400 shrink-0" />}
+            </div>
             <div className="relative">
               <input
                 type="text"
+                disabled={!!formData.promotionId}
                 placeholder="Rs. 500 (optional)"
                 value={formData.minPurchase}
                 onChange={(e) => setFormData({ ...formData, minPurchase: e.target.value })}
-                className="w-full pl-11 pr-4 py-2.5 bg-slate-50/75 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 focus:ring-blue-500 transition-all"
+                className={`w-full pl-11 pr-4 py-2.5 border rounded-xl outline-none font-semibold text-slate-800 focus:ring-1 transition-all ${
+                  formData.promotionId 
+                    ? 'opacity-85 cursor-not-allowed bg-slate-100 border-slate-200 text-slate-500 font-mono'
+                    : 'bg-slate-50/75 border-slate-200 focus:border-blue-500 focus:bg-white'
+                }`}
               />
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">Rs.</span>
             </div>
+            {formData.promotionId && (
+              <span className="text-[10px] text-slate-400 block font-medium select-none mt-1">
+                Inherited from the selected promotion.
+              </span>
+            )}
           </div>
 
           {/* Apply To Branch */}
@@ -935,7 +988,7 @@ export default function CouponManagementPage() {
               disabled={loading || Object.keys(formErrors).length > 0}
               className={`px-6 py-2.5 text-xs font-bold text-white rounded-xl transition-all outline-none cursor-pointer ${
                 Object.keys(formErrors).length > 0
-                  ? 'bg-slate-350 cursor-not-allowed opacity-60'
+                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
                   : 'bg-blue-600 hover:bg-blue-700 shadow-md'
               }`}
             >

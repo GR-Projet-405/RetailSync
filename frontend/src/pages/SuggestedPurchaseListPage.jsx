@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { toast } from "react-toastify";
 
 import Breadcrumb from "../components/Breadcrumb";
 import PageHeader from "../components/PageHeader";
@@ -8,31 +9,28 @@ import SupplierCard from "../components/ai-reordering/SupplierCard";
 import PurchaseTable from "../components/ai-reordering/PurchaseTable";
 import Button from "../components/Button";
 
-import {
-  getRecommendations,
-  convertToPurchaseOrder,
-} from "../services/aiReorderingService";
+import { useAIRecommendations, useConvertToPurchaseOrder } from "../hooks/useAIReordering";
 
 export default function SuggestedPurchaseListPage() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: response, isLoading: loading } = useAIRecommendations();
+  const items = response?.data?.recommendations || [];
 
-  useEffect(() => {
-    loadPurchaseItems();
-  }, []);
+  const convertMutation = useConvertToPurchaseOrder();
 
-  const loadPurchaseItems = async () => {
-    try {
-      const response = await getRecommendations();
+  const handleGenerateOrders = () => {
+    const pendingItem = items.find(
+      (item) => item.status === "PENDING" || item.status === "APPROVED"
+    );
 
-      console.log("Purchase List:", response);
-
-      setItems(response.data.recommendations);
-    } catch (error) {
-      console.error("Failed to load purchase list:", error);
-    } finally {
-      setLoading(false);
+    if (!pendingItem) {
+      toast.info("No pending recommendations to convert.");
+      return;
     }
+
+    convertMutation.mutate({
+      id: pendingItem._id,
+      payload: { supplierId: pendingItem.supplierId },
+    });
   };
 
   // Summary cards
@@ -47,7 +45,7 @@ export default function SuggestedPurchaseListPage() {
     },
     {
       title: "Estimated Total Cost",
-      value: "--",
+      value: "N/A",
     },
   ];
 
@@ -55,7 +53,7 @@ export default function SuggestedPurchaseListPage() {
   const supplier = {
     name: items[0]?.supplierName || "Default Supplier",
     email: "-",
-    total: "--",
+    total: "N/A",
   };
 
   return (
@@ -86,8 +84,12 @@ export default function SuggestedPurchaseListPage() {
       )}
 
       <div className="flex justify-end mt-8">
-        <Button className="bg-[#0F172A] hover:bg-slate-800 px-6 py-3 rounded-xl text-white">
-          ✓ Generate Purchase Orders
+        <Button
+          onClick={handleGenerateOrders}
+          disabled={loading || convertMutation.isPending}
+          className="bg-[#0F172A] hover:bg-slate-800 px-6 py-3 rounded-xl text-white disabled:opacity-50"
+        >
+          {convertMutation.isPending ? "Generating..." : "✓ Generate Purchase Orders"}
         </Button>
       </div>
     </div>

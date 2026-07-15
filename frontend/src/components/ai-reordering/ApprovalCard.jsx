@@ -4,23 +4,13 @@ import Button from "../Button";
 import StatusBadge from "./StatusBadge";
 import ConfidenceBar from "./ConfidenceBar";
 
-import { updateRecommendationStatus } from "../../services/aiReorderingService";
+import { useUpdateAIRecommendationStatus } from "../../hooks/useAIReordering";
 
 export default function ApprovalCard({ item, onViewDetails }) {
+  const updateStatusMutation = useUpdateAIRecommendationStatus();
 
-  const handleStatusUpdate = async (status) => {
-    try {
-      await updateRecommendationStatus(item._id, {
-        status,
-      });
-
-      alert(`Recommendation ${status.toLowerCase()} successfully.`);
-
-      window.location.reload();
-    } catch (error) {
-      console.error(error);
-      alert("Failed to update recommendation.");
-    }
+  const handleStatusUpdate = (status) => {
+    updateStatusMutation.mutate({ id: item._id, status });
   };
 
   return (

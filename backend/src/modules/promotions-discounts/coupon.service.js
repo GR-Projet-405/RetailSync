@@ -252,6 +252,13 @@ class CouponService {
       throw err;
     }
 
+    // Strip database internal / frontend helper properties to prevent immutable update error
+    delete updateData._id;
+    delete updateData.id;
+    delete updateData.createdAt;
+    delete updateData.updatedAt;
+    delete updateData.__v;
+
     // Combine updateData values with existing values for validation
     const merged = {
       code: updateData.code !== undefined ? updateData.code : existing.code,

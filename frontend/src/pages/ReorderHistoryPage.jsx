@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import Breadcrumb from "../components/Breadcrumb";
 import PageHeader from "../components/PageHeader";
@@ -7,34 +7,16 @@ import HistoryFilterTabs from "../components/ai-reordering/HistoryFilterTabs";
 import HistoryTable from "../components/ai-reordering/HistoryTable";
 import RecommendationDetailsModal from "../components/ai-reordering/RecommendationDetailsModal";
 
-import { getRecommendations } from "../services/aiReorderingService";
+import { useAIRecommendations } from "../hooks/useAIReordering";
 
 export default function ReorderHistoryPage() {
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
-
   const [selectedTab, setSelectedTab] = useState("All");
 
   const [selectedRecommendation, setSelectedRecommendation] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  useEffect(() => {
-    loadHistory();
-  }, []);
-
-  const loadHistory = async () => {
-    try {
-      const response = await getRecommendations();
-
-      console.log("History:", response);
-
-      setHistory(response.data.recommendations);
-    } catch (error) {
-      console.error("Failed to load reorder history:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: response, isLoading: loading } = useAIRecommendations();
+  const history = response?.data?.recommendations || [];
 
   const filteredHistory = useMemo(() => {
     switch (selectedTab) {

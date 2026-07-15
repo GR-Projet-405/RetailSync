@@ -13,6 +13,8 @@ import Card, { CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import Modal from '../components/Modal';
 import { useProductsList } from '../hooks/useProducts';
 import { useCategories } from '../hooks/useCategories';
+import api from '../services/api';
+import { useQueryClient } from '@tanstack/react-query';
 
 /* Currency formatter */
 const currency = {
@@ -184,7 +186,7 @@ function ItemDiscountPanel({ item, onApply, onClose }) {
             <span>Discount</span>
             <span className="font-medium">−{currency.format(discountAmt)}</span>
           </div>
-          <div className="flex justify-between text-emerald-600 font-bold border-t border-slate-100 pt-1">
+          <div className="flex justify-between pt-1 font-bold border-t text-emerald-600 border-slate-100">
             <span>After discount</span>
             <span>{currency.format(afterDiscount)}</span>
           </div>
@@ -230,16 +232,16 @@ function CartItem({ item, onQuantitySet, onDelta, onRemove, onItemDiscount }) {
         <div className="flex items-start gap-2.5 min-w-0">
           <span className={`mt-0.5 h-2 w-2 rounded-full flex-shrink-0 ${catStyle.dot}`} />
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-slate-900 leading-snug truncate">{item.name}</div>
+            <div className="text-sm font-semibold leading-snug truncate text-slate-900">{item.name}</div>
             <div className="text-[11px] text-slate-400 mt-0.5">{item.sku} · {item.barcode}</div>
           </div>
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center flex-shrink-0 gap-1">
           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${catStyle.bg} ${catStyle.text}`}>{item.category}</span>
           <button
             type="button"
             onClick={() => onRemove(item.id)}
-            className="ml-1 p-1 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+            className="p-1 ml-1 transition-colors rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50"
             title="Remove item"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -248,7 +250,7 @@ function CartItem({ item, onQuantitySet, onDelta, onRemove, onItemDiscount }) {
       </div>
 
       {/* Row 2 – qty controls + price */}
-      <div className="mt-3 flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 mt-3">
         <div className="flex items-center gap-1.5">
           <button
             type="button"
@@ -287,7 +289,7 @@ function CartItem({ item, onQuantitySet, onDelta, onRemove, onItemDiscount }) {
       </div>
 
       {/* Row 3 – discount badge + toggle button */}
-      <div className="mt-2 flex items-center justify-between">
+      <div className="flex items-center justify-between mt-2">
         {hasDiscount ? (
           <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
             <TrendingDown className="w-2.5 h-2.5" />
@@ -336,7 +338,7 @@ function OrderSummary({ subtotal, itemSavings, orderDiscountAmount, orderDiscoun
       {itemSavings > 0 && (
         <div className="flex items-center justify-between text-xs">
           <span className="flex items-center gap-1 text-emerald-600"><TrendingDown className="w-3 h-3" />Item discounts</span>
-          <span className="text-emerald-600 font-medium">−{currency.format(itemSavings)}</span>
+          <span className="font-medium text-emerald-600">−{currency.format(itemSavings)}</span>
         </div>
       )}
 
@@ -349,7 +351,7 @@ function OrderSummary({ subtotal, itemSavings, orderDiscountAmount, orderDiscoun
               <span className="bg-violet-100 text-violet-700 px-1.5 rounded-full text-[10px]">{orderDiscount}%</span>
             )}
           </span>
-          <span className="text-violet-600 font-medium">−{currency.format(orderDiscountAmount)}</span>
+          <span className="font-medium text-violet-600">−{currency.format(orderDiscountAmount)}</span>
         </div>
       )}
 
@@ -386,6 +388,12 @@ function OrderSummary({ subtotal, itemSavings, orderDiscountAmount, orderDiscoun
 export default function POSBillingPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['products'] });
+  }, [queryClient]);
+
   const restoredState = location.state || {};
   const [searchQuery, setSearchQuery] = useState('');
   const [barcodeValue, setBarcodeValue] = useState('');
@@ -401,18 +409,24 @@ export default function POSBillingPage() {
 
   const inventoryProducts = useMemo(() => {
     if (!productsData?.data) return [];
-    return productsData.data.map(p => ({
-      id: p.id || p._id,
-      barcode: p.barcode || '',
-      name: p.name || 'Unnamed Product',
-      price: p.pricing?.sellingPrice ?? p.sellingPrice ?? p.price ?? 0,
-      currency: 'LKR',
-      unit: p.unit || 'pcs',
-      stock: p.totalStock ?? p.stock ?? 0,
-      sku: p.sku || 'N/A',
-      category: p.category?.name ?? (typeof p.category === 'string' ? p.category : 'Uncategorised')
-    }));
-  }, [productsData]);
+    return productsData.data.map(p => {
+      const productId = p.id || p._id;
+      const inCart = cart.find(item => item.id === productId);
+      const baseStock = p.totalStock ?? p.stock ?? 0;
+      const currentStock = Math.max(0, baseStock - (inCart ? inCart.quantity : 0));
+      return {
+        id: productId,
+        barcode: p.barcode || '',
+        name: p.name || 'Unnamed Product',
+        price: p.pricing?.sellingPrice ?? p.sellingPrice ?? p.price ?? 0,
+        currency: 'LKR',
+        unit: p.unit || 'pcs',
+        stock: currentStock,
+        sku: p.sku || 'N/A',
+        category: p.category?.name ?? (typeof p.category === 'string' ? p.category : 'Uncategorised')
+      };
+    });
+  }, [productsData, cart]);
 
   useEffect(() => {
     if (productsError) {
@@ -565,7 +579,7 @@ export default function POSBillingPage() {
   /* Cart actions */
   const notify = (msg, type = 'info') => { setStatusMessage(msg); setStatusType(type); };
 
-  const addProductToCart = useCallback((product) => {
+  const addProductToCart = useCallback(async (product) => {
     if (product.stock <= 0) {
       notify(`⚠️ Cannot add ${product.name}. This product is out of stock.`, 'error');
       setStockAlert({
@@ -577,34 +591,18 @@ export default function POSBillingPage() {
       return;
     }
 
-    let limitReached = false;
     setCart((cur) => {
       const existing = cur.find((i) => i.id === product.id);
       if (existing) {
-        if (existing.quantity >= product.stock) {
-          limitReached = true;
-          return cur;
-        }
         return cur.map((i) => {
           if (i.id !== product.id) return i;
-          const next = Math.min(i.quantity + 1, product.stock);
-          return { ...i, quantity: next };
+          return { ...i, quantity: i.quantity + 1 };
         });
       }
       return [...cur, { ...product, quantity: 1, itemDiscount: 0, itemDiscountMode: DISCOUNT_MODES.NONE }];
     });
 
-    if (limitReached) {
-      notify(`⚠️ Cannot add more. Only ${product.stock} units of ${product.name} are available in stock.`, 'error');
-      setStockAlert({
-        title: 'Stock Limit Reached',
-        message: `You cannot add more units of "${product.name}" to the sale. Only ${product.stock} units are available in stock, and all of them are already in the shopping cart.`,
-        productName: product.name,
-        stock: product.stock
-      });
-    } else {
-      notify(`✓ ${product.name} added to cart.`, 'success');
-    }
+    notify(`✓ ${product.name} added to cart.`, 'success');
   }, []);
 
   const findProduct = useCallback((raw) => {
@@ -658,23 +656,45 @@ export default function POSBillingPage() {
   };
 
   const updateCartQuantity = (id, delta) => {
-    setCart((cur) =>
-      cur.map((i) => {
+    const item = cart.find(i => i.id === id);
+    if (!item) return;
+
+    setCart((cur) => {
+      return cur.map((i) => {
         if (i.id !== id) return i;
         const next = i.quantity + delta;
         if (next <= 0) return null;
-        return { ...i, quantity: Math.min(next, i.stock) };
-      }).filter(Boolean)
-    );
+        return { ...i, quantity: next };
+      }).filter(Boolean);
+    });
+
+    notify(delta > 0 ? `✓ Added 1 unit.` : `✓ Removed 1 unit.`, 'success');
   };
 
   const setCartQuantity = (id, qty) => {
-    setCart((cur) =>
-      cur.map((i) => (i.id === id ? { ...i, quantity: qty } : i))
-    );
+    const item = cart.find(i => i.id === id);
+    if (!item) return;
+
+    const diff = qty - item.quantity;
+    if (diff === 0) return;
+
+    setCart((cur) => {
+      return cur.map((i) => (i.id === id ? { ...i, quantity: qty } : i));
+    });
+
+    notify(`✓ Updated quantity to ${qty}.`, 'success');
   };
 
-  const removeCartItem = (id) => setCart((cur) => cur.filter((i) => i.id !== id));
+  const removeCartItem = (id) => {
+    const item = cart.find(i => i.id === id);
+    if (!item) return;
+
+    setCart((cur) => {
+      return cur.filter((i) => i.id !== id);
+    });
+
+    notify(`✓ ${item.name} removed from cart.`, 'success');
+  };
 
   const applyItemDiscount = (id, value, mode) => {
     setCart((cur) =>
@@ -683,10 +703,12 @@ export default function POSBillingPage() {
   };
 
   const clearSale = () => {
+    if (cart.length === 0) return;
+
     setCart([]);
     setOrderDiscount('');
     setOrderDiscountMode(DISCOUNT_MODES.NONE);
-    notify('Sale cleared. Ready for a new transaction.', 'info');
+    notify('Sale cleared.', 'info');
   };
 
   /* Tax rate editing */
@@ -758,7 +780,7 @@ export default function POSBillingPage() {
             className={`border-[#E2E8F0] shadow-[0_8px_30px_rgba(37,99,235,0.08)] transition-all duration-300 ${primary ? 'bg-[#2563EB] text-white border-[#2563EB]' : 'bg-white text-slate-900'
               }`}
           >
-            <CardContent className="p-4 flex items-center gap-3">
+            <CardContent className="flex items-center gap-3 p-4">
               <div className={`h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 ${primary ? 'bg-white/20 text-white' : accent ? 'bg-emerald-50 text-emerald-600' : 'bg-[#EFF6FF] text-[#2563EB]'
                 }`}>
                 {icon}
@@ -791,7 +813,7 @@ export default function POSBillingPage() {
                 {/* Barcode & Manual SKU Column */}
                 <div className="space-y-3.5 md:border-r md:border-slate-100 md:pr-6">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Barcode & SKU Entry</span>
+                    <span className="text-xs font-bold tracking-wider uppercase text-slate-500">Barcode & SKU Entry</span>
                     <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       Scanner Active
@@ -800,7 +822,7 @@ export default function POSBillingPage() {
 
                   <form className="flex gap-2" onSubmit={handleBarcodeSubmit}>
                     <div className="relative flex-1">
-                      <ScanBarcode className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                      <ScanBarcode className="absolute w-4 h-4 -translate-y-1/2 pointer-events-none left-3 top-1/2 text-slate-400" />
                       <input
                         autoFocus
                         value={barcodeValue}
@@ -822,7 +844,7 @@ export default function POSBillingPage() {
                       placeholder="Or enter SKU manually"
                       className="flex-1 h-11 rounded-xl border border-[#E2E8F0] bg-white px-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition"
                     />
-                    <Button type="button" onClick={handleManualAdd} className="h-11 rounded-xl bg-slate-800 hover:bg-slate-900 text-white px-4 flex-shrink-0 text-xs font-bold">
+                    <Button type="button" onClick={handleManualAdd} className="flex-shrink-0 px-4 text-xs font-bold text-white h-11 rounded-xl bg-slate-800 hover:bg-slate-900">
                       <Plus className="w-3.5 h-3.5 mr-1" /> Add
                     </Button>
                   </div>
@@ -831,7 +853,7 @@ export default function POSBillingPage() {
                 {/* Search & Category Filter Column */}
                 <div className="space-y-3.5 flex flex-col justify-between">
                   <div>
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">Browse Inventory</span>
+                    <span className="block mb-2 text-xs font-bold tracking-wider uppercase text-slate-500">Browse Inventory</span>
                     <SearchInput
                       placeholder="Search products by name or SKU"
                       value={searchQuery}
@@ -901,7 +923,7 @@ export default function POSBillingPage() {
                 <div className="rounded-2xl border border-dashed border-[#BFDBFE] bg-[#EFF6FF] p-8 text-center text-slate-500">
                   <PackageSearch className="w-8 h-8 mx-auto mb-2 text-[#2563EB] animate-pulse" />
                   <p className="text-sm font-medium text-slate-700">Loading inventory products...</p>
-                  <p className="text-xs mt-1 text-slate-400">The POS grid will populate once the backend responds.</p>
+                  <p className="mt-1 text-xs text-slate-400">The POS grid will populate once the backend responds.</p>
                 </div>
               ) : filteredProducts.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-[#BFDBFE] bg-[#EFF6FF] p-8 text-center text-slate-500">
@@ -910,59 +932,121 @@ export default function POSBillingPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {paginatedProducts.map((product) => {
                       const inCart = cart.find((i) => i.id === product.id);
                       const catStyle = CATEGORY_COLORS[product.category] || defaultCat;
+                      
+                      // Stock status styles
+                      let stockBadgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                      let stockText = `${product.stock} ${product.unit}s`;
+                      let stockAlertText = 'In Stock';
+                      let stockProgressColor = 'bg-emerald-500';
+
+                      if (product.stock === 0) {
+                        stockBadgeColor = 'bg-red-50 text-red-700 border-red-200';
+                        stockAlertText = 'Out of Stock';
+                        stockText = '0 units';
+                        stockProgressColor = 'bg-red-300';
+                      } else if (product.stock <= 5) {
+                        stockBadgeColor = 'bg-red-50 text-red-700 border-red-200 animate-pulse';
+                        stockAlertText = `Critical: Only ${product.stock} left!`;
+                        stockProgressColor = 'bg-red-500';
+                      } else if (product.stock <= 15) {
+                        stockBadgeColor = 'bg-amber-50 text-amber-700 border-amber-200';
+                        stockAlertText = 'Low Stock';
+                        stockProgressColor = 'bg-amber-500';
+                      }
+
+                      const stockPercentage = Math.min((product.stock / 50) * 100, 100);
+
                       return (
                         <div
                           key={product.id}
-                          className={`rounded-2xl border p-4 space-y-3 transition-all duration-200 ${inCart
-                            ? 'border-[#2563EB] bg-[#EFF6FF] shadow-md'
-                            : 'border-[#E2E8F0] bg-white shadow-sm hover:border-[#BFDBFE] hover:shadow-md'
+                          className={`group relative rounded-2xl border bg-white p-4 flex flex-col justify-between transition-all duration-300 min-h-[260px] ${inCart
+                            ? 'border-[#2563EB] ring-2 ring-[#2563EB]/15 bg-gradient-to-b from-[#EFF6FF]/60 to-white shadow-lg'
+                            : 'border-slate-200/80 hover:border-blue-300/80 hover:shadow-[0_12px_24px_-8px_rgba(59,130,246,0.12)] hover:-translate-y-1'
                             }`}
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${catStyle.bg} ${catStyle.text}`}>
-                                <span className={`h-1.5 w-1.5 rounded-full ${catStyle.dot}`} />
-                                {product.category}
-                              </div>
-                              <h3 className="text-sm font-semibold text-slate-900 mt-1.5 leading-snug">{product.name}</h3>
-                            </div>
-                            <div className="text-right flex-shrink-0">
-                              <div className="text-sm font-bold text-[#2563EB]">{currency.format(product.price)}</div>
-                              <div className="text-[10px] text-slate-400">/{product.unit}</div>
-                            </div>
+
+                          {/* Row 1: Category & SKU */}
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 ${catStyle.bg} ${catStyle.text} border-transparent`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${catStyle.dot}`} />
+                              {product.category}
+                            </span>
+                            <span className="text-[10px] font-semibold text-slate-400">
+                              SKU: {product.sku}
+                            </span>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="rounded-lg bg-white/60 px-2.5 py-1.5 border border-[#E2E8F0]">
-                              <div className="text-[10px] text-slate-400 uppercase tracking-wide">SKU</div>
-                              <div className="text-slate-700 font-medium text-[11px]">{product.sku}</div>
-                            </div>
-                            <div className={`rounded-lg px-2.5 py-1.5 border ${product.stock <= 10 ? 'bg-red-50 border-red-200' : 'bg-white/60 border-[#E2E8F0]'}`}>
-                              <div className="text-[10px] text-slate-400 uppercase tracking-wide">Stock</div>
-                              <div className={`font-medium text-[11px] ${product.stock <= 10 ? 'text-red-600' : 'text-slate-700'}`}>
-                                {product.stock} {product.unit}s
-                              </div>
-                            </div>
+                          {/* Row 2: Product Name */}
+                          <div className="mt-3 mb-2">
+                            <h3 className="text-xs font-bold text-slate-800 leading-snug tracking-tight line-clamp-2 min-h-[34px] group-hover:text-slate-950">
+                              {product.name}
+                            </h3>
                           </div>
 
-                          <Button
-                            type="button"
-                            className={`w-full rounded-xl text-sm h-9 transition-all ${inCart
-                              ? 'bg-[#1E40AF] hover:bg-[#1E3A8A] shadow-md shadow-blue-300/30'
-                              : 'bg-[#2563EB] hover:bg-[#1E40AF]'
-                              }`}
-                            onClick={() => addProductToCart(product)}
-                          >
-                            {inCart ? (
-                              <><Check className="w-3.5 h-3.5 mr-1.5" />In cart ({inCart.quantity})</>
-                            ) : (
-                              <><Plus className="w-3.5 h-3.5 mr-1.5" />Add to cart</>
+                          {/* Row 3: Price and Barcode */}
+                          <div className="flex items-center justify-between gap-2 mt-auto border-t border-slate-100 pt-2.5">
+                            <div className="flex flex-col">
+                              <span className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">Price</span>
+                              <span className="text-sm font-extrabold text-[#2563EB]">
+                                {currency.format(product.price)}
+                              </span>
+                            </div>
+                            {product.barcode && (
+                              <div className="flex flex-col items-end">
+                                <span className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">Barcode</span>
+                                <span className="text-[10px] font-semibold text-slate-500 bg-slate-50 rounded px-1.5 py-0.5 border border-slate-200/30">
+                                  {product.barcode}
+                                </span>
+                              </div>
                             )}
-                          </Button>
+                          </div>
+
+                          {/* Row 4: Stock Indicator */}
+                          <div className="space-y-1.5 mt-3">
+                            <div className="flex items-center justify-between text-[10px] font-bold">
+                              <span className="text-slate-400 uppercase tracking-wider">Stock Status</span>
+                              <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold border ${stockBadgeColor}`}>
+                                {stockAlertText}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden border border-slate-200/40">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${stockProgressColor}`}
+                                  style={{ width: `${stockPercentage}%` }}
+                                />
+                              </div>
+                              <span className="text-[11px] font-bold text-slate-700 min-w-[40px] text-right">
+                                {stockText}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Row 5: Action Button */}
+                          <div className="mt-3.5">
+                            <Button
+                              type="button"
+                              disabled={product.stock === 0}
+                              className={`w-full rounded-xl text-xs h-9 font-bold transition-all duration-300 shadow-sm flex items-center justify-center gap-1.5 ${inCart
+                                ? 'bg-gradient-to-r from-blue-700 to-indigo-700 hover:from-blue-800 hover:to-indigo-800 hover:shadow-md text-white border-transparent'
+                                : 'bg-[#2563EB] hover:bg-[#1E40AF] text-white border-transparent hover:shadow-md'
+                                }`}
+                              onClick={() => addProductToCart(product)}
+                            >
+                              {inCart ? (
+                                <><Check className="w-3.5 h-3.5" /> In Cart ({inCart.quantity})</>
+                              ) : product.stock === 0 ? (
+                                <>Out of stock</>
+                              ) : (
+                                <><Plus className="w-3.5 h-3.5" /> Add to Sale</>
+                              )}
+                            </Button>
+                          </div>
                         </div>
                       );
                     })}
@@ -1026,7 +1110,7 @@ export default function POSBillingPage() {
             <CardHeader className="border-b border-[#E2E8F0]">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <CardTitle className="text-slate-900 flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-slate-900">
                     <ShoppingCart className="w-4 h-4 text-[#2563EB]" />
                     Shopping Cart
                     {cart.length > 0 && (
@@ -1039,7 +1123,7 @@ export default function POSBillingPage() {
                 </div>
                 <Button
                   type="button" variant="ghost"
-                  className="text-slate-500 hover:text-red-500 hover:bg-red-50 text-xs"
+                  className="text-xs text-slate-500 hover:text-red-500 hover:bg-red-50"
                   onClick={clearSale}
                   disabled={cart.length === 0}
                 >
@@ -1054,7 +1138,7 @@ export default function POSBillingPage() {
                 <div className="rounded-2xl border border-dashed border-[#BFDBFE] bg-[#EFF6FF] p-10 text-center text-slate-500">
                   <ShoppingCart className="w-10 h-10 mx-auto mb-3 text-[#2563EB] opacity-60" />
                   <p className="text-sm font-medium">Your cart is empty</p>
-                  <p className="text-xs mt-1 text-slate-400">Add products from the inventory panel.</p>
+                  <p className="mt-1 text-xs text-slate-400">Add products from the inventory panel.</p>
                 </div>
               ) : (
                 <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-0.5">
@@ -1099,7 +1183,7 @@ export default function POSBillingPage() {
                           onClick={() => setOrderDiscountMode(m)}
                           className={`flex-1 rounded-xl py-1.5 text-xs font-semibold transition-colors ${orderDiscountMode === m ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                         >
-                          {m === DISCOUNT_MODES.PERCENT ? <><Percent className="w-3 h-3 inline mr-1" />Percent</> : <><DollarSign className="w-3 h-3 inline mr-1" />Flat</>}
+                          {m === DISCOUNT_MODES.PERCENT ? <><Percent className="inline w-3 h-3 mr-1" />Percent</> : <><DollarSign className="inline w-3 h-3 mr-1" />Flat</>}
                         </button>
                       ))}
                       <button
@@ -1128,7 +1212,7 @@ export default function POSBillingPage() {
 
                     <Button
                       type="button"
-                      className="w-full rounded-xl bg-violet-600 hover:bg-violet-700 h-9 text-xs font-semibold"
+                      className="w-full text-xs font-semibold rounded-xl bg-violet-600 hover:bg-violet-700 h-9"
                       onClick={applyOrderDiscount}
                     >
                       Apply Order Discount
@@ -1184,7 +1268,7 @@ export default function POSBillingPage() {
               <div className="flex gap-3">
                 <Button
                   type="button" variant="outline"
-                  className="flex-1 rounded-xl h-11 border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold"
+                  className="flex-1 font-semibold bg-white rounded-xl h-11 border-slate-200 hover:bg-slate-50 text-slate-700"
                   disabled={cart.length === 0}
                   onClick={() => notify('Sale held (simulated).', 'info')}
                 >
@@ -1195,7 +1279,7 @@ export default function POSBillingPage() {
                   className="flex-1 rounded-xl h-11 bg-[#2563EB] hover:bg-[#1E40AF] text-white font-semibold"
                   disabled={cart.length === 0}
                   onClick={() => {
-                    navigate('/pos-checkout', {
+                    navigate('/payment-processing', {
                       state: {
                         cart,
                         subtotal,
@@ -1223,16 +1307,16 @@ export default function POSBillingPage() {
       {/* Stock Limit & Out-of-Stock Modal */}
       <Modal isOpen={!!stockAlert} onClose={() => setStockAlert(null)} title={stockAlert?.title || 'Stock Alert'} size="sm">
         <div className="space-y-4">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-500">
-            <CircleAlert className="h-6 w-6 animate-pulse" />
+          <div className="flex items-center justify-center w-12 h-12 mx-auto text-red-500 rounded-full bg-red-50">
+            <CircleAlert className="w-6 h-6 animate-pulse" />
           </div>
           <div className="space-y-2 text-center">
-            <h4 className="font-bold text-slate-800 text-base">{stockAlert?.title}</h4>
-            <p className="text-sm text-slate-500 leading-relaxed">{stockAlert?.message}</p>
+            <h4 className="text-base font-bold text-slate-800">{stockAlert?.title}</h4>
+            <p className="text-sm leading-relaxed text-slate-500">{stockAlert?.message}</p>
           </div>
           <div className="pt-2">
             <Button
-              className="w-full rounded-xl h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+              className="w-full font-semibold text-white bg-blue-600 rounded-xl h-11 hover:bg-blue-700"
               onClick={() => setStockAlert(null)}
             >
               OK
