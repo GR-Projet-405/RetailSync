@@ -61,6 +61,8 @@ export default function ReceiptPreviewPage() {
       taxNumber: s.taxNumber || 'REG-2024-00123',
       receiptFooter: s.receiptFooter || 'Thank you for shopping with us! Visit again.',
       storeLogo: s.storeLogo || '🛒',
+      couponCode: s.couponCode || null,
+      couponDiscountAmount: s.couponDiscountAmount || 0,
     };
   });
 
@@ -69,8 +71,10 @@ export default function ReceiptPreviewPage() {
     paymentMethod, amountReceived, changeDue, customer,
     invoiceNumber, date, time, cashierName, counterNumber,
     storeName, storeAddress, storePhone, storeEmail, storeBranch,
-    taxNumber, receiptFooter, storeLogo,
+    taxNumber, receiptFooter, storeLogo, couponCode, couponDiscountAmount
   } = meta;
+
+  const finalGrandTotal = Math.max(0, total - couponDiscountAmount);
 
   // ── Email send state ───────────────────────────────────────────────────────
   const [emailInput, setEmailInput] = useState('');
@@ -105,8 +109,8 @@ export default function ReceiptPreviewPage() {
         cashierName, counterNumber,
         paymentMethod, amountReceived, changeDue,
         cart, subtotal,
-        discounts: itemSavings + orderDiscountAmount,
-        tax, total, customer,
+        discounts: itemSavings + orderDiscountAmount + couponDiscountAmount,
+        tax, total: finalGrandTotal, customer,
       });
 
       const result = data?.data || {};
@@ -161,10 +165,11 @@ export default function ReceiptPreviewPage() {
 ${cart.map(i => `<div class="row"><span style="flex:1;text-align:left">${i.name} x${i.quantity}</span><span>${currency.format(i.price * i.quantity)}</span></div>`).join('')}
 <div class="dashed"></div>
 <div class="row"><span>Subtotal</span><span>${currency.format(subtotal)}</span></div>
-${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.format(itemSavings + orderDiscountAmount)}</span></div>` : ''}
+${(itemSavings + orderDiscountAmount) > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.format(itemSavings + orderDiscountAmount)}</span></div>` : ''}
+${couponDiscountAmount > 0 ? `<div class="row"><span>Coupon (${couponCode})</span><span>-${currency.format(couponDiscountAmount)}</span></div>` : ''}
 <div class="row"><span>Tax</span><span>${currency.format(tax)}</span></div>
 <div class="dashed"></div>
-<div class="row bold" style="font-size:14px"><span>TOTAL</span><span>${currency.format(total)}</span></div>
+<div class="row bold" style="font-size:14px"><span>TOTAL</span><span>${currency.format(finalGrandTotal)}</span></div>
 <div class="dashed"></div>
 <div class="center" style="font-size:10px;margin-top:6px">${receiptFooter}</div>
 </body></html>`;
@@ -175,7 +180,7 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
   };
 
   const handleCopyInvoice = () => {
-    const text = `INVOICE #${invoiceNumber}\n${storeName} – ${storeBranch}\nDate: ${date} ${time}\nCashier: ${cashierName}\nItems: ${cart.length}\nTotal: ${currency.format(total)}\nPayment: ${paymentMethod}\n${receiptFooter}`;
+    const text = `INVOICE #${invoiceNumber}\n${storeName} – ${storeBranch}\nDate: ${date} ${time}\nCashier: ${cashierName}\nItems: ${cart.length}\nTotal: ${currency.format(finalGrandTotal)}\nPayment: ${paymentMethod}\n${receiptFooter}`;
     navigator.clipboard.writeText(text.trim());
     setCopySuccess(true);
     setTimeout(() => setCopySuccess(false), 3000);
@@ -314,9 +319,14 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
               <span>Discounts</span><span>−{currency.format(itemSavings + orderDiscountAmount)}</span>
             </div>
           )}
+          {couponDiscountAmount > 0 && (
+            <div className="flex justify-between text-sm text-emerald-600">
+              <span>Coupon Discount ({couponCode})</span><span>−{currency.format(couponDiscountAmount)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm"><span className="text-slate-600">Tax</span><span>{currency.format(tax)}</span></div>
           <div className="flex justify-between text-lg font-bold text-blue-600 border-t border-slate-200 pt-2">
-            <span>Total</span><span>{currency.format(total)}</span>
+            <span>Total</span><span>{currency.format(finalGrandTotal)}</span>
           </div>
         </div>
 
@@ -364,7 +374,7 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
           </div>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-bold text-emerald-700">{currency.format(total)}</p>
+          <p className="text-2xl font-bold text-emerald-700">{currency.format(finalGrandTotal)}</p>
           <p className="text-xs text-emerald-600">Total Amount</p>
         </div>
       </div>
@@ -522,7 +532,7 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
                 <div className="bg-white rounded-lg p-3 border border-slate-200 col-span-2 print:p-2">
                   <p className="text-xs text-slate-400 uppercase tracking-wider">Amount Received</p>
                   <p className="font-bold text-slate-800 text-lg print:text-base">
-                    {paymentMethod === 'cash' ? currency.format(amountReceived) : currency.format(total)}
+                    {paymentMethod === 'cash' ? currency.format(amountReceived) : currency.format(finalGrandTotal)}
                   </p>
                   {paymentMethod === 'cash' && changeDue > 0 && (
                     <p className="text-sm text-emerald-600 print:text-xs">Change: {currency.format(changeDue)}</p>
@@ -549,11 +559,16 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
                     <span>Cart Discount</span><span>−{currency.format(orderDiscountAmount)}</span>
                   </div>
                 )}
+                {couponDiscountAmount > 0 && (
+                  <div className="flex justify-between text-sm text-emerald-600 print:text-xs">
+                    <span>Coupon Discount ({couponCode})</span><span>−{currency.format(couponDiscountAmount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm text-slate-600 border-b border-slate-200 pb-2 print:text-xs print:pb-1">
                   <span>Tax (VAT)</span><span>{currency.format(tax)}</span>
                 </div>
                 <div className="flex justify-between text-xl font-bold text-slate-800 pt-1 print:text-base">
-                  <span>Grand Total</span><span className="text-blue-600">{currency.format(total)}</span>
+                  <span>Grand Total</span><span className="text-blue-600">{currency.format(finalGrandTotal)}</span>
                 </div>
               </div>
             </div>
