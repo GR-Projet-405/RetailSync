@@ -15,6 +15,9 @@ import Modal from '../components/Modal';
 import { useCustomers } from '../features/customer-management/hooks/useCustomers';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import { AddCustomerForm } from '../features/customer-management/components/AddCustomerForm';
+import customerService from '../features/customer-management/services/customerService';
+import toast from '../utils/toast';
 
 const currency = {
   format: (value) => `Rs. ${Number(value || 0).toLocaleString('en-US', {
@@ -57,6 +60,29 @@ export default function POSCheckoutPage() {
   const [isWalkIn, setIsWalkIn] = useState(true);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+
+  const handleAddCustomerSubmit = async (customerData) => {
+    try {
+      const newCustomer = await customerService.createCustomer(customerData);
+      const mappedCustomer = {
+        id: newCustomer._id || newCustomer.id,
+        name: newCustomer.name || `${newCustomer.firstName || ''} ${newCustomer.lastName || ''}`.trim(),
+        phone: newCustomer.phone,
+        email: newCustomer.email,
+        points: newCustomer.loyaltyPoints ?? 0,
+        tier: newCustomer.customerType ?? 'Regular',
+      };
+      setSelectedCustomer(mappedCustomer);
+      setIsWalkIn(false);
+      setShowAddCustomerModal(false);
+      toast.success('Customer created and selected successfully!');
+    } catch (error) {
+      console.error('Failed to create customer:', error);
+      toast.error(error.response?.data?.message || error.message || 'Failed to create customer.');
+    }
+  };
+
 
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [amountReceived, setAmountReceived] = useState('');
@@ -293,7 +319,8 @@ export default function POSCheckoutPage() {
           : 'Nipuni Perera',
         counterNumber: '01',
         couponCode: appliedCoupon ? appliedCoupon.code : null,
-        couponDiscountAmount
+        couponDiscountAmount,
+        notes: notes.trim()
       }
     });
   };
@@ -388,7 +415,17 @@ export default function POSCheckoutPage() {
                       />
                       Walk-in
                     </label>
-                    {!isWalkIn && (
+                    {isWalkIn ? (
+                      <button
+                        onClick={() => {
+                          setIsWalkIn(false);
+                          setShowCustomerSearch(true);
+                        }}
+                        className="text-xs bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Select Customer
+                      </button>
+                    ) : (
                       <button
                         onClick={() => setShowCustomerSearch(true)}
                         className="text-xs bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition-colors"
@@ -396,6 +433,12 @@ export default function POSCheckoutPage() {
                         Change
                       </button>
                     )}
+                    <button
+                      onClick={() => setShowAddCustomerModal(true)}
+                      className="text-xs bg-emerald-600 text-white px-3 py-1 rounded-lg hover:bg-emerald-700 transition-colors font-medium flex items-center gap-1"
+                    >
+                      + Add New
+                    </button>
                   </div>
                 </div>
               </div>
@@ -443,7 +486,24 @@ export default function POSCheckoutPage() {
                       <User className="w-8 h-8 text-slate-400" />
                     </div>
                     <p className="font-medium text-slate-700">Walk-in Customer</p>
-                    <p className="text-xs text-slate-400 mt-1">No loyalty points will be awarded</p>
+                    <p className="text-xs text-slate-400 mt-1 mb-4">No loyalty points will be awarded</p>
+                    <div className="flex justify-center gap-3">
+                      <button
+                        onClick={() => {
+                          setIsWalkIn(false);
+                          setShowCustomerSearch(true);
+                        }}
+                        className="text-xs border border-blue-200 text-blue-600 bg-blue-50/50 hover:bg-blue-50 px-4 py-2 rounded-xl transition-all font-semibold"
+                      >
+                        Select Customer
+                      </button>
+                      <button
+                        onClick={() => setShowAddCustomerModal(true)}
+                        className="text-xs border border-emerald-250 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-50 px-4 py-2 rounded-xl transition-all font-semibold"
+                      >
+                        + Add New Customer
+                      </button>
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -988,12 +1048,23 @@ export default function POSCheckoutPage() {
                 <h3 className="font-bold text-slate-800">Search Customer</h3>
                 <p className="text-sm text-slate-500">Find customer by name or phone number</p>
               </div>
-              <button
-                onClick={() => setShowCustomerSearch(false)}
-                className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setShowCustomerSearch(false);
+                    setShowAddCustomerModal(true);
+                  }}
+                  className="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                >
+                  + Add New Customer
+                </button>
+                <button
+                  onClick={() => setShowCustomerSearch(false)}
+                  className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             <div className="p-6">
               <div className="flex gap-3 mb-4">
@@ -1016,7 +1087,16 @@ export default function POSCheckoutPage() {
                   </div>
                 ) : filteredCustomers.length === 0 ? (
                   <div className="py-8 text-center text-slate-500 text-sm">
-                    No customers found matching search.
+                    <p className="mb-3 text-slate-500">No customers found matching search.</p>
+                    <button
+                      onClick={() => {
+                        setShowCustomerSearch(false);
+                        setShowAddCustomerModal(true);
+                      }}
+                      className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition"
+                    >
+                      + Add New Customer
+                    </button>
                   </div>
                 ) : (
                   filteredCustomers.map(customer => (
@@ -1081,6 +1161,16 @@ export default function POSCheckoutPage() {
               Yes, Cancel
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Add New Customer Modal */}
+      <Modal isOpen={showAddCustomerModal} onClose={() => setShowAddCustomerModal(false)} title="Add New Customer" size="lg">
+        <div className="max-h-[70vh] overflow-y-auto p-1">
+          <AddCustomerForm
+            onSubmit={handleAddCustomerSubmit}
+            onCancel={() => setShowAddCustomerModal(false)}
+          />
         </div>
       </Modal>
     </div>
