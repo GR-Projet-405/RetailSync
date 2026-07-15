@@ -1,22 +1,16 @@
-import axios from 'axios';
+import api from '../services/api';
 
-const salesApi = axios.create({
-  baseURL: 'http://localhost:5000/api',
-  headers: { 'Content-Type': 'application/json' },
-});
+const getSalesBaseURL = () => {
+  const base = api.defaults.baseURL || '/api/v1';
+  return base.endsWith('/v1') ? base.slice(0, -3) : base;
+};
 
-salesApi.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('retailsync_token');
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+const salesApi = {
+  get: (url, config = {}) => api.get(url, { ...config, baseURL: getSalesBaseURL() }),
+  post: (url, data, config = {}) => api.post(url, data, { ...config, baseURL: getSalesBaseURL() }),
+  put: (url, data, config = {}) => api.put(url, data, { ...config, baseURL: getSalesBaseURL() }),
+  delete: (url, config = {}) => api.delete(url, { ...config, baseURL: getSalesBaseURL() }),
+};
 
 export const getDashboardData = async (params = {}) => {
   const { branchId, startDate, endDate } = params;
