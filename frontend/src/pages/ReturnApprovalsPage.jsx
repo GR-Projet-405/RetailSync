@@ -32,10 +32,20 @@ export default function ReturnApprovalsPage() {
         fetchPendingApprovals();
     }, []);
 
-    const filteredRequests = pendingRequests.filter(row =>
-        row.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        row.receipt.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const formatName = (user) => {
+        if (!user) return 'N/A';
+        if (typeof user === 'object') {
+            const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+            return fullName || 'N/A';
+        }
+        return user;
+    };
+
+    const filteredRequests = pendingRequests.filter(row => {
+        const rowId = (row.id || row._id || '').toString().toLowerCase();
+        const receiptId = (row.receipt || '').toString().toLowerCase();
+        return rowId.includes(searchTerm.toLowerCase()) || receiptId.includes(searchTerm.toLowerCase());
+    });
 
     return (
         <div className="p-6 mx-auto space-y-6 max-w-7xl fade-up">
@@ -101,19 +111,19 @@ export default function ReturnApprovalsPage() {
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
                                                 <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                                                <span className="font-bold text-slate-900">{row.id}</span>
+                                                <span className="font-bold text-slate-900">{row.id || row._id}</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">{row.date}</td>
                                         <td className="px-6 py-4 font-semibold text-slate-600">{row.receipt}</td>
-                                        <td className="px-6 py-4">{row.customer}</td>
-                                        <td className="px-6 py-4">{row.cashier}</td>
+                                        <td className="px-6 py-4">{formatName(row.customer)}</td>
+                                        <td className="px-6 py-4">{formatName(row.cashier)}</td>
                                         <td className="px-6 py-4 font-bold text-right text-slate-800">
                                             Rs. {row.amount ? row.amount.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '0.00'}
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <button
-                                                onClick={() => navigate(`/returns/approval/${row.id}`)}
+                                                onClick={() => navigate(`/returns/approval/${row.id || row._id}`)}
                                                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-blue-200 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-600 hover:text-white transition-all shadow-sm group-hover:border-blue-600"
                                             >
                                                 Review <ChevronRight size={14} />

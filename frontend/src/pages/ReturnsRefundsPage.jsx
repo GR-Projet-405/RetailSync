@@ -1,14 +1,16 @@
-import ReturnStatusPage from './ReturnStatusPage';
 import { useState, useEffect } from 'react';
 import PageHeader from '../components/PageHeader';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/Card';
 import Button from '../components/Button';
-import { Search, Package, AlertCircle, Send, Barcode, HelpCircle, UploadCloud, Check, Save, Trash2, Edit2, Info } from 'lucide-react';
+import { Search, Package, AlertCircle, Send, Barcode, UploadCloud, Check, Save, Trash2, Edit2, Info } from 'lucide-react';
 import api from '../services/api';
 import Swal from 'sweetalert2';
-import toast from '../utils/toast'; 
+import toast from '../utils/toast';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export default function ReturnsRefundsPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [receiptId, setReceiptId] = useState('');
   const [uiState, setUiState] = useState('IDLE');
   const [receiptItems, setReceiptItems] = useState([]);
@@ -18,16 +20,20 @@ export default function ReturnsRefundsPage() {
   const [activeDetailSku, setActiveDetailSku] = useState(null);
   const [formStates, setFormStates] = useState({});
   const [activeCondition, setActiveCondition] = useState('Opened');
+  const [activePhotoFile, setActivePhotoFile] = useState(null);
 
   useEffect(() => {
     if (activeDetailSku) {
       const savedCondition = formStates[activeDetailSku]?.condition;
+      const savedPhoto = formStates[activeDetailSku]?.photoFile;
       setActiveCondition(savedCondition || 'Opened');
+      setActivePhotoFile(savedPhoto || null);
     }
   }, [activeDetailSku, formStates]);
 
-  const handleVerify = async () => {
-    const cleanId = receiptId.trim().toUpperCase();
+  const handleVerify = async (idToVerify) => {
+    const id = typeof idToVerify === 'string' ? idToVerify : receiptId;
+    const cleanId = id.trim().toUpperCase();
     if (!cleanId) return;
 
     try {
@@ -52,6 +58,15 @@ export default function ReturnsRefundsPage() {
       }
     }
   };
+
+  useEffect(() => {
+    if (location.state?.autoLoadReceiptId) {
+      const passedId = location.state.autoLoadReceiptId;
+      setReceiptId(passedId);
+      handleVerify(passedId);
+      window.history.replaceState({}, document.title);
+    }
+  }, []);
 
   const handleTryAnother = () => {
     setUiState('IDLE');
@@ -85,10 +100,10 @@ export default function ReturnsRefundsPage() {
     setReturnQuantities({ ...returnQuantities, [sku]: parseInt(qty) });
   };
 
-  const handleSaveSidebarDetails = (sku, reason, condition, comments) => {
+  const handleSaveSidebarDetails = (sku, reason, condition, comments, photoFile) => {
     setFormStates(prev => ({
       ...prev,
-      [sku]: { reason, condition, comments, isSaved: true }
+      [sku]: { reason, condition, comments, photoFile, isSaved: true }
     }));
     toast.success('Return details saved successfully.');
   };
@@ -138,22 +153,38 @@ export default function ReturnsRefundsPage() {
           reason: formInfo.reason,
           condition: formInfo.condition,
           comments: formInfo.comments,
-          photoProofUrl: "https://images.unsplash.com/photo-1527814050087-37938154791f?auto=format&fit=crop&w=100&q=80"
         };
       });
 
-      const payload = {
-        receiptId: receiptId.trim().toUpperCase(),
-        items: itemsPayload,
-        estimatedRefundTotal: calculateRefundTotal()
-      };
+      const formData = new FormData();
+      formData.append('receiptId', receiptId.trim().toUpperCase());
+      formData.append('estimatedRefundTotal', calculateRefundTotal());
+      formData.append('items', JSON.stringify(itemsPayload));
 
-      const response = await api.post('/returns-refunds/request', payload);
+      for (const sku of selectedSkus) {
+        if (formStates[sku]?.photoFile) {
+          formData.append('photoProofs', formStates[sku].photoFile);
+        }
+      }
+
+      const response = await api.post('/returns-refunds/request', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
       if (response.data.success) {
         Swal.close();
         toast.success('Return request submitted successfully.');
-        setUiState('TRACKING');
+        
+        const newReturnId = response.data.data?.returnId || response.data.returnId;
+
+        if (newReturnId) {
+          navigate(`/returns/status/${newReturnId}`);
+        } else {
+          toast.info('Redirecting to returns history...');
+          navigate('/returns/history');
+        }
       }
 
     } catch (error) {
@@ -163,18 +194,8 @@ export default function ReturnsRefundsPage() {
   };
 
   const activeItemInfo = receiptItems.find(item => item.sku === activeDetailSku);
-  const activeFormInfo = formStates[activeDetailSku] || { reason: 'Defective/Damaged Product', condition: 'Opened', comments: '', isSaved: false };
-
+  const activeFormInfo = formStates[activeDetailSku] || { reason: 'Defective/Damaged Product', condition: 'Opened', comments: '', isSaved: false, photoFile: null };
   const availableItemsCount = receiptItems.filter(i => i.availableQty > 0).length;
-
-  if (uiState === 'TRACKING') {
-    return (
-      <ReturnStatusPage
-        returnId="RET-0091"
-        onGoBack={() => setUiState('IDLE')}
-      />
-    );
-  }
 
   return (
     <div className="pt-2 pb-10 space-y-5 fade-up">
@@ -442,22 +463,33 @@ export default function ReturnsRefundsPage() {
 
                     <div>
                       <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wide mb-2">Photo Proof (Optional)</label>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src="https://images.unsplash.com/photo-1527814050087-37938154791f?auto=format&fit=crop&w=100&q=80"
-                            alt="Proof"
-                            className="object-cover w-12 h-12 border rounded-lg shadow-sm border-slate-200"
-                          />
-                          <div>
-                            <div className="text-[11px] font-bold text-slate-700">image_proof.jpg</div>
-                            <div className="text-[10px] font-medium text-slate-400 mt-0.5">156 KB</div>
+                      {activeFormInfo.photoFile ? (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={URL.createObjectURL(activeFormInfo.photoFile)}
+                              alt="Proof"
+                              className="object-cover w-12 h-12 border rounded-lg shadow-sm border-slate-200"
+                            />
+                            <div>
+                              <div className="text-[11px] font-bold text-slate-700">{activeFormInfo.photoFile.name}</div>
+                              <div className="text-[10px] font-medium text-slate-400 mt-0.5">{(activeFormInfo.photoFile.size / 1024).toFixed(0)} KB</div>
+                            </div>
                           </div>
+                          <button
+                            onClick={() => {
+                              const updatedForms = { ...formStates };
+                              updatedForms[activeDetailSku] = { ...updatedForms[activeDetailSku], photoFile: null };
+                              setFormStates(updatedForms);
+                            }}
+                            className="p-2 text-red-500 transition-colors rounded-md hover:bg-red-50"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
-                        <button className="p-2 text-red-500 transition-colors rounded-md hover:bg-red-50">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+                      ) : (
+                        <div className="text-[11px] font-medium text-slate-400">No photo uploaded</div>
+                      )}
                     </div>
 
                     <div>
@@ -512,11 +544,31 @@ export default function ReturnsRefundsPage() {
 
                     <div className="space-y-1.5">
                       <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wide">Photo Proof (Optional)</label>
-                      <div className="flex flex-col items-center justify-center p-5 text-center transition-all border-2 border-dashed cursor-pointer border-slate-200 rounded-xl bg-slate-50/30 hover:bg-slate-50">
-                        <UploadCloud size={24} className="mb-2 text-blue-500" />
-                        <span className="text-[11px] font-bold text-slate-700">Click or drag photos here</span>
-                        <span className="text-[10px] text-slate-400 mt-0.5">PNG, JPG up to 5MB</span>
-                      </div>
+                      <label className="flex flex-col items-center justify-center p-5 text-center transition-all border-2 border-dashed cursor-pointer border-slate-200 rounded-xl bg-slate-50/30 hover:bg-slate-50">
+                        <input
+                          type="file"
+                          accept="image/png, image/jpeg, image/jpg"
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files.length > 0) {
+                              setActivePhotoFile(e.target.files[0]);
+                            }
+                          }}
+                        />
+                        {activePhotoFile ? (
+                          <div className="flex flex-col items-center">
+                            <Check size={24} className="mb-2 text-emerald-500" />
+                            <span className="text-[11px] font-bold text-slate-700">{activePhotoFile.name}</span>
+                            <span className="text-[10px] text-slate-400 mt-0.5">{(activePhotoFile.size / 1024).toFixed(0)} KB</span>
+                          </div>
+                        ) : (
+                          <>
+                            <UploadCloud size={24} className="mb-2 text-blue-500" />
+                            <span className="text-[11px] font-bold text-slate-700">Click or drag photos here</span>
+                            <span className="text-[10px] text-slate-400 mt-0.5">PNG, JPG up to 5MB</span>
+                          </>
+                        )}
+                      </label>
                     </div>
 
                     <div className="space-y-1.5">
@@ -550,7 +602,8 @@ export default function ReturnsRefundsPage() {
                         activeDetailSku,
                         reasonEl ? reasonEl.value : "Defective/Damaged Product",
                         activeCondition,
-                        commentsEl ? commentsEl.value : ""
+                        commentsEl ? commentsEl.value : "",
+                        activePhotoFile
                       );
                     }}
                     className="flex items-center justify-center w-full h-10 gap-2 text-xs font-bold text-white bg-blue-600 rounded-lg shadow-none hover:bg-blue-700"
