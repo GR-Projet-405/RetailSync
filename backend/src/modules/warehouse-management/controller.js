@@ -2,7 +2,8 @@ const asyncHandler = require('../../utils/asyncHandler');
 const service = require('./service');
 
 const getWarehouses = asyncHandler(async (req, res) => {
-  const data = await service.getWarehouses();
+  const { branchId } = req.query;
+  const data = await service.getWarehouses({ branchId });
   res.status(200).json({
     success: true,
     message: 'Warehouse inventory summary loaded.',

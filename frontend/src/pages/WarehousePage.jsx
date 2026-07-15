@@ -1,42 +1,59 @@
 import { useEffect, useMemo, useState } from 'react';
-import axios from 'axios';
 import { Boxes, Building2, MapPin, Search, Users } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
+import { useAuth } from '../contexts/AuthContext';
+import { useBranches } from '../hooks/useBranches';
+import { useWarehouses } from '../hooks/useWarehouses';
 
 const statusStyles = {
   Active: 'success',
+  ACTIVE: 'success',
   Maintenance: 'warning',
-  Inactive: 'danger'
+  MAINTENANCE: 'warning',
+  Inactive: 'danger',
+  INACTIVE: 'danger'
+};
+
+const displayStatus = (status) => {
+  if (!status) return 'Active';
+  return status.charAt(0) + status.slice(1).toLowerCase();
 };
 
 export default function WarehousePage() {
-  const [warehouses, setWarehouses] = useState([]);
+  const { activeBranch } = useAuth();
+  const { data: branchRes } = useBranches();
+  
+  // Resolve selected active branch to branchId
+  const activeBranchObject = useMemo(() => {
+    return branchRes?.data?.find(b => b.branchName === activeBranch || b.name === activeBranch);
+  }, [branchRes, activeBranch]);
+  
+  const branchId = activeBranchObject?._id;
+
+  // Fetch warehouses scoped to the active branchId using React Query
+  const { data: warehousesRes, isLoading: loading } = useWarehouses({ branchId });
+  const warehouses = useMemo(() => warehousesRes?.data || [], [warehousesRes]);
+
   const [selectedWarehouse, setSelectedWarehouse] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(true);
 
-  const fetchWarehouses = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get('/api/v1/warehouse-management');
-      const data = response?.data?.data || [];
-      setWarehouses(data);
-      if (data.length) {
-        setSelectedWarehouse((current) => current || data[0]);
-      }
-    } catch (error) {
-      console.error('Unable to load warehouse data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Synchronize selected warehouse
   useEffect(() => {
-    fetchWarehouses();
-  }, []);
+    if (warehouses.length) {
+      setSelectedWarehouse((current) => {
+        if (current) {
+          const found = warehouses.find((w) => w._id === current._id);
+          if (found) return found;
+        }
+        return warehouses[0];
+      });
+    } else {
+      setSelectedWarehouse(null);
+    }
+  }, [warehouses]);
 
   const filteredWarehouses = useMemo(() => {
     const query = searchTerm.toLowerCase();
@@ -48,16 +65,10 @@ export default function WarehousePage() {
     });
   }, [warehouses, searchTerm]);
 
-  useEffect(() => {
-    if (!selectedWarehouse && filteredWarehouses.length) {
-      setSelectedWarehouse(filteredWarehouses[0]);
-    }
-  }, [filteredWarehouses, selectedWarehouse]);
-
   const summary = useMemo(() => {
     const totalCapacity = warehouses.reduce((sum, warehouse) => sum + (warehouse.totalCapacity || 0), 0);
     const usedCapacity = warehouses.reduce((sum, warehouse) => sum + (warehouse.usedCapacity || 0), 0);
-    const activeWarehouses = warehouses.filter((warehouse) => warehouse.status === 'Active').length;
+    const activeWarehouses = warehouses.filter((warehouse) => warehouse.status === 'Active' || warehouse.status === 'ACTIVE').length;
     return {
       totalCapacity,
       usedCapacity,
@@ -152,13 +163,15 @@ export default function WarehousePage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-semibold text-slate-900">{warehouse.name}</p>
-                        <p className="text-sm text-slate-500">{warehouse.code} • {warehouse.city}</p>
+                        <p className="text-sm text-slate-500">{warehouse.code} • {warehouse.city || 'N/A'}</p>
                       </div>
-                      <Badge variant={statusStyles[warehouse.status] || 'neutral'}>{warehouse.status}</Badge>
+                      <Badge variant={statusStyles[warehouse.status] || 'neutral'}>
+                        {displayStatus(warehouse.status)}
+                      </Badge>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-500">
-                      <span>{warehouse.totalLocations} locations</span>
-                      <span>{warehouse.activeSkus} active SKUs</span>
+                      <span>{warehouse.totalLocations || 0} locations</span>
+                      <span>{warehouse.activeSkus || 0} active SKUs</span>
                       <span>{Math.round(((warehouse.usedCapacity || 0) / (warehouse.totalCapacity || 1)) * 100)}% utilized</span>
                     </div>
                   </button>
@@ -177,8 +190,11 @@ export default function WarehousePage() {
               <>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-sm text-slate-500">Warehouse manager</p>
-                  <p className="text-base font-semibold text-slate-900">{selectedWarehouse.manager}</p>
-                  <p className="mt-2 text-sm text-slate-600">{selectedWarehouse.address}, {selectedWarehouse.city}</p>
+                  <p className="text-base font-semibold text-slate-900">{selectedWarehouse.manager || 'Unassigned'}</p>
+                  <p className="mt-2 text-sm text-slate-600">
+                    {selectedWarehouse.address ? `${selectedWarehouse.address}, ` : ''}
+                    {selectedWarehouse.city || ''}
+                  </p>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
