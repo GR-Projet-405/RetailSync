@@ -4,8 +4,9 @@ export default function FilterTabs({
   filter,
   setFilter,
   products = [],
+  searchTerm,
+  setSearchTerm,
 }) {
-
   const tabs = [
     {
       label: "All",
@@ -41,22 +42,19 @@ export default function FilterTabs({
   return (
     <div className="flex items-center justify-between mt-6 mb-6">
 
-      {/* Left Tabs */}
+      {/* Filter Tabs */}
       <div className="flex items-center bg-slate-100 rounded-xl p-1">
 
         {tabs.map((tab) => (
-
           <button
             key={tab.value}
             onClick={() => setFilter(tab.value)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all
-              ${
-                filter === tab.value
-                  ? "bg-white shadow text-slate-900 font-medium"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all ${
+              filter === tab.value
+                ? "bg-white shadow text-slate-900 font-medium"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
           >
-
             {tab.color && (
               <span
                 className={`w-2 h-2 rounded-full ${tab.color}`}
@@ -68,16 +66,17 @@ export default function FilterTabs({
             <span className="text-xs text-slate-400">
               ({tab.count})
             </span>
-
           </button>
-
         ))}
 
       </div>
 
+      {/* Search */}
       <SearchInput
         placeholder="Search products..."
         className="w-72"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
       />
 
     </div>

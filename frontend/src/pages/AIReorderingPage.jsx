@@ -13,7 +13,9 @@ export default function AIReorderingPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
   const [filter, setFilter] = useState("ALL");
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     loadRecommendations();
@@ -34,10 +36,19 @@ export default function AIReorderingPage() {
       setLoading(false);
     }
   };
-   const filteredProducts =
-      filter === "ALL"
-        ? products
-        : products.filter((item) => item.urgency === filter);
+
+  // Filter by urgency + search
+  const filteredProducts = products.filter((product) => {
+    const matchesFilter =
+      filter === "ALL" || product.urgency === filter;
+
+    const matchesSearch =
+      product.productName
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase());
+
+    return matchesFilter && matchesSearch;
+  });
 
   return (
     <div>
@@ -59,6 +70,8 @@ export default function AIReorderingPage() {
         filter={filter}
         setFilter={setFilter}
         products={products}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
       />
 
       {loading ? (
