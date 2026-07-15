@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
 import Breadcrumb from "../components/Breadcrumb";
 import PageHeader from "../components/PageHeader";
 import RecommendationBanner from "../components/ai-reordering/RecommendationBanner";
@@ -6,7 +7,7 @@ import SummaryCards from "../components/ai-reordering/SummaryCards";
 import FilterTabs from "../components/ai-reordering/FilterTabs";
 import RecommendationTable from "../components/ai-reordering/RecommendationTable";
 
-import { useAIRecommendations } from "../hooks/useAIReordering";
+import { getRecommendations } from "../services/aiReorderingService";
 
 export default function AIReorderingPage() {
   const [products, setProducts] = useState([]);
@@ -50,7 +51,7 @@ export default function AIReorderingPage() {
   });
 
   return (
-    <div>
+    <div className="space-y-6">
       <Breadcrumb
         items={[
           "Workspace",
@@ -59,7 +60,10 @@ export default function AIReorderingPage() {
         ]}
       />
 
-      <PageHeader />
+      <PageHeader
+        title="Recommendations"
+        description="AI-generated reorder recommendations based on inventory levels and demand forecasting."
+      />
 
       <RecommendationBanner />
 
@@ -77,9 +81,9 @@ export default function AIReorderingPage() {
         <div className="py-10 text-center text-slate-500">
           Loading recommendations...
         </div>
-      ) : queryError ? (
+      ) : error ? (
         <div className="py-10 text-center text-red-500">
-          {queryError.message || "Failed to load AI recommendations."}
+          {error}
         </div>
       ) : (
         <RecommendationTable products={filteredProducts} />
