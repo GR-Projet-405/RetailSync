@@ -126,13 +126,6 @@ export const NAVIGATION_GROUPS = [
     title: "Identity & Access",
     items: [
       {
-        id: "authentication",
-        name: "Authentication Info",
-        path: "/auth-info",
-        icon: "KeyRound",
-        allowedRoles: Object.values(ROLES),
-      },
-      {
         id: "user-role-management",
         name: "User & Role Management",
         path: "/users-roles",
