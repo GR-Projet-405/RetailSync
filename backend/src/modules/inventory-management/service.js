@@ -574,7 +574,7 @@ const getLowStockAlerts = async ({
     {
       $project: {
         productId: 1, warehouseId: 1,
-        currentStock: 1, reorderLevel: 1, severity: 1, lastMovementAt: 1,
+        currentStock: 1, reorderLevel: 1, severity: 1, lastMovementAt: 1, updatedAt: 1,
         'product.name': 1, 'product.sku': 1,
         'category.name': 1,
         'supplier.name': 1,
