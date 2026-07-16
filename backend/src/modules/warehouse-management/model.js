@@ -1,79 +1,144 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
+
+const zoneSchema = new mongoose.Schema(
+  {
+    zone: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    category: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    total: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+    },
+    used: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+    },
+  },
+  { _id: false },
+);
 
 const warehouseSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: [true, 'Warehouse name is required'],
-      trim: true,
-      maxlength: [100, 'Warehouse name cannot exceed 100 characters'],
-    },
     code: {
       type: String,
-      required: [true, 'Warehouse code is required'],
+      required: true,
       unique: true,
-      trim: true,
       uppercase: true,
-      maxlength: [20, 'Warehouse code cannot exceed 20 characters'],
+      trim: true,
     },
-    branchId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Branch',
-      required: [true, 'Branch is required'],
+
+    name: {
+      type: String,
+      required: true,
+      trim: true,
     },
-    location: {
-      address: { type: String, trim: true, default: null },
-      city:    { type: String, trim: true, default: null },
-      country: { type: String, trim: true, default: 'Sri Lanka' },
+
+    city: {
+      type: String,
+      required: true,
+      trim: true,
     },
-    contactPhone: {
+
+    address: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    manager: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    phone: {
       type: String,
       trim: true,
-      default: null,
     },
-    managerId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      default: null,
+
+    email: {
+      type: String,
+      lowercase: true,
+      trim: true,
     },
-    capacity: {
-      type: Number,
-      default: 5000,
-    },
+
     status: {
       type: String,
-      enum: ['ACTIVE', 'INACTIVE', 'MAINTENANCE'],
-      default: 'ACTIVE',
+      enum: [
+        "Active",
+        "Maintenance",
+        "Inactive",
+        "Full",
+        "Empty",
+        "Pending",
+        "Approved",
+        "Completed",
+        "Rejected",
+      ],
+      default: "Active",
+    },
+
+    totalCapacity: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+    },
+
+    usedCapacity: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    totalItems: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    totalLocations: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    activeSkus: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    incomingTransfers: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    lastUpdated: {
+      type: Date,
+      default: Date.now,
+    },
+
+    zoneData: {
+      type: [zoneSchema],
+      default: [],
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  },
 );
 
-warehouseSchema.index({ branchId: 1 });
-warehouseSchema.index({ status: 1 });
-
-// Virtuals for frontend backward-compatibility
-warehouseSchema.virtual('address').get(function () {
-  return this.location?.address;
-});
-
-warehouseSchema.virtual('city').get(function () {
-  return this.location?.city;
-});
-
-warehouseSchema.virtual('totalCapacity').get(function () {
-  return this.capacity || 5000;
-});
-
-warehouseSchema.virtual('manager').get(function () {
-  if (this.managerId && typeof this.managerId === 'object') {
-    return `${this.managerId.firstName || ''} ${this.managerId.lastName || ''}`.trim() || this.managerId.username || 'Unassigned';
-  }
-  return 'Unassigned';
-});
-
-// Ensure virtuals are output in JSON and Objects
-warehouseSchema.set('toJSON', { virtuals: true });
-warehouseSchema.set('toObject', { virtuals: true });
-
-module.exports = mongoose.model('Warehouse', warehouseSchema);
+module.exports = mongoose.model("Warehouse", warehouseSchema);

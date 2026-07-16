@@ -31,7 +31,7 @@ import StockLevelsPage from '../pages/StockLevelsPage';
 import StockMovementsPage from '../pages/StockMovementsPage';
 import StockAdjustmentsPage from '../pages/StockAdjustmentsPage';
 import LowStockAlertsPage from '../pages/LowStockAlertsPage';
-import WarehousePage from '../pages/WarehousePage';
+import WarehouseManagementPage from "../pages/WarehouseManagementPage";
 import PurchaseOrderPage from '../pages/PurchaseOrderPage';
 import GoodsReceivingPage from '../pages/GoodsReceivingPage';
 import StockTransferPage from '../pages/StockTransferPage';
@@ -365,6 +365,15 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
+        {/* Warehouse Management */}
+        <Route
+          path="/warehouses"
+  element={
+    <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+      <WarehouseManagementPage />
+    </ProtectedRoute>
+  }
+/>
         {/* Supplier Order Details */}
         <Route path="/purchase-orders/:id" element={
           <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER]}>
