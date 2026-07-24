@@ -4,13 +4,15 @@ import PageHeader from "../components/PageHeader";
 import PredictionBanner from "../components/ai-reordering/PredictionBanner";
 import PredictionGrid from "../components/ai-reordering/PredictionGrid";
 
-import { predictionItems } from "../data/aiReorderingData";
+import { useAIRecommendations } from "../hooks/useAIReordering";
 
 export default function InventoryPredictionPage() {
+  const { data: response, isLoading: loading } = useAIRecommendations();
+  const predictions = response?.data?.recommendations || [];
+
   return (
     <div className="space-y-6">
-
-     <Breadcrumb
+      <Breadcrumb
         items={[
           "Workspace",
           "AI Reordering",
@@ -25,10 +27,13 @@ export default function InventoryPredictionPage() {
 
       <PredictionBanner />
 
-      <PredictionGrid
-        items={predictionItems}
-      />
-
+      {loading ? (
+        <div className="text-center py-8 text-slate-500">
+          Loading predictions...
+        </div>
+      ) : (
+        <PredictionGrid items={predictions} />
+      )}
     </div>
   );
 }

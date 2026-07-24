@@ -391,7 +391,23 @@ export default function UserForm({ initialData = null, onSubmit, onCancel, isLoa
                 </Select>
               </Field>
             </>
-          ) : null}
+          ) : (
+            <Field label="Role" required error={(touched.roleId || touched.role) && errors.roleId}>
+              <Select
+                icon={Shield}
+                value={form.roleId || form.role || ''}
+                onChange={set('roleId')}
+                error={(touched.roleId || touched.role) && errors.roleId}
+              >
+                <option value="">Select role...</option>
+                {roles.map((r) => (
+                  <option key={r._id} value={r._id}>
+                    {r.name.replace('_', ' ')}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
         </div>
 
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -230,6 +230,111 @@ class POSBillingService {
 
     return result;
   }
+
+  /**
+   * Adjust stock levels for a single product in the database.
+   */
+  async adjustStock({ productId, delta, branchId }) {
+    const mongoose = require('mongoose');
+    const Product = require('../product-management/model');
+    const Inventory = require('../inventory-management/model');
+    const InventoryItem = require('../inventory-management/inventoryItem.model');
+    const Warehouse = require('../warehouse-management/model');
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      throw new Error('Invalid product ID.');
+    }
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      throw new Error('Product not found.');
+    }
+
+    // Find the warehouse for this branch
+    let warehouse = await Warehouse.findOne({ branchId });
+    if (!warehouse) {
+      warehouse = await Warehouse.findOne({ status: 'ACTIVE' });
+    }
+    const warehouseId = warehouse ? warehouse._id : null;
+
+    // 1. Adjust product variants stock
+    if (!product.variants || product.variants.length === 0) {
+      product.variants = [{
+        size: 'Default',
+        sku: product.sku,
+        quantity: 0,
+        warehouse: warehouseId
+      }];
+    }
+
+    let variant = product.variants.find(v => 
+      (warehouseId && v.warehouse && v.warehouse.toString() === warehouseId.toString()) || 
+      v.size === 'Default'
+    );
+    if (!variant) {
+      variant = product.variants[0];
+    }
+
+    const nextQty = variant.quantity + delta;
+    if (nextQty < 0) {
+      throw new Error(`Insufficient stock for product "${product.name}". Available: ${variant.quantity}`);
+    }
+    variant.quantity = nextQty;
+    await product.save();
+
+    // 2. Adjust legacy Inventory
+    if (branchId) {
+      const inv = await Inventory.findOne({ productId, branchId });
+      if (inv) {
+        inv.quantity = Math.max(0, inv.quantity + delta);
+        await inv.save();
+      } else {
+        await Inventory.create({ productId, branchId, quantity: Math.max(0, delta) });
+      }
+    }
+
+    // 3. Adjust modern InventoryItem
+    if (warehouseId) {
+      const item = await InventoryItem.findOne({ productId, warehouseId });
+      if (item) {
+        item.currentStock = Math.max(0, item.currentStock + delta);
+        await item.save();
+      } else {
+        await InventoryItem.create({ productId, warehouseId, currentStock: Math.max(0, delta) });
+      }
+    }
+
+    return {
+      productId,
+      newStock: variant.quantity
+    };
+  }
+
+  /**
+   * Adjust stock levels for multiple products or a single product based on payload.
+   */
+  async adjustStocks(payload, branchId) {
+    const { productId, delta, adjustments } = payload;
+    const results = [];
+
+    if (Array.isArray(adjustments)) {
+      for (const adj of adjustments) {
+        const res = await this.adjustStock({
+          productId: adj.productId,
+          delta: adj.delta,
+          branchId
+        });
+        results.push(res);
+      }
+    } else if (productId && delta !== undefined) {
+      const res = await this.adjustStock({ productId, delta, branchId });
+      results.push(res);
+    } else {
+      throw new Error('Invalid payload: specify either adjustments array or productId and delta.');
+    }
+
+    return results;
+  }
 }
 
 module.exports = new POSBillingService();

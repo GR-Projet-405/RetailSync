@@ -26,8 +26,10 @@ export default function ProcessRefundPage() {
             return;
           }
           setRequestData(data);
-          if (data.originalPaymentMethod) {
-            setSelectedMethod(data.originalPaymentMethod);
+          
+          const methodFromDB = data.originalPaymentMethod || data.paymentMethod;
+          if (methodFromDB) {
+            setSelectedMethod(methodFromDB);
           } else {
             setSelectedMethod('cash'); 
           }
@@ -43,7 +45,7 @@ export default function ProcessRefundPage() {
     if (returnId) fetchRefundDetails();
   }, [returnId, navigate]);
 
-const handleIssueRefund = async () => {
+  const handleIssueRefund = async () => {
     if (!selectedMethod) {
       toast.warning('Please select a refund destination method to proceed.');
       return;
@@ -123,7 +125,7 @@ const handleIssueRefund = async () => {
   const taxAmount = subtotal * 0.15;
   const total = subtotal + taxAmount;
 
-  const origMethod = requestData.originalPaymentMethod || 'cash';
+  const origMethod = requestData.originalPaymentMethod || requestData.paymentMethod || 'cash';
 
   return (
     <div className="p-6 mx-auto space-y-6 max-w-7xl fade-up">
@@ -187,7 +189,7 @@ const handleIssueRefund = async () => {
               <span className="font-bold text-slate-800">Rs. {subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
             </div>
             <div className="flex justify-between font-medium text-slate-500">
-              <span>Tax Refundable (VAT 15%)</span>
+              <span>Tax Refundable </span>
               <span className="font-bold text-slate-800">Rs. {taxAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
             </div>
           </div>
@@ -230,7 +232,7 @@ const handleIssueRefund = async () => {
                     </div>
                     <div>
                       <div className="text-sm font-bold text-slate-800">Cash Refund</div>
-                      <div className="text-xs font-medium text-slate-500">Issue from cash drawer</div>
+                      <div className="text-xs font-medium text-slate-500">Issue directly from cash drawer</div>
                     </div>
                   </div>
                   <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-1 rounded font-bold uppercase">Original</span>
@@ -244,26 +246,28 @@ const handleIssueRefund = async () => {
                       <CreditCard size={20} />
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-slate-800">Card Reversal</div>
-                      <div className="text-xs font-medium text-slate-500">Card {requestData.cardLastFourDigits ? `(****${requestData.cardLastFourDigits})` : ''}</div>
+                      <div className="text-sm font-bold text-slate-800">Card Reversal (Manual)</div>
+                      <div className="text-xs font-medium text-slate-500">
+                        Reverse via POS terminal {requestData.cardLastFourDigits ? `for card ****${requestData.cardLastFourDigits}` : ''}
+                      </div>
                     </div>
                   </div>
                   <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-1 rounded font-bold uppercase">Original</span>
                 </div>
               )}
 
-              {['ezcash', 'mcash', 'frimi', 'qr'].includes(origMethod) && (
-                <div className="flex items-center justify-between p-2.5 rounded-lg border border-blue-500 bg-blue-50/50">
+              {['ezcash', 'mcash', 'frimi', 'qr'].includes(origMethod.toLowerCase()) && (
+                <div className="flex items-center justify-between p-2.5 rounded-lg border border-purple-500 bg-purple-50/50">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center w-10 h-10 font-bold text-purple-600 bg-purple-100 rounded-lg shrink-0">
-                      {origMethod.toUpperCase()}
+                      <RotateCcw size={20} />
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-slate-800">Digital Wallet Reversal</div>
-                      <div className="text-xs font-medium text-slate-500">Refund to {origMethod.toUpperCase()} wallet</div>
+                      <div className="text-sm font-bold text-slate-800">{origMethod.toUpperCase()} / Digital (Manual)</div>
+                      <div className="text-xs font-medium text-slate-500">Perform a manual transfer or issue cash equivalent</div>
                     </div>
                   </div>
-                  <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-1 rounded font-bold uppercase">Original</span>
+                  <span className="text-[10px] bg-purple-100 text-purple-600 px-2 py-1 rounded font-bold uppercase">Original</span>
                 </div>
               )}
 
@@ -277,7 +281,7 @@ const handleIssueRefund = async () => {
               className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3.5 px-4 rounded-xl shadow-sm flex items-center justify-center gap-2 text-sm transition-colors cursor-pointer"
             >
               <ShieldAlert size={18} className="text-white/80" />
-              <span>Authorize & Issue Rs. {total.toLocaleString('en-US', { minimumFractionDigits: 2 })} Refund</span>
+              <span>Authorize & Record Rs. {total.toLocaleString('en-US', { minimumFractionDigits: 2 })} Refund</span>
             </button>
           </div>
 

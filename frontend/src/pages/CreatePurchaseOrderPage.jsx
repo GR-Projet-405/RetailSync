@@ -110,7 +110,7 @@ function SupplierStep({ data, setData, onNext, onCancel }) {
       fetch(`${API_BASE}/suppliers?search=${encodeURIComponent(query)}`)
         .then((res) => res.json())
         .then((json) => {
-          if (json.success) setSuppliers(json.data);
+          if (json.success) setSuppliers(json.data || []);
         })
         .catch((err) => console.error("Failed to load suppliers:", err));
     }, 300);

@@ -1,3 +1,4 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
 
@@ -15,7 +16,6 @@ class PaymentProcessingService {
     return await Customer.find(query);
   }
 
-  // 2. Add a new customer
   // 2. Add a new customer
   async createCustomer(customerData) {
     const formattedData = {
@@ -54,7 +54,15 @@ class PaymentProcessingService {
 
     // Save the transaction to the database
     const transaction = new Transaction(transactionData);
-    const savedTransaction = await transaction.save();
+    let savedTransaction = await transaction.save();
+
+    savedTransaction = await savedTransaction.populate([
+      { path: 'customerId' },
+      {
+        path: 'cashierId',
+        populate: { path: 'branchId', model: 'Branch' }
+      }
+    ]);
 
     // If a registered customer made the payment, update their points
     if (customerId) {
@@ -72,7 +80,10 @@ class PaymentProcessingService {
   async getAllTransactions() {
     return await Transaction.find()
       .populate('customerId', 'firstName lastName phone email loyaltyPoints')
-      .populate('cashierId', 'name')
+      .populate({
+        path: 'cashierId',
+        populate: { path: 'branchId', model: 'Branch' }
+      })
       .sort({ createdAt: -1 });
   }
 
@@ -82,10 +93,12 @@ class PaymentProcessingService {
     if (!transaction) throw new Error("Transaction not found");
 
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: process.env.EMAIL_HOST,
+      port: parseInt(process.env.EMAIL_PORT),
+      secure: process.env.EMAIL_SECURE === 'true', //secure:true for port 465, secure:false for port 587
       auth: {
-        user: 'ashenlakmal05@gmail.com',
-        pass: 'suvf aklf rjbt yyob'
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
       }
     });
 
@@ -129,7 +142,7 @@ class PaymentProcessingService {
       loyaltyHtml = `
           <hr style="border: 0; border-top: 1px dashed #cbd5e1; margin: 15px 0;" />
           <div style="text-align: center; background-color: #fffbeb; border: 1px solid #fde68a; padding: 12px; border-radius: 8px;">
-              <p style="margin: 0; color: #92400e; font-size: 14px; font-weight: bold;">Customer: ${customer.name}</p>
+              <p style="margin: 0; color: #92400e; font-size: 14px; font-weight: bold;">Customer: ${customer.firstName} ${customer.lastName}</p>
               ${transaction.pointsEarned > 0 ? `<p style="margin: 5px 0 0 0; color: #d97706; font-size: 12px;">Points Earned: +${transaction.pointsEarned}</p>` : ''}
               ${transaction.pointsRedeemed > 0 ? `<p style="margin: 5px 0 0 0; color: #d97706; font-size: 12px;">Points Redeemed: -${transaction.pointsRedeemed}</p>` : ''}
               <p style="margin: 8px 0 0 0; color: #b45309; font-size: 13px; font-weight: bold;">New Points Balance: ${customer.loyaltyPoints} Pts</p>
@@ -176,7 +189,7 @@ class PaymentProcessingService {
                       <span>- Rs. ${(transaction.pointsRedeemed / 10).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                   </div>` : ''}
                   <div style="display: flex; justify-content: space-between; margin: 5px 0;">
-                      <span>VAT (15%):</span>
+                      <span>TAX :</span>
                       <span>Rs. ${transaction.taxAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                   </div>
               </div>
@@ -202,7 +215,7 @@ class PaymentProcessingService {
     `;
 
     const mailOptions = {
-      from: '"RetailOS Pro POS" <ashenlakmal05@gmail.com>',
+      from: `"RetailOS Pro POS" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: `Your Receipt from RetailOS Pro (#${transaction.receiptId})`,
       html: htmlContent

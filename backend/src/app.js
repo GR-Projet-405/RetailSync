@@ -8,6 +8,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
+const recordActivity = require('./middleware/activity.middleware');
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
+app.use(recordActivity);
 
 // Initialize MongoDB Connection
 connectDB();
@@ -33,6 +35,7 @@ app.use('/api/sales', require('../routes/salesRoutes'));
 require('./modules/branch-management/branch.model');
 require('./modules/role-management/role.model');
 require('./modules/user-management/user.model');
+require('./modules/goods-receiving/model');
 require('./modules/promotions-discounts/promotion.model');
 require('./modules/promotions-discounts/coupon.model');
 require('./modules/promotions-discounts/discountRule.model');

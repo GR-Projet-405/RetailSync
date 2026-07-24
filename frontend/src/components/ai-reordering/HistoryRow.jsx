@@ -1,18 +1,22 @@
 import StatusBadge from "./StatusBadge";
 
 export default function HistoryRow({ item }) {
+  const confidenceColor = {
+    CRITICAL: "text-red-600",
+    HIGH: "text-orange-500",
+    MEDIUM: "text-amber-600",
+    LOW: "text-green-600",
+  };
+
+  const difference =
+    item.decisionNote?.match(/[+-]\d+/)?.[0] || null;
+
   const differenceColor =
-    item.difference?.startsWith("+")
+    difference?.startsWith("+")
       ? "text-green-600"
-      : item.difference?.startsWith("-")
+      : difference?.startsWith("-")
       ? "text-red-600"
       : "text-slate-400";
-
-  const confidenceColor = {
-    HIGH: "text-green-700",
-    MEDIUM: "text-amber-600",
-    LOW: "text-red-600",
-  };
 
   return (
     <div className="grid grid-cols-[50px_2fr_1.2fr_0.8fr_1fr_1fr_1fr] items-center px-6 py-5 border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors">
@@ -28,39 +32,37 @@ export default function HistoryRow({ item }) {
       {/* Product */}
       <div>
         <p className="text-[15px] font-medium text-slate-900 leading-6 max-w-[230px]">
-          {item.product}
+          {item.productName}
         </p>
       </div>
 
       {/* Branch */}
       <div>
-        <p className="text-[15px] text-slate-600 leading-6 whitespace-pre-line">
-          {item.branch.replace(" ", "\n")}
+        <p className="text-[15px] text-slate-600 whitespace-pre-line">
+          {item.branchName}
         </p>
       </div>
 
-      {/* Current */}
+      {/* Recommended Qty */}
       <div className="text-[15px] text-slate-600">
-        {item.current}
+        {item.recommendedQuantity}
       </div>
 
-      {/* Reordered */}
+      {/* Final Qty */}
       <div className="text-[15px] font-medium">
-
-        {item.reordered ? (
+        {item.status === "REJECTED" ? (
+          <span className="text-slate-400">—</span>
+        ) : (
           <>
-            <span>{item.reordered}</span>
+            <span>{item.recommendedQuantity}</span>
 
-            {item.difference && (
+            {difference && (
               <span className={`ml-1 ${differenceColor}`}>
-                ({item.difference})
+                ({difference})
               </span>
             )}
           </>
-        ) : (
-          <span className="text-slate-400">—</span>
         )}
-
       </div>
 
       {/* Status */}
@@ -70,15 +72,15 @@ export default function HistoryRow({ item }) {
 
       {/* Confidence */}
       <div className="flex items-center gap-1 font-semibold">
-
-        <span className={confidenceColor[item.level]}>
-          {item.confidence}%
+        <span className={confidenceColor[item.urgency]}>
+          {item.confidenceScore}%
         </span>
 
-        <span className={`${confidenceColor[item.level]} text-sm`}>
-          {item.level}
+        <span
+          className={`${confidenceColor[item.urgency]} text-sm`}
+        >
+          {item.urgency}
         </span>
-
       </div>
 
     </div>

@@ -25,6 +25,7 @@ const DEFAULT_EVENT_TYPES = [
 export default function SystemEventsPage() {
   const [severity, setSeverity] = useState('ALL');
   const [eventType, setEventType] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
 
   const statsQuery = useSystemEventStats();
@@ -42,11 +43,18 @@ export default function SystemEventsPage() {
 
   const handleSeverityChange = (value: string) => {
     setSeverity(value);
+    setSearchQuery('');
     setPage(1);
   };
 
   const handleEventTypeChange = (value: string) => {
     setEventType(value);
+    setSearchQuery('');
+    setPage(1);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
     setPage(1);
   };
 
@@ -58,6 +66,18 @@ export default function SystemEventsPage() {
   const handleExport = () => {
     exportSystemEventsToPDF(events, severity, eventType);
   };
+
+  // Client-side search filtering (message, source, or eventId)
+  const filteredEvents = searchQuery.trim()
+    ? events.filter((event) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          event.message.toLowerCase().includes(q) ||
+          event.source.toLowerCase().includes(q) ||
+          event.eventId.toLowerCase().includes(q)
+        );
+      })
+    : events;
 
   return (
     <div className="space-y-6">
@@ -82,15 +102,17 @@ export default function SystemEventsPage() {
           eventType={eventType}
           severities={severities}
           eventTypes={eventTypes}
+          searchQuery={searchQuery}
           onSeverityChange={handleSeverityChange}
           onEventTypeChange={handleEventTypeChange}
+          onSearchChange={handleSearchChange}
           onRefresh={handleRefresh}
           isRefreshing={statsQuery.isFetching || eventsQuery.isFetching}
           onExport={handleExport}
           isExportDisabled={eventsQuery.isLoading || events.length === 0}
         />
 
-        <EventsTable events={events} isLoading={eventsQuery.isLoading} />
+        <EventsTable events={filteredEvents} isLoading={eventsQuery.isLoading} />
 
         {pagination && pagination.total > 0 && (
           <Pagination pagination={pagination} onPageChange={setPage} />
