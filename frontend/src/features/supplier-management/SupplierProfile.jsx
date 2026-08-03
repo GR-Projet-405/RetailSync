@@ -116,10 +116,7 @@ const SupplierProfile = ({ supplier, onBack, onGoToContacts, onGoToPerformance, 
   };
 
   // All other data comes directly from the supplier prop
-
-const SupplierProfile = ({ supplier, onBack, onGoToContacts, onGoToPerformance }) => {
   // Use contacts embedded in supplier document from the API
-
   const contacts = supplier?.contacts ?? [];
   const primaryContact = contacts.find(c => c.isPrimary) ?? contacts[0];
   const recentDocs = supplier?.documents ?? [];
@@ -162,7 +159,10 @@ const SupplierProfile = ({ supplier, onBack, onGoToContacts, onGoToPerformance }
           >
             <Phone className="w-4 h-4" /> Contacts
           </button>
-          <button className="inline-flex items-center gap-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-3.5 py-2 rounded-xl transition-colors shadow-sm">
+          <button
+            onClick={onEditSupplier}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-3.5 py-2 rounded-xl transition-colors shadow-sm"
+          >
             <Edit className="w-4 h-4" /> Edit Supplier
           </button>
         </div>
