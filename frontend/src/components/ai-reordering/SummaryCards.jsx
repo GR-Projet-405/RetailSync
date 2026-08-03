@@ -8,14 +8,29 @@ import {
   Info,
 } from "lucide-react";
 
-export default function SummaryCards() {
+export default function SummaryCards({ products = [] }) {
+
+  const totalFlagged = products.length;
+
+  const critical = products.filter(
+    (item) => item.urgency === "CRITICAL"
+  ).length;
+
+  const high = products.filter(
+    (item) => item.urgency === "HIGH"
+  ).length;
+
+  const low = products.filter(
+    (item) => item.urgency === "LOW"
+  ).length;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mt-6">
 
       {/* Total Flagged */}
       <SummaryCard
         title="Total Flagged"
-        value="6"
+        value={totalFlagged}
         description="Products below reorder level"
         icon={<Package className="text-slate-600" size={20} />}
         bgColor="bg-slate-100"
@@ -27,8 +42,8 @@ export default function SummaryCards() {
       {/* Critical */}
       <SummaryCard
         title="Critical"
-        value="2"
-        description="Stockout within 2 days"
+        value={critical}
+        description="Immediate attention required"
         icon={<AlertTriangle className="text-red-600" size={20} />}
         bgColor="bg-red-100"
         cardColor="bg-red-50"
@@ -36,11 +51,11 @@ export default function SummaryCards() {
         descColor="text-red-600"
       />
 
-      {/* Medium */}
+      {/* High */}
       <SummaryCard
-        title="Medium"
-        value="3"
-        description="Stockout within 7 days"
+        title="High"
+        value={high}
+        description="Reorder soon"
         icon={<AlertCircle className="text-yellow-600" size={20} />}
         bgColor="bg-yellow-100"
         cardColor="bg-yellow-50"
@@ -51,7 +66,7 @@ export default function SummaryCards() {
       {/* Low */}
       <SummaryCard
         title="Low"
-        value="1"
+        value={low}
         description="Monitor only"
         icon={<Info className="text-green-600" size={20} />}
         bgColor="bg-green-100"

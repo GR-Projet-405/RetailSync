@@ -9,7 +9,7 @@ const recommendationSchema = new mongoose.Schema(
     },
     productId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'ProductPage',
+      ref: 'Product',
       default: null,
     },
     sku: {
@@ -48,7 +48,7 @@ const recommendationSchema = new mongoose.Schema(
     },
     supplierId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'SupplierPage',
+      ref: 'Supplier',
       default: null,
     },
     supplierName: {
@@ -114,7 +114,7 @@ const recommendationSchema = new mongoose.Schema(
     purchaseOrderDraft: {
       supplierId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'SupplierPage',
+        ref: 'Supplier',
         default: null,
       },
       supplierName: {
@@ -136,7 +136,7 @@ const recommendationSchema = new mongoose.Schema(
         {
           productId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'ProductPage',
+            ref: 'Product',
             default: null,
           },
           sku: { type: String, trim: true },

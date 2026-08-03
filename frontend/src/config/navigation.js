@@ -126,13 +126,6 @@ export const NAVIGATION_GROUPS = [
     title: "Identity & Access",
     items: [
       {
-        id: "authentication",
-        name: "Authentication Info",
-        path: "/auth-info",
-        icon: "KeyRound",
-        allowedRoles: Object.values(ROLES),
-      },
-      {
         id: "user-role-management",
         name: "User & Role Management",
         path: "/users-roles",
@@ -402,6 +395,23 @@ export const NAVIGATION_GROUPS = [
           ROLES.BRANCH_MANAGER,
           ROLES.CASHIER,
         ],
+      },
+      {
+        id: "returns-approvals",
+        name: "Manage Return Requests",
+        path: "/returns/approvals",
+        icon: "RotateCcw",
+        allowedRoles: [
+          ROLES.BRANCH_MANAGER,
+        ],
+      },
+
+      {
+        id: 'returns-refunds-history',
+        name: 'Returns & Refunds History',
+        path: '/returns/history',
+        icon: 'FileText',
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.CASHIER]
       },
       {
         id: "customer-management",
