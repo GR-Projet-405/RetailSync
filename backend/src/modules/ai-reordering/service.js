@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const AIReorderRecommendation = require('./model');
 const BusinessAnalyticsSnapshot = require('../business-analytics/model');
+const PurchaseOrderPageService = require('../purchase-orders/service');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -398,21 +399,47 @@ const convertToPurchaseOrder = async (id, payload, userId) => {
     throw buildError('Only pending or approved recommendations can be converted to a purchase order draft.', 409);
   }
 
-  const purchaseOrderDraft = {
-    supplierId: payload.supplierId || recommendation.supplierId || null,
-    supplierName: payload.supplierName || recommendation.supplierName || '',
-    branchId: recommendation.branchId || null,
-    branchName: recommendation.branchName || '',
+  if (!recommendation.productId) {
+    throw buildError('This recommendation does not have a linked product.', 400);
+  }
+
+  const supplierId = payload.supplierId || recommendation.supplierId;
+  if (!supplierId) {
+    throw buildError('A supplier must be selected to generate a purchase order draft.', 400);
+  }
+
+  // Create a real draft purchase order via the canonical service
+  const poDraftBody = {
+    supplierId: supplierId.toString(),
+    expectedDeliveryDate: payload.expectedDeliveryDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    shippingAddress: payload.shippingAddress || 'Default Warehouse Address',
     items: [
       {
-        productId: recommendation.productId || null,
-        sku: recommendation.sku,
-        productName: recommendation.productName,
+        productId: recommendation.productId.toString(),
         quantity: recommendation.recommendedQuantity,
-      },
+      }
     ],
-    note: payload.note || 'Generated from AI reorder recommendation.',
-    generatedAt: new Date(),
+    internalNotes: payload.note || 'Generated from AI reorder recommendation.',
+    asDraft: true
+  };
+
+  const createdPO = await PurchaseOrderPageService.create(poDraftBody, userId);
+
+  const purchaseOrderDraft = {
+    supplierId: createdPO.supplier,
+    supplierName: createdPO.supplierNameSnapshot,
+    branchId: recommendation.branchId || null,
+    branchName: recommendation.branchName || '',
+    items: createdPO.items.map(item => ({
+      productId: item.product,
+      sku: item.sku,
+      productName: item.name,
+      quantity: item.quantity,
+    })),
+    note: createdPO.internalNotes,
+    generatedAt: createdPO.createdAt,
+    poNumber: createdPO.poNumber,
+    purchaseOrderId: createdPO._id,
   };
 
   recommendation.status = 'CONVERTED_TO_PO';
@@ -426,7 +453,8 @@ const convertToPurchaseOrder = async (id, payload, userId) => {
   return {
     recommendation,
     purchaseOrderDraft,
-    message: 'Purchase order backend is not implemented yet; returning a draft payload for review.',
+    purchaseOrder: createdPO,
+    message: 'AI reorder recommendation successfully converted to a Purchase Order draft.',
   };
 };
 

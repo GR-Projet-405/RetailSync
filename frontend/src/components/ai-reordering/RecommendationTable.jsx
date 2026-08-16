@@ -2,92 +2,101 @@ import DataTable from "../DataTable";
 import Badge from "../Badge";
 
 export default function RecommendationTable({ products }) {
-  const getVariant = (status) => {
-    switch (status) {
-      case "Critical":
-        return "danger";
-      case "Medium":
-        return "warning";
-      case "Low":
-        return "success";
-      default:
-        return "neutral";
-    }
-  };
+const getVariant = (urgency) => {
+  switch (urgency) {
+    case "CRITICAL":
+      return "danger";
 
-  const columns = [
-    {
-      header: "",
-      key: "checkbox",
-      width: "50px",
-      render: () => (
-        <input
-          type="checkbox"
-          className="w-4 h-4 rounded border-slate-300"
-        />
-      ),
-    },
+    case "HIGH":
+      return "warning";
 
-    {
-      header: "Product",
-      key: "product",
-      render: (row) => (
-        <div className="flex items-center gap-3">
-          <span>{row.product}</span>
+    case "MEDIUM":
+      return "warning";
 
-          <Badge variant={getVariant(row.status)}>
-            {row.status}
-          </Badge>
-        </div>
-      ),
-    },
+    case "LOW":
+      return "success";
 
-    {
-      header: "Branch",
-      key: "branch",
-    },
+    default:
+      return "neutral";
+  }
+};
 
-    {
-      header: "Current Stock",
-      key: "stock",
-    },
+const columns = [
+  {
+    header: "",
+    key: "checkbox",
+    width: "50px",
+    render: () => (
+      <input
+        type="checkbox"
+        className="w-4 h-4 rounded border-slate-300"
+      />
+    ),
+  },
 
-    {
-      header: "Reorder Level",
-      key: "reorder",
+  {
+    header: "Product",
+    key: "productName",
+    render: (row) => (
+      <div className="flex items-center gap-3">
+        <span>{row.productName}</span>
 
-      render: (row) => {
-          const colors = {
-          Critical: "bg-red-50 text-red-600",
-          Medium: "bg-yellow-50 text-yellow-600",
-          Low: "bg-green-50 text-green-600",
-          };
-
-          return (
-          <span
-              className={`px-3 py-1 rounded-md text-sm font-semibold ${colors[row.status]}`}
-          >
-              {row.reorder}
-          </span>
-          );
-        },
-    },
-
-    {
-      header: "AI Suggested Qty",
-      key: "suggested",
-    },
-
-    {
-      header: "Confidence",
-      key: "confidence",
-      render: (row) => (
-        <Badge variant="neutral">
-          {row.confidence}
+        <Badge variant={getVariant(row.urgency)}>
+          {row.urgency}
         </Badge>
-      ),
+      </div>
+    ),
+  },
+
+  {
+    header: "Branch",
+    key: "branchName",
+  },
+
+  {
+    header: "Current Stock",
+    key: "currentStock",
+  },
+
+  {
+    header: "Reorder Level",
+    key: "reorderLevel",
+
+    render: (row) => {
+      const colors = {
+        CRITICAL: "bg-red-50 text-red-600",
+        HIGH: "bg-yellow-50 text-yellow-600",
+        MEDIUM: "bg-yellow-50 text-yellow-600",
+        LOW: "bg-green-50 text-green-600",
+      };
+
+      return (
+        <span
+          className={`px-3 py-1 rounded-md text-sm font-semibold ${
+            colors[row.urgency]
+          }`}
+        >
+          {row.reorderLevel}
+        </span>
+      );
     },
-  ];
+  },
+
+  {
+    header: "AI Suggested Qty",
+    key: "recommendedQuantity",
+  },
+
+  {
+    header: "Confidence",
+    key: "confidenceScore",
+    render: (row) => (
+      <Badge variant="neutral">
+        {row.confidenceScore}%
+      </Badge>
+    ),
+  },
+];
 
   return (
     <div className="rounded-xl border border-slate-200 overflow-hidden bg-white">

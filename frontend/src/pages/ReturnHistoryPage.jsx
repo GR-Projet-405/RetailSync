@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Building2, Filter, Calendar, Loader2 } from 'lucide-react';
+import { Search, Filter, Calendar, Loader2 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import toast from '../utils/toast'; 
@@ -13,6 +13,9 @@ export default function ReturnHistoryPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -65,11 +68,37 @@ export default function ReturnHistoryPage() {
     const matchesStatus = statusFilter === 'All' ? true :
       (statusFilter === 'Refunded' ? (row.status === 'Refund Issued' || row.status === 'Completed' || row.status === 'Refunded') : row.status.includes(statusFilter));
 
-    return matchesSearch && matchesStatus;
+    const matchesDate = (() => {
+      if (!row.date) return true;
+      
+      const rowDate = new Date(row.date);
+      rowDate.setHours(0, 0, 0, 0);
+
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        if (rowDate < start) return false;
+      }
+      
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(0, 0, 0, 0);
+        if (rowDate > end) return false;
+      }
+
+      return true;
+    })();
+
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const handleViewClick = (row) => {
     navigate(`/returns/status/${row.id}`, { state: { status: row.status } });
+  };
+
+  const handleClearDates = () => {
+    setStartDate('');
+    setEndDate('');
   };
 
   return (
@@ -93,10 +122,8 @@ export default function ReturnHistoryPage() {
               className="w-full py-2 pl-10 pr-4 text-sm transition-all border rounded-lg border-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
-          <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border rounded-lg text-slate-700 border-slate-200 hover:bg-slate-50">
-              <Building2 size={16} className="text-slate-500" /> Select Branch
-            </button>
+          
+          <div className="flex flex-wrap items-center gap-3">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -108,9 +135,31 @@ export default function ReturnHistoryPage() {
               <option value="Refunded">Refunded</option>
               <option value="Rejected">Rejected</option>
             </select>
-            <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border rounded-lg text-slate-700 border-slate-200 hover:bg-slate-50">
-              <Calendar size={16} className="text-slate-500" /> Date Range
-            </button>
+
+            <div className="flex items-center gap-2 px-3 py-1.5 border rounded-lg border-slate-200 bg-white text-sm">
+              <Calendar size={16} className="text-slate-400" />
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="bg-transparent outline-none text-slate-700 text-xs cursor-pointer focus:text-blue-600"
+              />
+              <span className="text-slate-400 px-0.5 text-xs font-medium">to</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="bg-transparent outline-none text-slate-700 text-xs cursor-pointer focus:text-blue-600"
+              />
+              {(startDate || endDate) && (
+                <button
+                  onClick={handleClearDates}
+                  className="text-xs text-red-500 hover:text-red-700 font-bold ml-2 transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -149,7 +198,15 @@ export default function ReturnHistoryPage() {
                     <td className="px-6 py-4">{row.date}</td>
                     <td className="px-6 py-4 font-semibold text-blue-600">{row.receipt}</td>
                     <td className="px-6 py-4">{row.customer}</td>
-                    <td className="px-6 py-4">{row.cashier}</td>
+                    <td className="px-6 py-4">
+                      {(() => {
+                        const cashierData = row.cashier || row.cashierId;
+                        if (typeof cashierData === 'object' && cashierData !== null) {
+                          return `${cashierData.firstName || ''} ${cashierData.lastName || ''}`.trim();
+                        }
+                        return cashierData || 'Unknown';
+                      })()}
+                    </td>
                     <td className="px-6 py-4 font-bold text-slate-800">
                       Rs. {row.amount ? row.amount.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '0.00'}
                     </td>

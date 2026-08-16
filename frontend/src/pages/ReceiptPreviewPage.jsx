@@ -14,7 +14,6 @@ import Modal from '../components/Modal';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
-
 const currency = {
   format: (value) => `Rs. ${Number(value || 0).toLocaleString('en-US', {
     minimumFractionDigits: 2,
@@ -62,6 +61,9 @@ export default function ReceiptPreviewPage() {
       taxNumber: s.taxNumber || 'REG-2024-00123',
       receiptFooter: s.receiptFooter || 'Thank you for shopping with us! Visit again.',
       storeLogo: s.storeLogo || '🛒',
+      couponCode: s.couponCode || null,
+      couponDiscountAmount: s.couponDiscountAmount || 0,
+      notes: s.notes || '',
     };
   });
 
@@ -70,17 +72,19 @@ export default function ReceiptPreviewPage() {
     paymentMethod, amountReceived, changeDue, customer,
     invoiceNumber, date, time, cashierName, counterNumber,
     storeName, storeAddress, storePhone, storeEmail, storeBranch,
-    taxNumber, receiptFooter, storeLogo,
+    taxNumber, receiptFooter, storeLogo, couponCode, couponDiscountAmount,
+    notes
   } = meta;
+
+  const finalGrandTotal = Math.max(0, total - couponDiscountAmount);
 
   // ── Email send state ───────────────────────────────────────────────────────
   const [emailInput, setEmailInput] = useState('');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
-  const [emailStatus, setEmailStatus] = useState(null); // 'success' | 'error' | null
+  const [emailStatus, setEmailStatus] = useState(null);
   const [emailMsg, setEmailMsg] = useState('');
   const [emailPreviewUrl, setEmailPreviewUrl] = useState(null);
 
-  // Pre-fill from customer record if available
   useEffect(() => {
     if (customer?.email) setEmailInput(customer.email);
   }, [customer]);
@@ -107,8 +111,9 @@ export default function ReceiptPreviewPage() {
         cashierName, counterNumber,
         paymentMethod, amountReceived, changeDue,
         cart, subtotal,
-        discounts: itemSavings + orderDiscountAmount,
-        tax, total, customer,
+        discounts: itemSavings + orderDiscountAmount + couponDiscountAmount,
+        tax, total: finalGrandTotal, customer,
+        notes,
       });
 
       const result = data?.data || {};
@@ -123,11 +128,14 @@ export default function ReceiptPreviewPage() {
     }
   };
 
-
   // ── Print / misc helpers ───────────────────────────────────────────────────
   const handlePrint = () => {
     setIsPrinting(true);
-    setTimeout(() => { window.print(); setIsPrinting(false); }, 300);
+    // Use window.print with a small delay to ensure content is rendered
+    setTimeout(() => {
+      window.print();
+      setIsPrinting(false);
+    }, 500);
   };
 
   const handleThermalPrint = () => {
@@ -135,7 +143,13 @@ export default function ReceiptPreviewPage() {
     setTimeout(() => {
       const html = generateThermalHtml();
       const w = window.open('', '_blank');
-      if (w) { w.document.write(html); w.document.close(); w.focus(); w.print(); setTimeout(() => w.close(), 1000); }
+      if (w) {
+        w.document.write(html);
+        w.document.close();
+        w.focus();
+        w.print();
+        setTimeout(() => w.close(), 1000);
+      }
       setIsThermalPrinting(false);
     }, 500);
   };
@@ -154,29 +168,37 @@ export default function ReceiptPreviewPage() {
 ${cart.map(i => `<div class="row"><span style="flex:1;text-align:left">${i.name} x${i.quantity}</span><span>${currency.format(i.price * i.quantity)}</span></div>`).join('')}
 <div class="dashed"></div>
 <div class="row"><span>Subtotal</span><span>${currency.format(subtotal)}</span></div>
-${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.format(itemSavings + orderDiscountAmount)}</span></div>` : ''}
+${(itemSavings + orderDiscountAmount) > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.format(itemSavings + orderDiscountAmount)}</span></div>` : ''}
+${couponDiscountAmount > 0 ? `<div class="row"><span>Coupon (${couponCode})</span><span>-${currency.format(couponDiscountAmount)}</span></div>` : ''}
 <div class="row"><span>Tax</span><span>${currency.format(tax)}</span></div>
 <div class="dashed"></div>
-<div class="row bold" style="font-size:14px"><span>TOTAL</span><span>${currency.format(total)}</span></div>
+<div class="row bold" style="font-size:14px"><span>TOTAL</span><span>${currency.format(finalGrandTotal)}</span></div>
 <div class="dashed"></div>
+${notes ? `<div style="font-size:10px;margin-top:4px;font-style:italic">Note: ${notes}</div><div class="dashed"></div>` : ''}
 <div class="center" style="font-size:10px;margin-top:6px">${receiptFooter}</div>
 </body></html>`;
 
-  const handleDownloadPdf = () => window.print();
+  const handleDownloadPdf = () => {
+    // Use window.print with PDF settings
+    window.print();
+  };
 
   const handleCopyInvoice = () => {
-    const text = `INVOICE #${invoiceNumber}\n${storeName} – ${storeBranch}\nDate: ${date} ${time}\nCashier: ${cashierName}\nItems: ${cart.length}\nTotal: ${currency.format(total)}\nPayment: ${paymentMethod}\n${receiptFooter}`;
+    const text = `INVOICE #${invoiceNumber}\n${storeName} – ${storeBranch}\nDate: ${date} ${time}\nCashier: ${cashierName}\nItems: ${cart.length}\nTotal: ${currency.format(finalGrandTotal)}\nPayment: ${paymentMethod}\n${receiptFooter}`;
     navigator.clipboard.writeText(text.trim());
     setCopySuccess(true);
     setTimeout(() => setCopySuccess(false), 3000);
   };
 
   const handleNewSale = () => setShowConfirmNewSale(true);
-  const confirmNewSale = () => { setShowConfirmNewSale(false); navigate('/pos-billing', { state: { cart: [] } }); };
+  const confirmNewSale = () => {
+    setShowConfirmNewSale(false);
+    navigate('/pos-billing', { state: { cart: [] } });
+  };
 
   const PaymentIcon = { cash: Banknote, card: CreditCard, wallet: Smartphone }[paymentMethod] || Banknote;
 
-  // ── Send Receipt panel (shared across both modals) ─────────────────────────
+  // ── Send Receipt panel ─────────────────────────────────────────────────────
   const sendPanel = (
     <div className="border-t border-slate-200 pt-5 mt-2">
       <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
@@ -184,8 +206,6 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
       </h4>
 
       <div className="grid grid-cols-1 gap-4">
-
-        {/* ── Email ──────────────────────────────────── */}
         <div className="bg-blue-50/50 border border-blue-200/60 rounded-xl p-4 space-y-3">
           <label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
             <Mail className="w-3.5 h-3.5 text-blue-500" /> Email Address
@@ -223,8 +243,8 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
             onClick={handleSendEmail}
             disabled={isSendingEmail}
             className={`w-full font-semibold flex items-center justify-center gap-1.5 ${emailStatus === 'success'
-                ? 'bg-emerald-600 hover:bg-emerald-700'
-                : 'bg-blue-600 hover:bg-blue-700'
+              ? 'bg-emerald-600 hover:bg-emerald-700'
+              : 'bg-blue-600 hover:bg-blue-700'
               } text-white rounded-lg py-2`}
           >
             {isSendingEmail ? (
@@ -240,11 +260,10 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
     </div>
   );
 
-  // ── Digital Invoice Modal (JSX variable — no nested component) ─────────────
+  // ── Digital Invoice Modal ──────────────────────────────────────────────────
   const digitalInvoiceModal = (
     <Modal isOpen={showDigitalInvoice} onClose={() => setShowDigitalInvoice(false)} title="Digital Invoice" size="lg">
       <div className="space-y-4">
-        {/* Invoice header */}
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-200/50">
           <div className="flex justify-between items-start">
             <div>
@@ -263,7 +282,6 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
           </div>
         </div>
 
-        {/* Meta grid */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-slate-50 rounded-lg p-3">
             <p className="text-xs text-slate-500">Cashier</p>
@@ -277,7 +295,6 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
           </div>
         </div>
 
-        {/* Items */}
         <div className="border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-slate-50">
@@ -299,7 +316,6 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
           </table>
         </div>
 
-        {/* Totals */}
         <div className="bg-slate-50 rounded-xl p-4 space-y-1">
           <div className="flex justify-between text-sm"><span className="text-slate-600">Subtotal</span><span>{currency.format(subtotal)}</span></div>
           {(itemSavings + orderDiscountAmount) > 0 && (
@@ -307,13 +323,24 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
               <span>Discounts</span><span>−{currency.format(itemSavings + orderDiscountAmount)}</span>
             </div>
           )}
+          {couponDiscountAmount > 0 && (
+            <div className="flex justify-between text-sm text-emerald-600">
+              <span>Coupon Discount ({couponCode})</span><span>−{currency.format(couponDiscountAmount)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm"><span className="text-slate-600">Tax</span><span>{currency.format(tax)}</span></div>
           <div className="flex justify-between text-lg font-bold text-blue-600 border-t border-slate-200 pt-2">
-            <span>Total</span><span>{currency.format(total)}</span>
+            <span>Total</span><span>{currency.format(finalGrandTotal)}</span>
           </div>
         </div>
 
-        {/* Send Panel */}
+        {notes && (
+          <div className="bg-amber-50/50 border border-amber-200/60 rounded-xl p-4">
+            <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-1">Notes / Instructions</p>
+            <p className="text-sm text-slate-700 italic">{notes}</p>
+          </div>
+        )}
+
         {sendPanel}
       </div>
     </Modal>
@@ -344,9 +371,9 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
 
   // ── Main render ────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-slate-50 max-w-4xl mx-auto space-y-6 pb-12 print:bg-white print:max-w-none print:pb-0">
+    <div className="min-h-screen bg-slate-50 max-w-4xl mx-auto space-y-6 pb-12 print:bg-white print:max-w-none print:pb-0 print:space-y-0 print:min-h-0">
 
-      {/* Success Banner */}
+      {/* Success Banner - Hidden in print */}
       <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 flex items-center justify-between print:hidden">
         <div className="flex items-center space-x-4">
           <div className="bg-emerald-500 rounded-full p-2">
@@ -358,12 +385,12 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
           </div>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-bold text-emerald-700">{currency.format(total)}</p>
+          <p className="text-2xl font-bold text-emerald-700">{currency.format(finalGrandTotal)}</p>
           <p className="text-xs text-emerald-600">Total Amount</p>
         </div>
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions - Hidden in print */}
       <div className="flex flex-wrap gap-2 print:hidden">
         <Button size="sm" variant="outline" className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
           onClick={() => setShowDigitalInvoice(true)}>
@@ -380,11 +407,14 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
         )}
       </div>
 
-      {/* Main Receipt card */}
-      <div ref={receiptRef} className="bg-white rounded-2xl shadow-lg overflow-hidden print:shadow-none print:rounded-none">
-
+      {/* Main Receipt card - This is what gets printed */}
+      <div 
+        ref={receiptRef} 
+        className="bg-white rounded-2xl shadow-lg overflow-hidden print:shadow-none print:rounded-none print:overflow-visible"
+        style={{ pageBreakAfter: 'avoid', pageBreakInside: 'avoid' }}
+      >
         {/* Receipt Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 print:bg-blue-600">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 print:bg-blue-600 print:p-4 print:break-inside-avoid">
           <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center gap-2 mb-2">
@@ -406,10 +436,10 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
           </div>
         </div>
 
-        <div className="p-6 space-y-6 print:p-4">
+        <div className="p-6 space-y-6 print:p-4 print:space-y-4 print:break-inside-avoid">
           {/* Invoice & Customer */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 print:gap-2 print:grid-cols-2">
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 print:p-3 print:border print:border-slate-200">
               <div className="flex items-center gap-2 text-slate-600 mb-2">
                 <Receipt className="w-4 h-4" />
                 <span className="text-xs font-semibold uppercase tracking-wider">Receipt</span>
@@ -420,7 +450,7 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
                 <p className="flex justify-between"><span className="text-slate-500">Time</span><span className="font-medium">{time}</span></p>
               </div>
             </div>
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 print:p-3 print:border print:border-slate-200">
               <div className="flex items-center gap-2 text-slate-600 mb-2">
                 <UserCircle className="w-4 h-4" />
                 <span className="text-xs font-semibold uppercase tracking-wider">Cashier</span>
@@ -430,7 +460,7 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
                 <p className="text-slate-500">Counter #{counterNumber}</p>
               </div>
             </div>
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 col-span-2 md:col-span-1">
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 col-span-2 md:col-span-1 print:p-3 print:border print:border-slate-200">
               <div className="flex items-center gap-2 text-slate-600 mb-2">
                 <User className="w-4 h-4" />
                 <span className="text-xs font-semibold uppercase tracking-wider">Customer</span>
@@ -451,18 +481,18 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
           </div>
 
           {/* Items Table */}
-          <div className="border rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-200">
+          <div className="border rounded-xl overflow-hidden print:border print:border-slate-300 print:overflow-visible">
+            <table className="w-full text-sm print:text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200 print:bg-slate-100">
                 <tr className="text-left text-slate-600">
-                  <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Item</th>
-                  <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center">Qty</th>
-                  <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-right">Price</th>
-                  <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-right">Discount</th>
-                  <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-right">Total</th>
+                  <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider print:px-2 print:py-2">Item</th>
+                  <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-center print:px-2 print:py-2">Qty</th>
+                  <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-right print:px-2 print:py-2">Price</th>
+                  <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-right print:px-2 print:py-2">Discount</th>
+                  <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-right print:px-2 print:py-2">Total</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 print:divide-slate-200">
                 {cart.map((item, idx) => {
                   const lineTotal = item.price * item.quantity;
                   const discountAmt = item.itemDiscountMode === 'percent'
@@ -470,19 +500,19 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
                     : (item.itemDiscount || 0);
                   const finalTotal = Math.max(lineTotal - discountAmt, 0);
                   return (
-                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-3">
+                    <tr key={idx} className="hover:bg-slate-50 transition-colors print:hover:bg-transparent">
+                      <td className="px-4 py-3 print:px-2 print:py-2">
                         <p className="font-medium text-slate-800">{item.name}</p>
                         {item.code && <p className="text-xs text-slate-400">#{item.code}</p>}
                       </td>
-                      <td className="px-4 py-3 text-center font-medium">{item.quantity}</td>
-                      <td className="px-4 py-3 text-right text-slate-600">{currency.format(item.price)}</td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-center font-medium print:px-2 print:py-2">{item.quantity}</td>
+                      <td className="px-4 py-3 text-right text-slate-600 print:px-2 print:py-2">{currency.format(item.price)}</td>
+                      <td className="px-4 py-3 text-right print:px-2 print:py-2">
                         {discountAmt > 0
                           ? <span className="text-emerald-600 font-medium">−{currency.format(discountAmt)}</span>
                           : <span className="text-slate-300">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-right font-bold text-slate-800">{currency.format(finalTotal)}</td>
+                      <td className="px-4 py-3 text-right font-bold text-slate-800 print:px-2 print:py-2">{currency.format(finalTotal)}</td>
                     </tr>
                   );
                 })}
@@ -491,67 +521,80 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
           </div>
 
           {/* Summary & Payment */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-              <h3 className="font-semibold text-slate-700 mb-3 flex items-center gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:gap-4 print:grid-cols-2">
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 print:p-3 print:border print:border-slate-200">
+              <h3 className="font-semibold text-slate-700 mb-3 flex items-center gap-2 print:text-sm">
                 <CreditCard className="w-4 h-4" /> Payment Details
               </h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white rounded-lg p-3 border border-slate-200">
+              <div className="grid grid-cols-2 gap-3 print:gap-2">
+                <div className="bg-white rounded-lg p-3 border border-slate-200 print:p-2 print:text-xs">
                   <p className="text-xs text-slate-400 uppercase tracking-wider">Method</p>
                   <div className="flex items-center gap-2 mt-1">
                     <PaymentIcon className="w-4 h-4 text-slate-600" />
                     <span className="font-semibold text-slate-800 capitalize">{paymentMethod}</span>
                   </div>
                 </div>
-                <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
+                <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200 print:p-2 print:text-xs">
                   <p className="text-xs text-emerald-600 uppercase tracking-wider">Status</p>
                   <p className="font-bold text-emerald-700 mt-1 flex items-center gap-1">
                     <CheckCircle2 className="w-4 h-4" /> Paid
                   </p>
                 </div>
-                <div className="bg-white rounded-lg p-3 border border-slate-200 col-span-2">
+                <div className="bg-white rounded-lg p-3 border border-slate-200 col-span-2 print:p-2">
                   <p className="text-xs text-slate-400 uppercase tracking-wider">Amount Received</p>
-                  <p className="font-bold text-slate-800 text-lg">
-                    {paymentMethod === 'cash' ? currency.format(amountReceived) : currency.format(total)}
+                  <p className="font-bold text-slate-800 text-lg print:text-base">
+                    {paymentMethod === 'cash' ? currency.format(amountReceived) : currency.format(finalGrandTotal)}
                   </p>
                   {paymentMethod === 'cash' && changeDue > 0 && (
-                    <p className="text-sm text-emerald-600">Change: {currency.format(changeDue)}</p>
+                    <p className="text-sm text-emerald-600 print:text-xs">Change: {currency.format(changeDue)}</p>
                   )}
                 </div>
               </div>
             </div>
 
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-              <h3 className="font-semibold text-slate-700 mb-3 flex items-center gap-2">
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 print:p-3 print:border print:border-slate-200">
+              <h3 className="font-semibold text-slate-700 mb-3 flex items-center gap-2 print:text-sm">
                 <Hash className="w-4 h-4" /> Summary
               </h3>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm text-slate-600">
+              <div className="space-y-2 print:space-y-1">
+                <div className="flex justify-between text-sm text-slate-600 print:text-xs">
                   <span>Subtotal ({totalUnits} items)</span><span>{currency.format(subtotal)}</span>
                 </div>
                 {itemSavings > 0 && (
-                  <div className="flex justify-between text-sm text-emerald-600">
+                  <div className="flex justify-between text-sm text-emerald-600 print:text-xs">
                     <span>Item Discounts</span><span>−{currency.format(itemSavings)}</span>
                   </div>
                 )}
                 {orderDiscountAmount > 0 && (
-                  <div className="flex justify-between text-sm text-violet-600">
+                  <div className="flex justify-between text-sm text-violet-600 print:text-xs">
                     <span>Cart Discount</span><span>−{currency.format(orderDiscountAmount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-sm text-slate-600 border-b border-slate-200 pb-2">
+                {couponDiscountAmount > 0 && (
+                  <div className="flex justify-between text-sm text-emerald-600 print:text-xs">
+                    <span>Coupon Discount ({couponCode})</span><span>−{currency.format(couponDiscountAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm text-slate-600 border-b border-slate-200 pb-2 print:text-xs print:pb-1">
                   <span>Tax (VAT)</span><span>{currency.format(tax)}</span>
                 </div>
-                <div className="flex justify-between text-xl font-bold text-slate-800 pt-1">
-                  <span>Grand Total</span><span className="text-blue-600">{currency.format(total)}</span>
+                <div className="flex justify-between text-xl font-bold text-slate-800 pt-1 print:text-base">
+                  <span>Grand Total</span><span className="text-blue-600">{currency.format(finalGrandTotal)}</span>
                 </div>
               </div>
             </div>
           </div>
 
+          {/* Notes / Special Instructions */}
+          {notes && (
+            <div className="bg-amber-50/50 border border-amber-200/60 rounded-xl p-4 print:p-3 print:border print:border-amber-200">
+              <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-1">Notes / Instructions</p>
+              <p className="text-sm text-slate-700 italic print:text-xs">{notes}</p>
+            </div>
+          )}
+
           {/* Footer */}
-          <div className="text-center pt-4 border-t border-slate-100">
+          <div className="text-center pt-4 border-t border-slate-100 print:pt-3 print:border-t print:border-slate-200">
             <div className="flex justify-center gap-2 mb-2">
               <Shield className="w-4 h-4 text-slate-400" />
               <span className="text-xs text-slate-500">Tax Invoice #{taxNumber}</span>
@@ -562,7 +605,7 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
         </div>
       </div>
 
-      {/* Action Buttons */}
+      {/* Action Buttons - Hidden in print */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 print:hidden">
         <Button onClick={handlePrint} variant="outline"
           className="h-12 bg-white text-slate-700 border-slate-200 hover:bg-slate-50 transition-all"
@@ -592,20 +635,65 @@ ${itemSavings > 0 ? `<div class="row"><span>Discounts</span><span>-${currency.fo
       <style dangerouslySetInnerHTML={{
         __html: `
         @media print {
-          body { background: white !important; font-family: 'Courier New', monospace !important; }
-          html, body, #root, .h-screen, .h-screen > div, main, .workspace-container {
-            height: auto !important; min-height: auto !important; overflow: visible !important;
-            position: static !important; display: block !important; box-shadow: none !important;
-            border: none !important; padding: 0 !important; margin: 0 !important;
-            width: auto !important; max-width: none !important; background: transparent !important;
+          /* Reset body and html for proper printing */
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            height: auto !important;
+            min-height: auto !important;
           }
-          .min-h-screen { min-height: auto !important; background: white !important; padding: 0 !important; margin: 0 !important; }
-          .print\\:hidden { display: none !important; }
-          .print\\:bg-blue-600 { background-color: #2563eb !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .print\\:p-4 { padding: 1rem !important; }
-          .print\\:rounded-none { border-radius: 0 !important; }
-          .print\\:shadow-none { box-shadow: none !important; }
-          @page { margin: 8mm; size: 80mm auto; }
+
+          /* Prevent empty pages */
+          .min-h-screen {
+            min-height: auto !important;
+            height: auto !important;
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+
+          /* Hide non-printable elements */
+          .print\\:hidden {
+            display: none !important;
+          }
+
+          /* Force background colors for print */
+          .print\\:bg-blue-600 {
+            background-color: #2563eb !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          /* Prevent page breaks inside the receipt */
+          [ref="${receiptRef}"] {
+            page-break-inside: avoid !important;
+            page-break-after: avoid !important;
+            break-inside: avoid !important;
+          }
+
+          /* Ensure the receipt doesn't overflow */
+          .bg-white.rounded-2xl {
+            max-height: none !important;
+            overflow: visible !important;
+            page-break-inside: avoid !important;
+          }
+
+          /* Compact spacing for print */
+          .p-6 { padding: 0.5rem !important; }
+          .space-y-6 > * + * { margin-top: 0.5rem !important; }
+          .gap-4 { gap: 0.5rem !important; }
+          .mb-3 { margin-bottom: 0.25rem !important; }
+          .mt-2 { margin-top: 0.25rem !important; }
+          .p-4 { padding: 0.5rem !important; }
+          .py-3 { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
+          .px-4 { padding-left: 0.25rem !important; padding-right: 0.25rem !important; }
+
+          /* Page size for receipt */
+          @page {
+            size: 80mm auto;
+            margin: 2mm 4mm;
+          }
         }
       `}} />
     </div>

@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Inventory = require('./model');
-const InventoryItem   = require('./inventoryItem.model');
-const StockMovement   = require('./stockMovement.model');
+const InventoryItem = require('./inventoryItem.model');
+const StockMovement = require('./stockMovement.model');
 const StockAdjustment = require('./stockAdjustment.model');
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -55,7 +55,7 @@ const getDashboardKPIs = async (warehouseIds) => {
       { $match: match },
       { $lookup: { from: 'products', localField: 'productId', foreignField: '_id', as: 'product' } },
       { $unwind: '$product' },
-      { $group: { _id: null, total: { $sum: { $multiply: ['$currentStock', '$product.costPrice'] } } } },
+      { $group: { _id: null, total: { $sum: { $multiply: ['$currentStock', '$product.pricing.costPrice'] } } } },
     ]),
 
     // Total distinct product-warehouse combinations (SKUs in stock)
@@ -98,13 +98,13 @@ const getStockCategoryBreakdown = async () => {
   const result = await InventoryItem.aggregate([
     { $lookup: { from: 'products', localField: 'productId', foreignField: '_id', as: 'product' } },
     { $unwind: '$product' },
-    { $lookup: { from: 'categories', localField: 'product.categoryId', foreignField: '_id', as: 'category' } },
-    { $unwind: { path: '$category', preserveNullAndEmpty: true } },
+    { $lookup: { from: 'categories', localField: 'product.category', foreignField: '_id', as: 'category' } },
+    { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
     {
       $group: {
         _id: '$category._id',
         name: { $first: '$category.name' },
-        totalValue: { $sum: { $multiply: ['$currentStock', '$product.costPrice'] } },
+        totalValue: { $sum: { $multiply: ['$currentStock', '$product.pricing.costPrice'] } },
       },
     },
     { $sort: { totalValue: -1 } },
@@ -147,13 +147,13 @@ const getStockLevels = async ({
 
   // Join product and warehouse
   pipeline.push(
-    { $lookup: { from: 'products',    localField: 'productId',   foreignField: '_id', as: 'product'   } },
+    { $lookup: { from: 'products', localField: 'productId', foreignField: '_id', as: 'product' } },
     { $unwind: '$product' },
-    { $lookup: { from: 'categories',  localField: 'product.categoryId', foreignField: '_id', as: 'category' } },
-    { $unwind: { path: '$category', preserveNullAndEmpty: true } },
-    { $lookup: { from: 'suppliers',   localField: 'product.supplierId', foreignField: '_id', as: 'supplier' } },
-    { $unwind: { path: '$supplier', preserveNullAndEmpty: true } },
-    { $lookup: { from: 'warehouses',  localField: 'warehouseId', foreignField: '_id', as: 'warehouse' } },
+    { $lookup: { from: 'categories', localField: 'product.category', foreignField: '_id', as: 'category' } },
+    { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
+    { $lookup: { from: 'suppliers', localField: 'product.supplierId', foreignField: '_id', as: 'supplier' } },
+    { $unwind: { path: '$supplier', preserveNullAndEmptyArrays: true } },
+    { $lookup: { from: 'warehouses', localField: 'warehouseId', foreignField: '_id', as: 'warehouse' } },
     { $unwind: '$warehouse' },
   );
 
@@ -182,17 +182,17 @@ const getStockLevels = async ({
   // Build match filters
   const matchFilters = {};
   if (warehouseId) matchFilters['warehouse._id'] = new mongoose.Types.ObjectId(warehouseId);
-  if (categoryId)  matchFilters['category._id']  = new mongoose.Types.ObjectId(categoryId);
-  if (status)      matchFilters['stockStatus']    = status;
+  if (categoryId) matchFilters['category._id'] = new mongoose.Types.ObjectId(categoryId);
+  if (status) matchFilters['stockStatus'] = status;
   if (startDate || endDate) {
     matchFilters['updatedAt'] = {};
     if (startDate) matchFilters['updatedAt'].$gte = new Date(startDate);
-    if (endDate)   matchFilters['updatedAt'].$lte = new Date(endDate + 'T23:59:59.999Z');
+    if (endDate) matchFilters['updatedAt'].$lte = new Date(endDate + 'T23:59:59.999Z');
   }
   if (search) {
     matchFilters.$or = [
       { 'product.name': { $regex: search, $options: 'i' } },
-      { 'product.sku':  { $regex: search, $options: 'i' } },
+      { 'product.sku': { $regex: search, $options: 'i' } },
     ];
   }
 
@@ -201,7 +201,7 @@ const getStockLevels = async ({
   }
 
   // Count + paginate in parallel
-  const countPipeline  = [...pipeline, { $count: 'total' }];
+  const countPipeline = [...pipeline, { $count: 'total' }];
   const resultPipeline = [
     ...pipeline,
     { $sort: { 'product.name': 1 } },
@@ -213,7 +213,7 @@ const getStockLevels = async ({
         currentStock: 1, reservedStock: 1, reorderLevel: 1,
         lastMovementAt: 1, stockStatus: 1, updatedAt: 1,
         'product.name': 1, 'product.sku': 1, 'product.unit': 1,
-        'product.costPrice': 1, 'product.sellingPrice': 1,
+        'product.pricing.costPrice': 1, 'product.pricing.sellingPrice': 1,
         'category.name': 1,
         'supplier.name': 1,
         'warehouse.name': 1, 'warehouse.code': 1,
@@ -288,12 +288,12 @@ const getMovements = async ({
   search, type, warehouseId, startDate, endDate, page = 1, limit = 20,
 }) => {
   const query = {};
-  if (type && type !== 'ALL')    query.type = type;
-  if (warehouseId)               query.warehouseId = warehouseId;
+  if (type && type !== 'ALL') query.type = type;
+  if (warehouseId) query.warehouseId = warehouseId;
   if (startDate || endDate) {
     query.performedAt = {};
     if (startDate) query.performedAt.$gte = new Date(startDate);
-    if (endDate)   query.performedAt.$lte = new Date(endDate + 'T23:59:59.999Z');
+    if (endDate) query.performedAt.$lte = new Date(endDate + 'T23:59:59.999Z');
   }
   if (search) {
     query.$or = [
@@ -305,10 +305,10 @@ const getMovements = async ({
   const skip = (Number(page) - 1) * Number(limit);
   const [movements, total] = await Promise.all([
     StockMovement.find(query)
-      .populate('productId',     'name sku')
-      .populate('warehouseId',   'name code')
+      .populate('productId', 'name sku')
+      .populate('warehouseId', 'name code')
       .populate('toWarehouseId', 'name code')
-      .populate('performedBy',   'firstName lastName')
+      .populate('performedBy', 'firstName lastName')
       .sort({ performedAt: -1 })
       .skip(skip)
       .limit(Number(limit))
@@ -338,7 +338,7 @@ const recordMovement = async ({
   // Validate stock before deducting
   if (SUB_TYPES.has(type)) {
     const item = await InventoryItem.findOne({ productId, warehouseId });
-    if (!item)                        throw badRequest('No inventory record found for this product/warehouse');
+    if (!item) throw badRequest('No inventory record found for this product/warehouse');
     if (item.currentStock < quantity) throw badRequest(`Insufficient stock. Available: ${item.currentStock}`);
   }
 
@@ -391,13 +391,13 @@ const getAdjustments = async ({
   search, type, warehouseId, status, startDate, endDate, page = 1, limit = 20,
 }) => {
   const query = {};
-  if (type && type !== 'ALL')     query.type      = type;
-  if (warehouseId)                query.warehouseId = warehouseId;
-  if (status && status !== 'ALL') query.status    = status;
+  if (type && type !== 'ALL') query.type = type;
+  if (warehouseId) query.warehouseId = warehouseId;
+  if (status && status !== 'ALL') query.status = status;
   if (startDate || endDate) {
     query.createdAt = {};
     if (startDate) query.createdAt.$gte = new Date(startDate);
-    if (endDate)   query.createdAt.$lte = new Date(endDate + 'T23:59:59.999Z');
+    if (endDate) query.createdAt.$lte = new Date(endDate + 'T23:59:59.999Z');
   }
   if (search) {
     query.$or = [
@@ -408,10 +408,10 @@ const getAdjustments = async ({
   const skip = (Number(page) - 1) * Number(limit);
   const [adjustments, total] = await Promise.all([
     StockAdjustment.find(query)
-      .populate('productId',   'name sku')
+      .populate('productId', 'name sku')
       .populate('warehouseId', 'name code')
       .populate('requestedBy', 'firstName lastName')
-      .populate('reviewedBy',  'firstName lastName')
+      .populate('reviewedBy', 'firstName lastName')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit))
@@ -455,30 +455,30 @@ const createAdjustment = async ({
  */
 const approveAdjustment = async (id, reviewedBy) => {
   const adj = await StockAdjustment.findById(id);
-  if (!adj)                    throw notFound('Stock adjustment');
+  if (!adj) throw notFound('Stock adjustment');
   if (adj.status !== 'PENDING') throw badRequest('Only PENDING adjustments can be approved');
 
   // Apply inventory change via the movement recorder
   await recordMovement({
-    type:        adj.type === 'ADD' ? 'ADJUSTMENT_ADD' : 'ADJUSTMENT_REMOVE',
-    productId:   adj.productId,
+    type: adj.type === 'ADD' ? 'ADJUSTMENT_ADD' : 'ADJUSTMENT_REMOVE',
+    productId: adj.productId,
     warehouseId: adj.warehouseId,
-    quantity:    adj.quantity,
+    quantity: adj.quantity,
     referenceId: adj.adjustmentId,
-    notes:       adj.notes,
+    notes: adj.notes,
     performedBy: reviewedBy,
   });
 
-  adj.status     = 'APPROVED';
+  adj.status = 'APPROVED';
   adj.reviewedBy = reviewedBy;
   adj.reviewedAt = new Date();
   await adj.save();
 
   return adj.populate([
-    { path: 'productId',   select: 'name sku' },
+    { path: 'productId', select: 'name sku' },
     { path: 'warehouseId', select: 'name code' },
     { path: 'requestedBy', select: 'firstName lastName' },
-    { path: 'reviewedBy',  select: 'firstName lastName' },
+    { path: 'reviewedBy', select: 'firstName lastName' },
   ]);
 };
 
@@ -487,20 +487,20 @@ const approveAdjustment = async (id, reviewedBy) => {
  */
 const rejectAdjustment = async (id, reviewedBy, rejectionReason) => {
   const adj = await StockAdjustment.findById(id);
-  if (!adj)                    throw notFound('Stock adjustment');
+  if (!adj) throw notFound('Stock adjustment');
   if (adj.status !== 'PENDING') throw badRequest('Only PENDING adjustments can be rejected');
 
-  adj.status          = 'REJECTED';
-  adj.reviewedBy      = reviewedBy;
-  adj.reviewedAt      = new Date();
+  adj.status = 'REJECTED';
+  adj.reviewedBy = reviewedBy;
+  adj.reviewedAt = new Date();
   adj.rejectionReason = rejectionReason || null;
   await adj.save();
 
   return adj.populate([
-    { path: 'productId',   select: 'name sku' },
+    { path: 'productId', select: 'name sku' },
     { path: 'warehouseId', select: 'name code' },
     { path: 'requestedBy', select: 'firstName lastName' },
-    { path: 'reviewedBy',  select: 'firstName lastName' },
+    { path: 'reviewedBy', select: 'firstName lastName' },
   ]);
 };
 
@@ -519,13 +519,13 @@ const getLowStockAlerts = async ({
     // Only items at or below reorder level
     { $match: { $expr: { $lte: ['$currentStock', '$reorderLevel'] } } },
 
-    { $lookup: { from: 'products',   localField: 'productId',          foreignField: '_id', as: 'product'   } },
+    { $lookup: { from: 'products', localField: 'productId', foreignField: '_id', as: 'product' } },
     { $unwind: '$product' },
     { $lookup: { from: 'categories', localField: 'product.categoryId', foreignField: '_id', as: 'category' } },
     { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
-    { $lookup: { from: 'suppliers',  localField: 'product.supplierId', foreignField: '_id', as: 'supplier' } },
+    { $lookup: { from: 'suppliers', localField: 'product.supplierId', foreignField: '_id', as: 'supplier' } },
     { $unwind: { path: '$supplier', preserveNullAndEmptyArrays: true } },
-    { $lookup: { from: 'warehouses', localField: 'warehouseId',        foreignField: '_id', as: 'warehouse' } },
+    { $lookup: { from: 'warehouses', localField: 'warehouseId', foreignField: '_id', as: 'warehouse' } },
     { $unwind: '$warehouse' },
 
     // Compute severity
@@ -549,23 +549,23 @@ const getLowStockAlerts = async ({
   // Filters after joins
   const postMatch = {};
   if (warehouseId) postMatch['warehouse._id'] = new mongoose.Types.ObjectId(warehouseId);
-  if (categoryId)  postMatch['category._id']  = new mongoose.Types.ObjectId(categoryId);
-  if (severity)    postMatch['severity']       = severity;
+  if (categoryId) postMatch['category._id'] = new mongoose.Types.ObjectId(categoryId);
+  if (severity) postMatch['severity'] = severity;
   if (startDate || endDate) {
     postMatch['lastMovementAt'] = {};
     if (startDate) postMatch['lastMovementAt'].$gte = new Date(startDate);
-    if (endDate)   postMatch['lastMovementAt'].$lte = new Date(endDate + 'T23:59:59.999Z');
+    if (endDate) postMatch['lastMovementAt'].$lte = new Date(endDate + 'T23:59:59.999Z');
   }
   if (search) {
     postMatch.$or = [
       { 'product.name': { $regex: search, $options: 'i' } },
-      { 'product.sku':  { $regex: search, $options: 'i' } },
+      { 'product.sku': { $regex: search, $options: 'i' } },
     ];
   }
   if (Object.keys(postMatch).length) pipeline.push({ $match: postMatch });
 
   // Count + result in parallel
-  const countPipeline  = [...pipeline, { $count: 'total' }];
+  const countPipeline = [...pipeline, { $count: 'total' }];
   const resultPipeline = [
     ...pipeline,
     { $sort: { currentStock: 1 } },
