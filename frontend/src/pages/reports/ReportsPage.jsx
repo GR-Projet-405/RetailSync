@@ -26,6 +26,7 @@ import DataTable from '../../components/DataTable';
 import { cn } from '../../utils/cn';
 import { reportService, REPORT_KEYS } from '../../services/reportService';
 import { computeReportData, generateReportPDF } from '../../utils/reportPdfExport';
+import { resolveBranchLabel, namesFromBranchRefs } from '../../utils/branchLabel';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -353,7 +354,11 @@ export default function ReportsPage() {
 
     const fmtD = (d) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
     const dateLabel   = (fmtD(dateFrom) && fmtD(dateTo)) ? `${fmtD(dateFrom)} – ${fmtD(dateTo)}` : 'All Time';
-    const branchLabel = allBranches ? 'All Branches' : `${nb} Branch${nb !== 1 ? 'es' : ''}`;
+    const { label: branchLabel } = resolveBranchLabel({
+      allBranches,
+      names: namesFromBranchRefs(filters.branches),
+      count: (filters.branches || []).length,
+    });
 
     const vd = computeReportData({
       reportType,

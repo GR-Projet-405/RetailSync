@@ -11,6 +11,7 @@ import { Card } from '../../components/Card';
 import { Modal } from '../../components/Modal';
 import { cn } from '../../utils/cn';
 import { reportService, REPORT_KEYS } from '../../services/reportService';
+import { resolveBranchLabel, namesFromBranchRefs } from '../../utils/branchLabel';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -211,7 +212,12 @@ export default function BranchManagerReportsPage() {
     const df = filters.dateFrom ? formatDate(filters.dateFrom) : null;
     const dt = filters.dateTo   ? formatDate(filters.dateTo)   : null;
     drawRow('Date Range', df && dt ? `${df} – ${dt}` : 'All Time');
-    drawRow('Branches',   filters.allBranches ? 'All Branches' : `${(filters.branches||[]).length} branch(es) selected`);
+    const { label: branchesLabel } = resolveBranchLabel({
+      allBranches: filters.allBranches,
+      names: namesFromBranchRefs(filters.branches),
+      count: (filters.branches || []).length,
+    });
+    drawRow('Branches', branchesLabel);
     const af = filters.additionalFilters || {};
     if (af.financeSubType)  drawRow('Finance Sub-type', af.financeSubType);
     if (af.stockStatus)     drawRow('Stock Status',     af.stockStatus);
