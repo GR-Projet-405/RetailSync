@@ -36,5 +36,7 @@ eslint-cache
 # OS Files
 .DS_Store
 Thumbs.db
-
-
+# Playwright (temporary test files)
+playwright-tests/
+test-results/
+playwright-report/
