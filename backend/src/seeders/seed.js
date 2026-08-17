@@ -15,7 +15,7 @@ const seedCategories           = require('./categories.seeder');
 const seedSuppliers            = require('./suppliers.seeder');
 const seedReports              = require('./reports.seeder');
 const seedProductsAndInventory = require('./productsAndInventory.seeder');
-const seedAIModules = require('./aiModules.seeder');
+// const seedAIModules = require('./aiModules.seeder'); // DISABLED - OpenAI not configured
 
 const runSeeders = async () => {
   try {
@@ -39,7 +39,7 @@ const runSeeders = async () => {
     } catch (err) {
       console.warn('Warning: Products/Inventory seeder had errors (non-fatal):', err.message);
     }
-    await seedAIModules();
+    // await seedAIModules(); // DISABLED - OpenAI not configured
     console.log('--- Seed Process Completed Successfully ---');
 
     process.exit(0);

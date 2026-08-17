@@ -48,11 +48,14 @@ require('./modules/inventory-management/model');
 const customerRoutes = require('./modules/customer-management/route');
 app.use('/api/v1/customers', customerRoutes);
 
-// Dynamically register routes for all 28 modular folders
+// Dynamically register routes for all modular folders
 const modulesPath = path.join(__dirname, 'modules');
 if (fs.existsSync(modulesPath)) {
   fs.readdirSync(modulesPath).forEach((folderName) => {
+    // Skip folders that should not be loaded as routes
     if (folderName === 'customer-management') return;
+    if (folderName === 'ai-assistant') return;
+    if (folderName === 'ai-assistant-disabled') return;
 
     const routePath = path.join(modulesPath, folderName, 'route.js');
     if (fs.existsSync(routePath)) {
@@ -67,4 +70,3 @@ app.use(errorHandler);
 
 module.exports = app;
 // Trigger hot-reload for database connection state refreshing
-

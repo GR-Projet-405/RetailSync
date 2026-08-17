@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 const path = require('path');
+const env = require('../src/config/env');
 const User = require('../src/modules/user-management/user.model');
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
@@ -23,7 +24,7 @@ const protect = async (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, env.JWT_SECRET || 'supersecretjwtkeyforretailsyncpos2026');
 
     const user = await User.findById(decoded.id)
       .populate('roleId')
