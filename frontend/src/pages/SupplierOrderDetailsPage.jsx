@@ -16,6 +16,14 @@ import {
 
 const API_BASE = "/api/v1/purchase-orders";
 
+const getAuthHeaders = (extra = {}) => {
+  const token = localStorage.getItem('token');
+  return {
+    ...extra,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 const STATUS_STYLES = {
   SENT: "bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-200",
   PARTIALLY_RECEIVED: "bg-yellow-50 text-yellow-700 ring-1 ring-inset ring-yellow-200",
@@ -101,11 +109,48 @@ function getProductImage(product) {
 
 const CAN_MANAGE_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER];
 
+function CancelConfirmModal({ onConfirm, onCancel, submitting, orderNumber }) {
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 fade-in">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
+            <XCircle className="w-5 h-5 text-red-600" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900">
+            Cancel Purchase Order?
+          </h3>
+        </div>
+        <p className="text-sm text-gray-500 mb-6">
+          Are you sure you want to cancel purchase order <strong className="text-gray-800">#{orderNumber}</strong>? This action cannot be undone.
+        </p>
+        <div className="flex items-center justify-end gap-3">
+          <button
+            onClick={onCancel}
+            disabled={submitting}
+            className="px-4 py-2.5 rounded-lg border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            Keep Order
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={submitting}
+            className="px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
+          >
+            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+            Cancel Order
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SupplierOrderDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const canManage = CAN_MANAGE_ROLES.includes(user?.role);
+  const { user, hasRole } = useAuth();
+  const canManage = hasRole(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER);
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -114,6 +159,7 @@ export default function SupplierOrderDetailsPage() {
   const [busyAction, setBusyAction] = useState(null); // 'cancel' | 'resend' | null
   const [actionError, setActionError] = useState(null);
   const [resendConfirmed, setResendConfirmed] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   const goBackToList = () => navigate("/purchase-orders");
 
@@ -121,7 +167,7 @@ export default function SupplierOrderDetailsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/${id}`);
+      const res = await fetch(`${API_BASE}/${id}`, { headers: getAuthHeaders() });
       const json = await res.json();
       if (!res.ok || !json.success) {
         throw new Error(json.message || "Failed to load purchase order");
@@ -144,7 +190,7 @@ export default function SupplierOrderDetailsPage() {
     setActionError(null);
     setResendConfirmed(false);
     try {
-      const res = await fetch(`${API_BASE}/${order._id}/resend-email`, { method: "POST" });
+      const res = await fetch(`${API_BASE}/${order._id}/resend-email`, { method: "POST", headers: getAuthHeaders() });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "Failed to resend email");
       setOrder(json.data);
@@ -156,16 +202,16 @@ export default function SupplierOrderDetailsPage() {
     }
   };
 
-  const handleCancelOrder = async () => {
+  const handleCancelOrderConfirm = async () => {
     if (!canManage) return;
-    if (!window.confirm("Cancel this purchase order? This can't be undone.")) return;
     setBusyAction("cancel");
     setActionError(null);
     try {
-      const res = await fetch(`${API_BASE}/${order._id}/cancel`, { method: "POST" });
+      const res = await fetch(`${API_BASE}/${order._id}/cancel`, { method: "POST", headers: getAuthHeaders() });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "Failed to cancel order");
       setOrder(json.data);
+      setShowCancelModal(false);
     } catch (err) {
       setActionError(err.message || "Something went wrong cancelling this order.");
     } finally {
@@ -175,8 +221,30 @@ export default function SupplierOrderDetailsPage() {
 
   const handleTrackOrder = () => navigate(`/purchase-orders/${id}/tracking`);
 
-  const handleDownloadPdf = () => {
-    window.open(`${API_BASE}/${id}/pdf`, "_blank", "noopener,noreferrer");
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true);
+    try {
+      const res = await fetch(`${API_BASE}/${id}/pdf`, {
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to download PDF");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `PO-${order?.poNumber || id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("PDF Download error:", err);
+      alert(err.message || "Failed to download PDF");
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   /* ── Loading state ── */
@@ -435,7 +503,7 @@ export default function SupplierOrderDetailsPage() {
 
                 {canCancel && (
                   <button
-                    onClick={handleCancelOrder}
+                    onClick={() => setShowCancelModal(true)}
                     disabled={busyAction === "cancel"}
                     className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
                   >
@@ -452,6 +520,15 @@ export default function SupplierOrderDetailsPage() {
           </div>
         </div>
       </div>
+
+      {showCancelModal && (
+        <CancelConfirmModal
+          orderNumber={order?.poNumber || id}
+          submitting={busyAction === "cancel"}
+          onCancel={() => setShowCancelModal(false)}
+          onConfirm={handleCancelOrderConfirm}
+        />
+      )}
     </div>
   );
 }
