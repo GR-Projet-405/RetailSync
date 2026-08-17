@@ -22,7 +22,7 @@ const formatNumber = (value = 0) => Number(value || 0).toLocaleString('en-US');
 const getModuleDetails = async () => ({
   module: 'AI Assistant',
   status: 'Active',
-  strategy: 'Rule-based business assistant using analytics and reorder data. No external LLM is required.',
+  strategy: 'Hybrid: attempts an external LLM for richer, conversational answers; automatically falls back to a rule-based analytics engine if the LLM is unavailable or returns an error.',
   examples: [
     'What are total sales this month?',
     'Which products are low stock?',
@@ -306,7 +306,7 @@ Provide a helpful, natural language response to the user's message using this da
     }
   } catch (err) {
     console.error('LLM API Error, falling back to rule-based answer:', err.message);
-    finalAnswer = `[AI Offline: ${err.message}]\n\n${assistantResult.answer}`;
+    finalAnswer = assistantResult.answer;
   }
 
   conversation.messages.push({
