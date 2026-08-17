@@ -600,7 +600,7 @@ const getInventoryHealth = async (filters = {}) => {
       stockValue: 0,
     },
     lowStockProducts: products
-      .filter((product) => product.shortage > 0 || product.inventoryStatus === 'LOW_STOCK')
+      .filter((product) => product.inventoryStatus === 'LOW_STOCK')
       .slice(0, Number(filters.limit || 10)),
     outOfStockProducts: products
       .filter((product) => product.inventoryStatus === 'OUT_OF_STOCK' || product.currentStock === 0)
