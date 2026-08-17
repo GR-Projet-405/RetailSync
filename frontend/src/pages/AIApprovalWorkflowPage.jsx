@@ -13,7 +13,7 @@ export default function AIApprovalWorkflowPage() {
 
   const { data: response, isLoading: loading } = useAIRecommendations();
   const items = response?.data?.recommendations || [];
-  const pendingCount = items.filter((item) => item.status === "pending").length;
+  const pendingCount = items.filter((item) => item.status === "PENDING").length;
 
   const handleViewDetails = (recommendation) => {
     setSelectedRecommendation(recommendation);
