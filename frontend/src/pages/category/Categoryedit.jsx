@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import categoryService from '../../services/categoryService';
+import { toast } from 'react-toastify';
+
 
 const ICONS_LIST = ['🍔', '📦', '🧴', '🏠', '👕', '💊', '🍎', '🥤', '🧹', '📱', '🎮', '📚'];
 const COLORS = ['#3B82F6', '#22C55E', '#EF4444', '#F97316', '#A855F7', '#EC4899', '#06B6D4', '#6B7280'];
@@ -47,27 +49,20 @@ export default function CategoryEdit({ id, onBack, onSuccess }) {
     return Object.keys(e).length === 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validate()) return;
-    try {
-      setLoading(true);
-      await categoryService.update(id, {
-        name: form.name.trim(),
-        description: form.description.trim(),
-        parentId: form.parentId || null,
-        sortOrder: Number(form.sortOrder),
-        isActive: form.isActive,
-        icon: form.icon,
-        labelColor: form.labelColor,
-      });
-      onSuccess();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update category');
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!validate()) return;
+  try {
+    setLoading(true);
+    await categoryService.update(id, { ...form });
+    toast.success('Category updated successfully!');
+    onSuccess();
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Failed to update category');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const hasChanges = form && original && JSON.stringify(form) !== JSON.stringify(original);
   const previewParent = rootCategories.find((r) => r._id === form?.parentId);

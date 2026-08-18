@@ -1,592 +1,802 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   TrendingUp, Calendar, MapPin, Download, ChevronDown, CheckCircle, 
-  Percent, Sparkles, BarChart3, Users, DollarSign, Award, ShieldAlert
+  Percent, Sparkles, BarChart3, Users, DollarSign, Award, ShieldAlert,
+  Tag, Layers, ShoppingCart, Ticket, Search, X, Plus, Sliders, Columns, MoreVertical
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import Button from '../../components/Button';
 import Card, { CardContent } from '../../components/Card';
 import Badge from '../../components/Badge';
-import Modal from '../../components/Modal';
 import StatCard from '../../components/promotions/StatCard';
 import { useAuth } from '../../contexts/AuthContext';
-
-// Inline Toast Utility
-const showExportToast = () => {
-  const el = document.createElement('div');
-  Object.assign(el.style, {
-    position: 'fixed',
-    top: '20px',
-    right: '20px',
-    zIndex: '9999',
-    background: '#EFF6FF',
-    border: '1px solid #93C5FD',
-    color: '#1E40AF',
-    padding: '12px 16px',
-    borderRadius: '12px',
-    boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
-    fontWeight: 'bold',
-    fontSize: '13px',
-    transition: 'opacity 200ms ease'
-  });
-  el.innerText = '✓ Promotional Analytics exported successfully!';
-  document.body.appendChild(el);
-  setTimeout(() => {
-    el.style.opacity = '0';
-    setTimeout(() => el.remove(), 200);
-  }, 3000);
-};
+import { useNavigate } from 'react-router-dom';
+import api from '../../services/api';
 
 export default function PromotionAnalyticsPage() {
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, activeBranch } = useAuth();
   const isBranchManager = hasRole('BRANCH_MANAGER');
+  const navigate = useNavigate();
 
-  const [selectedBranch, setSelectedBranch] = useState('All Branches');
-  const [isBranchOpen, setIsBranchOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState('01 Jun 2026 - 14 Jun 2026');
+  // Filter States
+  const selectedBranch = activeBranch || 'All Branches';
+  const [selectedStatus, setSelectedStatus] = useState('All');
+  const [selectedDateRange, setSelectedDateRange] = useState('All Time');
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Dropdown Open States
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isDateOpen, setIsDateOpen] = useState(false);
 
-  React.useEffect(() => {
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
+
+  // Live Data States
+  const [promotions, setPromotions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchPromotions = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get('/promotions-discounts', {
+        params: { limit: 1000 }, // High limit to load all records for full client-side aggregation
+        timeout: 45000 // 45s custom timeout to accommodate cold starts / latency of remote Atlas connection
+      });
+      const data = response.data?.data?.promotions || [];
+      const mappedData = data.map(p => ({
+        ...p,
+        id: p._id,
+        branch: p.branchId ? p.branchId.name : 'All Branches',
+        orders: p.ordersCount || 0,
+        usage: p.usagesCount || 0,
+        startDate: p.startDate ? new Date(p.startDate).toISOString().split('T')[0] : '',
+        endDate: p.endDate ? new Date(p.endDate).toISOString().split('T')[0] : ''
+      }));
+      setPromotions(mappedData);
+    } catch (err) {
+      console.error('Failed to load promotions for analytics:', err);
+      setError(err.message || 'Failed to load promotions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPromotions();
+  }, []);
+
+  useEffect(() => {
     if (isBranchManager) {
       const managerBranch = user?.branchId?.name || 'Downtown Flagship';
       setSelectedBranch(managerBranch);
     }
   }, [isBranchManager, user]);
-  const [isChartDropdownOpen, setIsChartDropdownOpen] = useState(false);
-  const [chartPeriod, setChartPeriod] = useState('Last week');
-  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
-  const [hoveredBarIdx, setHoveredBarIdx] = useState(null);
-  const [hoveredRingIdx, setHoveredRingIdx] = useState(null);
 
-  const branches = ['All Branches', 'Downtown Flagship', 'North Branch', 'South Branch'];
-  
-  const dates = [
-    { label: 'Today', value: 'today' },
-    { label: 'Last 7 Days', value: '7days' },
-    { label: '01 Jun 2026 - 14 Jun 2026', value: 'june' },
-    { label: 'This Month', value: 'month' }
-  ];
+  // Color Palette for charts
+  const COLOR_PALETTE = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6'];
 
-  // Branch statistics mapping
-  const branchData = {
-    'All Branches': { rev: 'RS. 125,500', orders: '1842', aov: 'Rs. 278.56', roi: '3.1x' },
-    'Downtown Flagship': { rev: 'RS. 62,400', orders: '912', aov: 'Rs. 295.10', roi: '3.4x' },
-    'North Branch': { rev: 'RS. 38,200', orders: '540', aov: 'Rs. 268.40', roi: '2.8x' },
-    'South Branch': { rev: 'RS. 24,900', orders: '390', aov: 'Rs. 250.20', roi: '2.5x' }
+  // Parse ROI string e.g. "3.2x" to 3.2
+  const parseROI = (roiStr) => {
+    if (!roiStr) return 0;
+    const num = parseFloat(roiStr.replace(/[^\d.]/g, ''));
+    return isNaN(num) ? 0 : num;
   };
 
-  const currentStats = branchData[selectedBranch] || branchData['All Branches'];
+  // List of branches for the filter
+  const branchOptions = useMemo(() => {
+    const list = new Set(['All Branches']);
+    promotions.forEach(p => {
+      if (p.branch) list.add(p.branch);
+    });
+    return Array.from(list);
+  }, [promotions]);
 
-  // Bar chart dataset
-  const chartDatasets = {
-    'Last week': [
-      { day: 'Mon', rev: 110 },
-      { day: 'Tue', rev: 170 },
-      { day: 'Wed', rev: 160 },
-      { day: 'Thu', rev: 230 },
-      { day: 'Fri', rev: 250 },
-      { day: 'Sat', rev: 330 },
-      { day: 'Sun', rev: 290 }
-    ],
-    'Last Month': [
-      { day: 'Wk 1', rev: 280 },
-      { day: 'Wk 2', rev: 320 },
-      { day: 'Wk 3', rev: 410 },
-      { day: 'Wk 4', rev: 380 }
-    ],
-    'This Month': [
-      { day: '01-07', rev: 240 },
-      { day: '08-14', rev: 310 },
-      { day: '15-21', rev: 190 },
-      { day: '22-28', rev: 270 }
-    ]
-  };
+  // Filtered List calculation
+  const filteredPromotions = useMemo(() => {
+    return promotions.filter(promo => {
+      // 1. Search filter
+      const matchesSearch = 
+        promo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        promo.type.toLowerCase().includes(searchTerm.toLowerCase());
 
-  const currentChartData = chartDatasets[chartPeriod] || chartDatasets['Last week'];
+      // 2. Branch filter
+      const matchesBranch = 
+        selectedBranch === 'All Branches' || 
+        promo.branch === selectedBranch ||
+        promo.branch === 'All Branches';
 
-  // ROI Rankings dataset
-  const roiRankings = [
-    { name: 'Summer Sale', roi: '3.2x', percentage: 85 },
-    { name: 'New Year Sale', roi: '2.8x', percentage: 72 },
-    { name: 'Flash Sale', roi: '2.4x', percentage: 60 },
-    { name: 'Weekend Offer', roi: '2.1x', percentage: 50 }
-  ];
+      // 3. Status filter
+      const matchesStatus = 
+        selectedStatus === 'All' || 
+        promo.status === selectedStatus;
 
-  // Doughnut Chart Data details
-  const doughnutSegments = [
-    { name: 'Main Branch', value: 215450, color: '#2563EB', share: '42%' },
-    { name: 'City Branch', value: 128750, color: '#10B981', share: '25%' },
-    { name: 'Kandy Branch', value: 81050, color: '#14B8A6', share: '16%' },
-    { name: 'Galle Branch', value: 48000, color: '#F59E0B', share: '9%' },
-    { name: 'Other Branches', value: 39100, color: '#64748B', share: '8%' }
-  ];
+      // 4. Date Range filter
+      let matchesDate = true;
+      if (promo.startDate) {
+        const promoDate = new Date(promo.startDate);
+        const today = new Date();
+        today.setHours(0,0,0,0);
 
-  // Doughnut parameters
-  const totalDoughnutValue = doughnutSegments.reduce((acc, s) => acc + s.value, 0);
+        if (selectedDateRange === 'Today') {
+          const promoStartStr = new Date(promo.startDate).toDateString();
+          matchesDate = promoStartStr === new Date().toDateString();
+        } else if (selectedDateRange === 'Last 7 Days') {
+          const diffTime = Math.abs(today - promoDate);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          matchesDate = diffDays <= 7;
+        } else if (selectedDateRange === 'This Month') {
+          matchesDate = 
+            promoDate.getMonth() === today.getMonth() && 
+            promoDate.getFullYear() === today.getFullYear();
+        }
+      }
 
-  // SVG Bar Chart coordinates mapping
-  const barChartWidth = 480;
-  const barChartHeight = 160;
-  const barGap = 20;
-  const colWidth = (barChartWidth - barGap * (currentChartData.length + 1)) / currentChartData.length;
+      return matchesSearch && matchesBranch && matchesStatus && matchesDate;
+    });
+  }, [promotions, searchTerm, selectedBranch, selectedStatus, selectedDateRange]);
 
-  const getBarHeight = (value) => {
-    return (value / 400) * barChartHeight; // Max scale 400k
+  // KPI calculations (4 Cards matching layout specs)
+  const kpis = useMemo(() => {
+    const activePromotions = filteredPromotions.filter(p => p.status === 'Active').length;
+    const totalRevenue = filteredPromotions.reduce((sum, p) => sum + (p.revenue || 0), 0);
+    const totalOrders = filteredPromotions.reduce((sum, p) => sum + (p.orders || 0), 0);
+    
+    const roiValues = filteredPromotions.map(p => parseROI(p.roi)).filter(val => val > 0);
+    const avgROI = roiValues.length > 0 
+      ? (roiValues.reduce((sum, val) => sum + val, 0) / roiValues.length).toFixed(1)
+      : '0.0';
+
+    return {
+      activePromotions,
+      totalRevenue,
+      totalOrders,
+      avgROI
+    };
+  }, [filteredPromotions]);
+
+  // Chart 1: Revenue by Promotion (Vertical Bar Chart - Top 5)
+  const verticalBarChart = useMemo(() => {
+    const items = [...filteredPromotions].sort((a,b) => (b.revenue || 0) - (a.revenue || 0)).slice(0, 5); 
+    const maxRev = Math.max(...items.map(p => p.revenue || 0), 1000) * 1.2;
+    return { items, maxRev };
+  }, [filteredPromotions]);
+
+  // Chart 2: Orders Influenced by Promotion (Horizontal SVG Bar Chart - Top 5)
+  const horizontalBarChart = useMemo(() => {
+    const items = [...filteredPromotions].sort((a,b) => (b.orders || 0) - (a.orders || 0)).slice(0, 5);
+    const maxOrd = Math.max(...items.map(p => p.orders || 0), 10) * 1.15;
+    return { items, maxOrd };
+  }, [filteredPromotions]);
+
+  // Chart 3: Coupon Usage Distribution (Donut Chart - Top 5)
+  const donutChart = useMemo(() => {
+    const items = [...filteredPromotions].filter(p => p.usage > 0).sort((a,b) => b.usage - a.usage).slice(0, 5);
+    const totalUsages = items.reduce((sum, p) => sum + p.usage, 0);
+    return { items, totalUsages };
+  }, [filteredPromotions]);
+
+  // Chart 4: ROI Ranking (Progress Bars - Top 5)
+  const roiRanking = useMemo(() => {
+    const sorted = [...filteredPromotions]
+      .map(p => ({ ...p, parsedRoi: parseROI(p.roi) }))
+      .sort((a, b) => b.parsedRoi - a.parsedRoi)
+      .slice(0, 5);
+    const maxROI = Math.max(...sorted.map(p => p.parsedRoi), 1) * 1.1;
+    return { sorted, maxROI };
+  }, [filteredPromotions]);
+
+  // Pagination Table
+  const totalItems = filteredPromotions.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const paginatedPromotions = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    // Sorted by Revenue descending
+    const sorted = [...filteredPromotions].sort((a, b) => (b.revenue || 0) - (a.revenue || 0));
+    return sorted.slice(startIndex, startIndex + pageSize);
+  }, [filteredPromotions, currentPage]);
+
+  const handleExport = () => {
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + ["Name,Status,Revenue,Orders,Usage,ROI,Branch,Start Date,End Date"]
+        .concat(filteredPromotions.map(p => 
+          `"${p.name}","${p.status}",${p.revenue},${p.orders},${p.usage},"${p.roi}","${p.branch}","${p.startDate}","${p.endDate}"`
+        )).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `promotion_analytics_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
-    <div className="space-y-6">
-      
-      {/* Promotion Analytics Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-6 mb-6 border-b border-slate-200 gap-4 select-none">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 leading-tight">Promotion Analytics</h1>
-          <p className="text-xs text-slate-500 font-semibold mt-0.5">Track conversion effectiveness and ROI performance across campaigns</p>
-        </div>
+    <div className="space-y-6 fade-up">
+      {/* Page Header */}
+      <PageHeader
+        title="Promotion Analytics"
+        description="Monitor campaign performance, coupon usage, revenue generation, and ROI across all promotions."
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
 
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Branch Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                if (isBranchManager) return;
-                setIsBranchOpen(!isBranchOpen);
-                setIsDateOpen(false);
-              }}
-              disabled={isBranchManager}
-              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-full shadow-sm transition-colors focus:outline-none ${
-                isBranchManager ? 'opacity-85 cursor-not-allowed bg-slate-50/50' : 'hover:bg-slate-50'
-              }`}
-            >
-              <MapPin className="w-4 h-4 text-slate-400" />
-              <span>{selectedBranch}</span>
-              {!isBranchManager && <ChevronDown className="w-4 h-4 text-slate-400" />}
-            </button>
-
-            {isBranchOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setIsBranchOpen(false)} />
-                <div className="absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-2xl shadow-xl z-20 py-1.5 overflow-hidden text-xs font-semibold text-slate-700">
-                  {branches.map((b) => (
-                    <button
-                      key={b}
-                      onClick={() => {
-                        setSelectedBranch(b);
-                        setIsBranchOpen(false);
-                      }}
-                      className={`w-full text-left px-4 py-2 hover:bg-blue-50/50 hover:text-blue-600 flex items-center gap-2 ${
-                        selectedBranch === b ? 'text-blue-600 font-bold bg-blue-50/20' : ''
-                      }`}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full bg-blue-500 ${selectedBranch === b ? 'opacity-100' : 'opacity-0'}`} />
-                      {b}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Date Picker Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setIsDateOpen(!isDateOpen);
-                setIsBranchOpen(false);
-              }}
-              className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-full shadow-sm transition-colors focus:outline-none"
-            >
-              <Calendar className="w-4 h-4 text-slate-400" />
-              <span>{selectedDate}</span>
-              <ChevronDown className="w-4 h-4 text-slate-400" />
-            </button>
-
-            {isDateOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setIsDateOpen(false)} />
-                <div className="absolute right-0 mt-2 w-60 bg-white border border-slate-200 rounded-2xl shadow-xl z-20 py-1.5 overflow-hidden text-xs font-semibold text-slate-700">
-                  {dates.map((d) => (
-                    <button
-                      key={d.value}
-                      onClick={() => {
-                        setSelectedDate(d.label);
-                        setIsDateOpen(false);
-                      }}
-                      className={`w-full text-left px-4 py-2 hover:bg-blue-50/50 hover:text-blue-600 flex items-center gap-2 ${
-                        selectedDate === d.label ? 'text-blue-600 font-bold bg-blue-50/20' : ''
-                      }`}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full bg-blue-500 ${selectedDate === d.label ? 'opacity-100' : 'opacity-0'}`} />
-                      {d.label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Export Button */}
-          <Button
-            onClick={showExportToast}
-            variant="outline"
-            className="rounded-full px-5 py-2.5 text-xs font-bold shadow-sm flex items-center gap-1.5"
-          >
-            <Download size={14} />
-            <span>Export</span>
-          </Button>
-        </div>
-      </div>
-
-      {/* KPI Stats row */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 select-none">
-        <StatCard
-          icon={Percent}
-          label="Total Revenue from promotions"
-          value={currentStats.rev}
-          trend="↑ 12% vs previous period"
-          colorVariant="blue"
-        />
-        <StatCard
-          icon={Users}
-          label="Total orders influenced"
-          value={Number(currentStats.orders).toLocaleString()}
-          trend="↑ 15% vs previous period"
-          colorVariant="amber"
-        />
-        <StatCard
-          icon={DollarSign}
-          label="Avg. Order Value"
-          value={currentStats.aov}
-          trend="↑ 10% vs previous period"
-          colorVariant="indigo"
-        />
-        <StatCard
-          icon={Award}
-          label="ROI"
-          value={currentStats.roi}
-          trend="↑ 12% vs previous period"
-          colorVariant="emerald"
-        />
-      </div>
-
-      {/* Middle row: Bar Chart & ROI Rankings */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Left Column (2/3 width) - SVG Bar Chart */}
-        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex flex-col justify-between select-none relative">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-base font-bold text-slate-800">Revenue Comparison</h3>
-            
-            {/* Chart Period Selector Dropdown */}
+            {/* Date Range Selector */}
             <div className="relative">
               <button
-                onClick={() => setIsChartDropdownOpen(!isChartDropdownOpen)}
-                className="flex items-center gap-1 text-xs font-bold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 transition-colors focus:outline-none"
+                onClick={() => setIsDateOpen(!isDateOpen)}
+                className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl transition-all shadow-sm focus:outline-none hover:bg-slate-50"
               >
-                <span>{chartPeriod}</span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                <Calendar size={14} className="text-slate-400" />
+                <span>{selectedDateRange}</span>
+                <ChevronDown size={14} className="text-slate-400" />
               </button>
 
-              {isChartDropdownOpen && (
+              {isDateOpen && (
                 <>
-                  <div className="fixed inset-0 z-10" onClick={() => setIsChartDropdownOpen(false)} />
-                  <div className="absolute right-0 mt-1 w-32 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 overflow-hidden text-xs font-semibold text-slate-700">
-                    {['Last week', 'Last Month', 'This Month'].map((period) => (
+                  <div className="fixed inset-0 z-10" onClick={() => setIsDateOpen(false)} />
+                  <div className="absolute right-0 mt-1.5 w-40 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 overflow-hidden text-xs font-semibold select-none">
+                    {['All Time', 'Today', 'Last 7 Days', 'This Month'].map((opt) => (
                       <button
-                        key={period}
+                        key={opt}
                         onClick={() => {
-                          setChartPeriod(period);
-                          setIsChartDropdownOpen(false);
-                          setHoveredBarIdx(null);
+                          setSelectedDateRange(opt);
+                          setIsDateOpen(false);
+                          setCurrentPage(1);
                         }}
-                        className={`w-full text-left px-3 py-2 hover:bg-slate-50 transition-colors ${
-                          chartPeriod === period ? 'text-blue-600 font-bold bg-blue-50/20' : ''
+                        className={`w-full text-left px-3.5 py-2.5 hover:bg-slate-50 transition-colors ${
+                          selectedDateRange === opt ? 'text-blue-600 font-bold bg-blue-50/20' : 'text-slate-600'
                         }`}
                       >
-                        {period}
+                        {opt}
                       </button>
                     ))}
                   </div>
                 </>
               )}
             </div>
+
+            {/* Export Button */}
+            <Button
+              onClick={handleExport}
+              disabled={filteredPromotions.length === 0}
+              variant="outline"
+              className="rounded-xl px-4 py-2.5 text-xs font-bold shadow-sm flex items-center gap-1.5"
+            >
+              <Download size={14} />
+              <span>Export CSV</span>
+            </Button>
+          </div>
+        }
+      />
+
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-xs font-bold select-none">
+          Error loading analytics dashboard: {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="text-center py-16 text-xs font-bold text-slate-400 select-none">
+          Loading promotions analytics dashboard...
+        </div>
+      ) : promotions.length === 0 ? (
+        /* Empty state when no promotions are present in DB */
+        <div className="bg-white border border-slate-200 rounded-[18px] shadow-sm p-12 text-center select-none flex flex-col items-center max-w-md mx-auto">
+          <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl mb-4">
+            <BarChart3 size={32} />
+          </div>
+          <h3 className="text-base font-bold text-slate-800">No promotion analytics available</h3>
+          <p className="text-xs text-slate-500 font-medium leading-relaxed mt-1.5 mb-6">
+            Create a campaign or promotion code in the system to begin tracking real-time sales and coupon performance metrics.
+          </p>
+          <Button
+            onClick={() => navigate('/promotions')}
+            variant="primary"
+            className="rounded-full px-6 py-2.5 text-xs font-bold shadow-md shadow-blue-500/10 flex items-center gap-1.5"
+          >
+            <Plus size={14} />
+            <span>Create Promotion</span>
+          </Button>
+        </div>
+      ) : (
+        /* Dashboard Container */
+        <div className="space-y-6">
+          {/* TOP KPI CARDS (Exactly 4 Cards matching screenshot layout specs) */}
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 select-none">
+            <StatCard
+              icon={Tag}
+              label="Active Promotions"
+              value={kpis.activePromotions}
+              trend="↑ 20% vs last 7 days"
+              trendDirection="up"
+              colorVariant="blue"
+            />
+            <StatCard
+              icon={TrendingUp}
+              label="Revenue Generated"
+              value={`Rs. ${kpis.totalRevenue.toLocaleString()}`}
+              trend="↑ 22% vs last 7 days"
+              trendDirection="up"
+              colorVariant="indigo"
+            />
+            <StatCard
+              icon={ShoppingCart}
+              label="Orders Influenced"
+              value={kpis.totalOrders.toLocaleString()}
+              trend="↑ 16% vs last 7 days"
+              colorVariant="emerald"
+            />
+            <StatCard
+              icon={Award}
+              label="Average ROI"
+              value={`${kpis.avgROI}x`}
+              trend="↑ 10% vs last 7 days"
+              trendDirection="up"
+              colorVariant="amber"
+            />
           </div>
 
-          {/* SVG Bar Chart Canvas */}
-          <div className="relative h-44 overflow-visible flex items-end">
-            <svg viewBox={`0 0 ${barChartWidth} ${barChartHeight}`} className="w-full h-full overflow-visible">
-              {/* Y Axis Grid lines */}
-              {[0, 100, 200, 300, 400].map((t) => {
-                const y = barChartHeight - (t / 400) * barChartHeight;
-                return (
-                  <g key={t} className="opacity-90">
-                    <line x1="45" y1={y} x2={barChartWidth} y2={y} stroke="#F1F5F9" strokeWidth="1" />
-                    <text x="35" y={y + 4} textAnchor="end" className="text-[10px] font-bold fill-slate-400">
-                      {t === 0 ? '0' : `Rs. ${t}k`}
-                    </text>
-                  </g>
-                );
-              })}
+          {/* MAIN CHARTS GRID */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Chart 1: Revenue by Promotion */}
+            <div className="bg-white border border-slate-200 rounded-[18px] shadow-sm p-6 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 select-none">
+                  <h3 className="text-sm font-bold text-slate-800">Revenue by Promotion</h3>
+                  <span className="text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1 cursor-pointer">
+                    Top 5 <ChevronDown size={12} />
+                  </span>
+                </div>
+                {verticalBarChart.items.length === 0 ? (
+                  <div className="text-center py-16 text-xs font-bold text-slate-400">No data to display</div>
+                ) : (
+                  <div className="relative min-h-[220px] select-none pt-4">
+                    {(() => {
+                      const viewWidth = 500;
+                      const viewHeight = 220;
+                      const paddingLeft = 55;
+                      const paddingRight = 20;
+                      const paddingTop = 30; // extra padding for labels on top of columns
+                      const paddingBottom = 35;
 
-              {/* Bar elements */}
-              {currentChartData.map((d, idx) => {
-                const x = 50 + idx * (colWidth + barGap);
-                const h = getBarHeight(d.rev);
-                const y = barChartHeight - h;
-                const isHovered = hoveredBarIdx === idx;
+                      const chartWidth = viewWidth - paddingLeft - paddingRight;
+                      const chartHeight = viewHeight - paddingTop - paddingBottom;
 
-                return (
-                  <g 
-                    key={idx}
-                    onMouseEnter={() => setHoveredBarIdx(idx)}
-                    onMouseLeave={() => setHoveredBarIdx(null)}
-                    className="cursor-pointer"
+                      const maxVal = verticalBarChart.maxRev;
+                      const items = verticalBarChart.items;
+                      const dataCount = items.length;
+
+                      const ticksCount = 5;
+                      const ticks = Array.from({ length: ticksCount }).map((_, idx) => {
+                        const val = (maxVal / (ticksCount - 1)) * idx;
+                        const label = val >= 1000 ? `Rs. ${(val / 1000).toFixed(0)}k` : `Rs. ${val.toFixed(0)}`;
+                        return {
+                          y: viewHeight - paddingBottom - (val / maxVal) * chartHeight,
+                          label
+                        };
+                      });
+
+                      return (
+                        <svg viewBox={`0 0 ${viewWidth} ${viewHeight}`} className="w-full h-full overflow-visible">
+                          {/* Grid Lines */}
+                          {ticks.map((tick, i) => (
+                            <g key={i} className="opacity-80">
+                              <text x={paddingLeft - 10} y={tick.y + 3.5} textAnchor="end" className="text-[10px] fill-slate-400 font-bold font-sans">
+                                {tick.label}
+                              </text>
+                              <line x1={paddingLeft} y1={tick.y} x2={viewWidth - paddingRight} y2={tick.y} className="stroke-slate-100" strokeWidth="1" strokeDasharray={i === 0 ? "0" : "4 4"} />
+                            </g>
+                          ))}
+                          {/* Bars */}
+                          {items.map((p, idx) => {
+                            const barWidth = 35;
+                            const spacing = chartWidth / dataCount;
+                            const x = paddingLeft + idx * spacing + (spacing - barWidth) / 2;
+                            const valHeight = ((p.revenue || 0) / maxVal) * chartHeight;
+                            const y = viewHeight - paddingBottom - valHeight;
+                            const color = '#3B82F6'; // Blue columns matching screenshot
+
+                            return (
+                              <g key={p.id} className="group cursor-pointer">
+                                {/* Value indicator directly above column */}
+                                <text
+                                  x={x + barWidth / 2}
+                                  y={y - 6}
+                                  textAnchor="middle"
+                                  className="text-[9px] fill-slate-800 font-black font-sans"
+                                >
+                                  Rs. {p.revenue.toLocaleString()}
+                                </text>
+                                <rect
+                                  x={x}
+                                  y={y}
+                                  width={barWidth}
+                                  height={Math.max(valHeight, 4)}
+                                  fill={color}
+                                  rx="4"
+                                  className="transition-all duration-300 hover:opacity-90"
+                                />
+                                <text
+                                  x={x + barWidth / 2}
+                                  y={viewHeight - paddingBottom + 16}
+                                  textAnchor="middle"
+                                  className="text-[10px] fill-slate-500 font-bold font-sans"
+                                >
+                                  {p.name.length > 12 ? `${p.name.substring(0, 11)}…` : p.name}
+                                </text>
+                              </g>
+                            );
+                          })}
+                        </svg>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Chart 2: Promotion ROI Ranking */}
+            <div className="bg-white border border-slate-200 rounded-[18px] shadow-sm p-6 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 select-none">
+                  <h3 className="text-sm font-bold text-slate-800">Promotion ROI Ranking</h3>
+                  <span className="text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1 cursor-pointer">
+                    Top 5 <ChevronDown size={12} />
+                  </span>
+                </div>
+                {roiRanking.sorted.length === 0 ? (
+                  <div className="text-center py-16 text-xs font-bold text-slate-400">No campaigns to evaluate</div>
+                ) : (
+                  <div className="space-y-7 py-2 select-none">
+                    {roiRanking.sorted.map((p, idx) => {
+                      const widthPercent = `${Math.min((p.parsedRoi / roiRanking.maxROI) * 100, 100)}%`;
+                      return (
+                        <div key={p.id} className="flex items-center justify-between gap-4 text-xs font-bold text-slate-600">
+                          <span className="w-24 truncate text-left">{p.name}</span>
+                          <div className="flex-1 bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200/50 relative">
+                            <div 
+                              className="h-full rounded-full transition-all duration-300 bg-[#8B5CF6]" // Purple ROI bars matching screenshot
+                              style={{ width: widthPercent }}
+                            />
+                          </div>
+                          <span className="w-10 text-right font-black text-slate-800 font-mono">{p.roi || '0.0x'}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Chart 3: Orders Influenced by Promotion (Green horizontal bars with ticks) */}
+            <div className="bg-white border border-slate-200 rounded-[18px] shadow-sm p-6 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 select-none">
+                  <h3 className="text-sm font-bold text-slate-800">Orders Influenced by Promotion</h3>
+                  <span className="text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1 cursor-pointer">
+                    Top 5 <ChevronDown size={12} />
+                  </span>
+                </div>
+                {horizontalBarChart.items.length === 0 ? (
+                  <div className="text-center py-16 text-xs font-bold text-slate-400">No data to display</div>
+                ) : (
+                  <div className="relative min-h-[200px] select-none pt-2">
+                    {(() => {
+                      const viewWidth = 500;
+                      const viewHeight = 200;
+                      const paddingLeft = 100;
+                      const paddingRight = 45;
+                      const paddingTop = 15;
+                      const paddingBottom = 30;
+
+                      const chartWidth = viewWidth - paddingLeft - paddingRight;
+                      const chartHeight = viewHeight - paddingTop - paddingBottom;
+
+                      const maxVal = horizontalBarChart.maxOrd;
+                      const items = horizontalBarChart.items;
+                      const dataCount = items.length;
+
+                      const ticksCount = 6;
+                      const tickStep = maxVal / (ticksCount - 1);
+                      const ticks = Array.from({ length: ticksCount }).map((_, idx) => {
+                        const val = tickStep * idx;
+                        return {
+                          x: paddingLeft + (val / maxVal) * chartWidth,
+                          label: Math.round(val)
+                        };
+                      });
+
+                      return (
+                        <svg viewBox={`0 0 ${viewWidth} ${viewHeight}`} className="w-full h-full overflow-visible">
+                          {/* Grid Ticks */}
+                          {ticks.map((tick, i) => (
+                            <g key={i} className="opacity-80">
+                              <line
+                                x1={tick.x}
+                                y1={paddingTop}
+                                x2={tick.x}
+                                y2={viewHeight - paddingBottom}
+                                className="stroke-slate-100"
+                                strokeWidth="1"
+                              />
+                              <text
+                                x={tick.x}
+                                y={viewHeight - paddingBottom + 16}
+                                textAnchor="middle"
+                                className="text-[9px] fill-slate-400 font-bold font-sans"
+                              >
+                                {tick.label}
+                              </text>
+                            </g>
+                          ))}
+                          {/* Green Horizontal Bars */}
+                          {items.map((p, idx) => {
+                            const barHeight = 8;
+                            const spacing = chartHeight / dataCount;
+                            const y = paddingTop + idx * spacing + (spacing - barHeight) / 2;
+                            const valWidth = ((p.orders || 0) / maxVal) * chartWidth;
+                            const color = '#10B981'; // Green color matching screenshot
+
+                            return (
+                              <g key={p.id}>
+                                <text
+                                  x={paddingLeft - 12}
+                                  y={y + barHeight / 2 + 3}
+                                  textAnchor="end"
+                                  className="text-[10px] fill-slate-500 font-bold font-sans"
+                                >
+                                  {p.name.length > 12 ? `${p.name.substring(0, 11)}…` : p.name}
+                                </text>
+                                <rect
+                                  x={paddingLeft}
+                                  y={y}
+                                  width={Math.max(valWidth, 4)}
+                                  height={barHeight}
+                                  fill={color}
+                                  rx="4"
+                                  className="transition-all duration-300 hover:opacity-90"
+                                />
+                                <text
+                                  x={paddingLeft + valWidth + 8}
+                                  y={y + barHeight / 2 + 3}
+                                  textAnchor="start"
+                                  className="text-[10px] fill-slate-700 font-black font-sans"
+                                >
+                                  {p.orders}
+                                </text>
+                              </g>
+                            );
+                          })}
+                        </svg>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Chart 4: Coupon Usage by Promotion */}
+            <div className="bg-white border border-slate-200 rounded-[18px] shadow-sm p-6 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 select-none">
+                  <h3 className="text-sm font-bold text-slate-800">Coupon Usage by Promotion</h3>
+                  <span className="text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1 cursor-pointer">
+                    Top 5 <ChevronDown size={12} />
+                  </span>
+                </div>
+                {donutChart.items.length === 0 ? (
+                  <div className="text-center py-16 text-xs font-bold text-slate-400">No coupons used yet</div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-8 py-4 select-none">
+                    {/* SVG Donut */}
+                    <div className="relative w-36 h-36 shrink-0">
+                      <svg viewBox="0 0 160 160" className="w-full h-full transform -rotate-90">
+                        {(() => {
+                          const radius = 55;
+                          const circ = 2 * Math.PI * radius; // 345.57
+                          let accumulated = 0;
+                          return donutChart.items.map((p, idx) => {
+                            const percent = p.usage / donutChart.totalUsages;
+                            const strokeLength = percent * circ;
+                            const strokeOffset = circ - strokeLength + accumulated;
+                            accumulated -= strokeLength;
+                            const color = COLOR_PALETTE[idx % COLOR_PALETTE.length];
+
+                            return (
+                              <circle
+                                key={p.id}
+                                cx="80"
+                                cy="80"
+                                r={radius}
+                                fill="none"
+                                stroke={color}
+                                strokeWidth="18"
+                                strokeDasharray={`${strokeLength} ${circ}`}
+                                strokeDashoffset={strokeOffset}
+                                className="transition-all duration-300"
+                              />
+                            );
+                          });
+                        })()}
+                        <circle cx="80" cy="80" r="42" fill="#FFF" />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                        <span className="text-[9px] text-slate-400 font-extrabold uppercase">Total Usage</span>
+                        <span className="text-xl font-black text-slate-800 font-mono">{donutChart.totalUsages}</span>
+                      </div>
+                    </div>
+
+                    {/* Donut Legend matching the screenshot */}
+                    <div className="flex-1 space-y-3 w-full">
+                      {donutChart.items.map((p, idx) => {
+                        const color = COLOR_PALETTE[idx % COLOR_PALETTE.length];
+                        const pct = ((p.usage / donutChart.totalUsages) * 100).toFixed(1);
+                        return (
+                          <div key={p.id} className="flex items-center justify-between text-xs font-bold text-slate-500 w-full">
+                            <span className="flex items-center gap-2.5 truncate">
+                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                              <span className="truncate max-w-[120px]">{p.code || p.name}</span>
+                            </span>
+                            <span className="font-sans text-slate-700 shrink-0 font-medium">{p.usage} ({pct}%)</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+          </div>
+
+          {/* TABLE CARD */}
+          <div className="bg-white border border-slate-200 rounded-[18px] shadow-sm overflow-hidden flex flex-col select-none">
+            {/* Table Header and Search */}
+            <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <h3 className="text-sm font-black text-slate-800">Promotion Performance Overview</h3>
+              
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="relative max-w-xs w-full sm:w-64">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 stroke-[2.25]" />
+                  <input
+                    type="text"
+                    placeholder="Search promotion..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl outline-none text-xs font-semibold text-slate-800 placeholder-slate-400 transition-all"
+                  />
+                </div>
+                
+                {/* Filter button */}
+                <button className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl shadow-sm">
+                  <Sliders size={14} className="text-slate-400" />
+                  <span>Filter</span>
+                </button>
+
+                {/* Columns button */}
+                <button className="p-2 hover:bg-slate-50 border border-slate-200 rounded-xl text-slate-400">
+                  <Columns size={14} />
+                </button>
+              </div>
+            </div>
+
+            {/* Table layout */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <th className="px-6 py-4 font-bold">Promotion Name</th>
+                    <th className="px-6 py-4 font-bold text-center">Status</th>
+                    <th className="px-6 py-4 font-bold">Revenue (Rs.)</th>
+                    <th className="px-6 py-4 font-bold">Orders Influenced</th>
+                    <th className="px-6 py-4 font-bold">Coupon Usage</th>
+                    <th className="px-6 py-4 font-bold text-center">ROI</th>
+                    <th className="px-6 py-4 font-bold">Branch</th>
+                    <th className="px-6 py-4 font-bold">Start Date</th>
+                    <th className="px-6 py-4 font-bold">End Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                  {paginatedPromotions.length > 0 ? (
+                    paginatedPromotions.map((p) => {
+                      let badgeVar = 'neutral';
+                      if (p.status === 'Active') badgeVar = 'success';
+                      else if (p.status === 'Scheduled') badgeVar = 'primary';
+                      else if (p.status === 'Expired') badgeVar = 'danger';
+
+                      return (
+                        <tr key={p.id} className="hover:bg-blue-50/10 transition-colors duration-150">
+                          <td className="px-6 py-4 whitespace-nowrap font-bold text-slate-800">
+                            {p.name}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <Badge variant={badgeVar}>{p.status}</Badge>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap font-extrabold text-slate-800 font-mono">
+                            {p.revenue.toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap font-bold text-slate-600 font-mono">
+                            {p.orders}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap font-bold text-slate-600 font-mono">
+                            {p.usage}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center font-extrabold text-blue-600 font-mono">
+                            {p.roi}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-slate-500 font-semibold">
+                            {p.branch}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-slate-500 font-medium font-mono">
+                            {p.startDate ? new Date(p.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-slate-500 font-medium font-mono">
+                            {p.endDate ? new Date(p.endDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan="9" className="px-6 py-12 text-center text-slate-400 select-none">
+                        No promotions found matching the active filters.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/20 flex items-center justify-between text-xs font-bold text-slate-400 select-none">
+                <span>Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalItems)} of {totalItems} Campaigns</span>
+                
+                <div className="flex items-center gap-1.5">
+                  <button 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-55 flex items-center justify-center transition-colors hover:bg-slate-50"
                   >
-                    {/* Background hover guide segment */}
-                    <rect 
-                      x={x - barGap/4} 
-                      y="0" 
-                      width={colWidth + barGap/2} 
-                      height={barChartHeight} 
-                      fill="transparent" 
-                    />
-                    
-                    {/* The solid Blue Bar */}
-                    <rect
-                      x={x}
-                      y={y}
-                      width={colWidth}
-                      height={h}
-                      rx="6"
-                      fill={isHovered ? '#1D4ED8' : '#2563EB'}
-                      className="transition-all duration-300"
-                    />
-
-                    {/* Labels under the bars */}
-                    <text
-                      x={x + colWidth / 2}
-                      y={barChartHeight + 15}
-                      textAnchor="middle"
-                      className="text-[10px] font-bold fill-slate-400"
-                    >
-                      {d.day}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-
-            {/* Hover Tooltip overlay */}
-            {hoveredBarIdx !== null && (
-              <div 
-                className="absolute bg-slate-900 text-white font-bold font-mono text-[10px] rounded-lg px-2.5 py-1.5 shadow-md pointer-events-none transition-all duration-75 z-10"
-                style={{
-                  left: `${50 + hoveredBarIdx * (colWidth + barGap) + colWidth / 2 - 40}px`,
-                  bottom: `${getBarHeight(currentChartData[hoveredBarIdx].rev) + 12}px`
-                }}
-              >
-                Rs. {currentChartData[hoveredBarIdx].rev},000
+                    &lt;
+                  </button>
+                  {Array.from({ length: totalPages }).map((_, i) => {
+                    const page = i + 1;
+                    const isActive = currentPage === page;
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`w-7 h-7 rounded-lg border transition-all ${
+                          isActive
+                            ? 'border-blue-600 bg-blue-600 text-white shadow-sm'
+                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+                  <button 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-55 flex items-center justify-center transition-colors hover:bg-slate-50"
+                  >
+                    &gt;
+                  </button>
+                </div>
               </div>
             )}
           </div>
+
         </div>
-
-        {/* Right Column (1/3 width) - ROI Rankings progress list */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 select-none flex flex-col justify-between select-none">
-          <div>
-            <h3 className="text-sm font-black text-slate-800 border-b border-slate-100 pb-3.5 mb-4">
-              promotion performance by ROI
-            </h3>
-
-            <div className="space-y-4">
-              {roiRankings.map((r, i) => (
-                <div key={i} className="space-y-1.5">
-                  <div className="flex justify-between items-center text-xs font-semibold text-slate-700">
-                    <span className="truncate max-w-[130px]">{r.name}</span>
-                    <span className="font-extrabold text-slate-900">{r.roi}</span>
-                  </div>
-
-                  {/* Horizontal Bar progress */}
-                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200/40">
-                    <div 
-                      className="bg-blue-600 h-full rounded-full transition-all duration-500" 
-                      style={{ width: `${r.percentage}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* Bottom row: Doughnut Chart & AI Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Left Column (2/3 width) - SVG Doughnut Chart */}
-        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl shadow-sm p-6 select-none">
-          <h3 className="text-base font-bold text-slate-800 mb-6">Revenue By Branch</h3>
-          
-          <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
-            {/* SVG Doughnut Circle */}
-            <div className="relative w-44 h-44 flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 120 120" className="w-full h-full transform -rotate-90 overflow-visible">
-                {/* SVG segments computed dynamically */}
-                {/* Circumference = 2 * PI * r = 2 * 3.14159 * 42 = 263.89 */}
-                {/* Segment shares: 42%, 25%, 16%, 9%, 8% */}
-                {[
-                  { dashArray: '110.8 263.89', dashOffset: '0', color: '#2563EB' },       // Main: 42%
-                  { dashArray: '65.9 263.89', dashOffset: '-110.8', color: '#10B981' },    // City: 25%
-                  { dashArray: '42.2 263.89', dashOffset: '-176.7', color: '#14B8A6' },    // Kandy: 16%
-                  { dashArray: '23.7 263.89', dashOffset: '-218.9', color: '#F59E0B' },    // Galle: 9%
-                  { dashArray: '21.2 263.89', dashOffset: '-242.6', color: '#64748B' }     // Other: 8%
-                ].map((seg, idx) => {
-                  const isHovered = hoveredRingIdx === idx;
-                  return (
-                    <circle
-                      key={idx}
-                      cx="60"
-                      cy="60"
-                      r="42"
-                      fill="transparent"
-                      stroke={seg.color}
-                      strokeWidth={isHovered ? '15' : '11'}
-                      strokeDasharray={seg.dashArray}
-                      strokeDashoffset={seg.dashOffset}
-                      onMouseEnter={() => setHoveredRingIdx(idx)}
-                      onMouseLeave={() => setHoveredRingIdx(null)}
-                      className="transition-all duration-200 cursor-pointer"
-                    />
-                  );
-                })}
-              </svg>
-
-              {/* Centre text overlay showing active branch hovered details */}
-              <div className="absolute text-center flex flex-col pointer-events-none select-none">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  {hoveredRingIdx !== null ? doughnutSegments[hoveredRingIdx].name : 'Total Share'}
-                </span>
-                <span className="text-sm font-extrabold text-slate-800 leading-none mt-0.5">
-                  {hoveredRingIdx !== null ? doughnutSegments[hoveredRingIdx].share : '100%'}
-                </span>
-              </div>
-            </div>
-
-            {/* Right List Legend */}
-            <div className="flex-1 space-y-2.5 max-w-xs font-semibold text-xs text-slate-600 w-full">
-              {doughnutSegments.map((segment, idx) => (
-                <div 
-                  key={idx} 
-                  onMouseEnter={() => setHoveredRingIdx(idx)}
-                  onMouseLeave={() => setHoveredRingIdx(null)}
-                  className={`flex items-center justify-between p-2 rounded-xl border border-transparent transition-all cursor-pointer ${
-                    hoveredRingIdx === idx ? 'bg-slate-50 border-slate-200/50' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: segment.color }} />
-                    <span className="truncate max-w-[120px]">{segment.name}</span>
-                  </div>
-                  <span className="font-extrabold text-slate-800 font-mono">
-                    Rs. {segment.value.toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-          </div>
-        </div>
-
-        {/* Right Column (1/3 width) - AI Insight List */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex flex-col justify-between select-none select-none">
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-purple-600 animate-pulse" />
-                <h3 className="text-base font-bold text-slate-800">AI Insight</h3>
-              </div>
-              <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                New
-              </span>
-            </div>
-
-            <div className="space-y-4 text-xs font-semibold text-slate-600 leading-relaxed">
-              <div className="flex items-start gap-2">
-                <CheckCircle size={14} className="text-slate-800 shrink-0 mt-0.5" />
-                <p>Beverage category promotions perform <span className="text-emerald-600 font-bold">22% better</span> on weekends</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <CheckCircle size={14} className="text-slate-800 shrink-0 mt-0.5" />
-                <p>Orders with promotions have <span className="text-emerald-600 font-bold">18% higher</span> average value.</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <CheckCircle size={14} className="text-slate-800 shrink-0 mt-0.5" />
-                <p>Flash sales on Fridays show <span className="text-emerald-600 font-bold">31% higher</span> engagement.</p>
-              </div>
-            </div>
-          </div>
-
-          <button 
-            onClick={() => setIsAIModalOpen(true)}
-            className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors flex items-center justify-end gap-1 mt-6 border-t border-slate-50 pt-4"
-          >
-            <span>View all AI Insights</span>
-            <span>&gt;</span>
-          </button>
-        </div>
-
-      </div>
-
-      {/* AI Recommendations Modal */}
-      <Modal
-        isOpen={isAIModalOpen}
-        onClose={() => setIsAIModalOpen(false)}
-        title="AI Recommendations & Insights"
-        size="md"
-      >
-        <div className="space-y-4 select-none">
-          <div className="flex items-start gap-3 p-4 bg-purple-50/50 border border-purple-100 rounded-2xl">
-            <Sparkles className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
-            <div>
-              <h5 className="font-bold text-slate-800 text-sm">Beverage Weekends</h5>
-              <p className="text-xs text-slate-600 mt-1">
-                Beverage category promotions perform 22% better on weekends. Suggest scheduling beverage discount rules from Friday noon to Sunday midnight.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-100 rounded-2xl">
-            <Sparkles className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
-            <div>
-              <h5 className="font-bold text-slate-800 text-sm">Average Order Value (AOV)</h5>
-              <p className="text-xs text-slate-600 mt-1">
-                Orders with promotions have 18% higher average value. Offering cross-sell rule rewards (e.g. Free items when purchasing over Rs. 1000) drives the highest ticket sizes.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-100 rounded-2xl">
-            <Sparkles className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
-            <div>
-              <h5 className="font-bold text-slate-800 text-sm">Friday Flash Sales</h5>
-              <p className="text-xs text-slate-600 mt-1">
-                Flash sales on Fridays show 31% higher engagement, specifically during high foot-traffic checkout hours (5:00 PM to 9:00 PM).
-              </p>
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-4 border-t border-slate-100">
-            <Button
-              variant="outline"
-              onClick={() => setIsAIModalOpen(false)}
-              className="px-5 py-2"
-            >
-              Close
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      )}
 
     </div>
   );

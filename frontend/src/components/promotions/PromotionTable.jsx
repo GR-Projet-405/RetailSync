@@ -7,7 +7,8 @@ export default function PromotionTable({
   promotions = [], 
   onView, 
   onEdit, 
-  onDelete 
+  onDelete,
+  onCouponsClick
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -98,7 +99,7 @@ export default function PromotionTable({
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 stroke-[2.25]" />
           <input
             type="text"
-            placeholder="Search promotions..."
+            placeholder="Search by promotion name..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -123,120 +124,131 @@ export default function PromotionTable({
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/30 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
               <th className="px-6 py-4 font-extrabold">Promotion</th>
-              <th className="px-6 py-4 font-extrabold">Discount</th>
-              <th className="px-6 py-4 font-extrabold">Type</th>
-              <th className="px-6 py-4 font-extrabold">Revenue</th>
-              <th className="px-6 py-4 font-extrabold">Orders</th>
-              <th className="px-6 py-4 font-extrabold">Usage</th>
-              <th className="px-6 py-4 font-extrabold">ROI</th>
+              <th className="px-6 py-4 font-extrabold">Branch</th>
               <th className="px-6 py-4 font-extrabold text-center">Status</th>
+              <th className="px-6 py-4 font-extrabold">Duration</th>
+              <th className="px-6 py-4 font-extrabold text-center">Coupons</th>
               <th className="px-6 py-4 font-extrabold text-center">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
             {paginatedPromotions.length > 0 ? (
-              paginatedPromotions.map((promo) => (
-                <tr
-                  key={promo.id}
-                  className="hover:bg-blue-50/10 transition-colors duration-150"
-                >
-                  {/* Name */}
-                  <td className="px-6 py-4.5 whitespace-nowrap font-bold text-slate-800">
-                    {promo.name}
-                  </td>
-                  
-                  {/* Discount */}
-                  <td className="px-6 py-4.5 whitespace-nowrap font-extrabold text-slate-800">
-                    {promo.discount}
-                  </td>
+              paginatedPromotions.map((promo) => {
+                // Inline date formatter for cleaner layout
+                const formatDate = (dateStr) => {
+                  if (!dateStr) return '—';
+                  const date = new Date(dateStr);
+                  if (isNaN(date.getTime())) return dateStr;
+                  return date.toLocaleDateString('en-US', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                  });
+                };
 
-                  {/* Type */}
-                  <td className="px-6 py-4.5 whitespace-nowrap text-slate-500 font-semibold text-[11px]">
-                    {promo.type}
-                  </td>
+                return (
+                  <tr
+                    key={promo.id}
+                    className="hover:bg-blue-50/10 transition-colors duration-150"
+                  >
+                    {/* Name */}
+                    <td className="px-6 py-4.5 whitespace-nowrap">
+                      <div className="font-bold text-slate-800">{promo.name}</div>
+                      <div className="text-[10px] text-slate-400 font-semibold mt-0.5 max-w-[220px] truncate" title={promo.categories && promo.categories.length > 0 ? promo.categories.map(c => typeof c === 'object' ? c.name : c).join(', ') : 'All Categories'}>
+                        {promo.categories && promo.categories.length > 0
+                          ? promo.categories.map(c => typeof c === 'object' ? c.name || c._id : c).join(', ')
+                          : 'All Categories'}
+                      </div>
+                    </td>
 
-                  {/* Revenue */}
-                  <td className="px-6 py-4.5 whitespace-nowrap font-extrabold text-slate-800">
-                    {formatCurrency(promo.revenue)}
-                  </td>
+                    {/* Branch */}
+                    <td className="px-6 py-4.5 whitespace-nowrap text-slate-600 font-semibold">
+                      <span className="bg-slate-100/80 border border-slate-200/55 px-2 py-0.5 rounded-full text-[11px]">
+                        {promo.branch || 'All Branches'}
+                      </span>
+                    </td>
+                    
 
-                  {/* Orders */}
-                  <td className="px-6 py-4.5 whitespace-nowrap font-semibold text-slate-600 font-mono text-[11px]">
-                    {promo.orders.toLocaleString()}
-                  </td>
 
-                  {/* Usage */}
-                  <td className="px-6 py-4.5 whitespace-nowrap font-semibold text-slate-600 font-mono text-[11px]">
-                    {promo.usage.toLocaleString()}
-                  </td>
+                    {/* Status */}
+                    <td className="px-6 py-4.5 whitespace-nowrap text-center">
+                      <Badge variant={getStatusVariant(promo.status)}>
+                        {promo.status}
+                      </Badge>
+                    </td>
 
-                  {/* ROI */}
-                  <td className="px-6 py-4.5 whitespace-nowrap font-extrabold text-slate-800">
-                    {promo.roi}
-                  </td>
+                    {/* Duration */}
+                    <td className="px-6 py-4.5 whitespace-nowrap text-slate-500 font-semibold font-mono text-[11px]">
+                      {formatDate(promo.startDate)} – {formatDate(promo.endDate)}
+                    </td>
 
-                  {/* Status */}
-                  <td className="px-6 py-4.5 whitespace-nowrap text-center">
-                    <Badge variant={getStatusVariant(promo.status)}>
-                      {promo.status}
-                    </Badge>
-                  </td>
-
-                  {/* Actions */}
-                  <td className="px-6 py-4.5 whitespace-nowrap text-center relative">
-                    <div className="flex items-center justify-center gap-1.5">
-                      {/* View Action */}
+                    {/* Coupons Count */}
+                    <td className="px-6 py-4.5 whitespace-nowrap text-center font-bold text-slate-800">
                       <button
-                        onClick={() => onView(promo)}
-                        className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
-                        title="View Promotion"
+                        type="button"
+                        onClick={() => onCouponsClick && onCouponsClick(promo)}
+                        className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-bold focus:outline-none bg-blue-50/50 hover:bg-blue-50 px-3 py-1 rounded-lg border border-blue-100 transition-colors inline-block"
                       >
-                        <Eye className="w-4 h-4 stroke-[2.25]" />
+                        {promo.couponCount || 0}
                       </button>
+                    </td>
 
-                      {/* Edit Action */}
-                      <button
-                        onClick={() => onEdit(promo)}
-                        className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
-                        title="Edit Promotion"
-                      >
-                        <Pencil className="w-4 h-4 stroke-[2.25]" />
-                      </button>
-
-                      {/* Options/More/Delete Menu */}
-                      <div className="relative">
+                    {/* Actions */}
+                    <td className="px-6 py-4.5 whitespace-nowrap text-center relative">
+                      <div className="flex items-center justify-center gap-3">
+                        {/* View Action */}
                         <button
-                          onClick={() => setActiveMenuId(activeMenuId === promo.id ? null : promo.id)}
-                          className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all"
+                          onClick={() => onView(promo)}
+                          className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+                          title="View Promotion"
                         >
-                          <MoreVertical className="w-4 h-4" />
+                          <Eye className="w-4 h-4 stroke-[2.25]" />
                         </button>
 
-                        {activeMenuId === promo.id && (
-                          <>
-                            <div className="fixed inset-0 z-10" onClick={() => setActiveMenuId(null)} />
-                            <div className="absolute right-0 mt-1 w-28 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 overflow-hidden text-xs text-left">
-                              <button
-                                onClick={() => {
-                                  onDelete(promo.id);
-                                  setActiveMenuId(null);
-                                }}
-                                className="w-full px-3 py-2 text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                <span>Delete</span>
-                              </button>
-                            </div>
-                          </>
-                        )}
+                        {/* Edit Action */}
+                        <button
+                          onClick={() => onEdit(promo)}
+                          className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+                          title="Edit Promotion"
+                        >
+                          <Pencil className="w-4 h-4 stroke-[2.25]" />
+                        </button>
+
+                        {/* Options/More/Delete Menu */}
+                        <div className="relative">
+                          <button
+                            onClick={() => setActiveMenuId(activeMenuId === promo.id ? null : promo.id)}
+                            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+
+                          {activeMenuId === promo.id && (
+                            <>
+                              <div className="fixed inset-0 z-10" onClick={() => setActiveMenuId(null)} />
+                              <div className="absolute right-0 bottom-full mb-1.5 w-28 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 overflow-hidden text-xs text-left">
+                                <button
+                                  onClick={() => {
+                                    onDelete(promo.id);
+                                    setActiveMenuId(null);
+                                  }}
+                                  className="w-full px-3 py-2 text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                </tr>
-              ))
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
-                <td colSpan="9" className="px-6 py-14 text-center text-slate-400 select-none font-semibold">
+                <td colSpan="6" className="px-6 py-14 text-center text-slate-400 select-none font-semibold">
                   No promotions found matching filters.
                 </td>
               </tr>

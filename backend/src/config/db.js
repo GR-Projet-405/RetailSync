@@ -2,11 +2,10 @@ const dns = require('dns');
 const mongoose = require('mongoose');
 const env = require('./env');
 
-// Windows DNS client does not forward SRV queries to Node.js properly.
-// Force Node.js to use Google's public DNS so mongodb+srv:// URIs resolve.
-if (process.platform === 'win32') {
-  dns.setServers(['8.8.8.8', '8.8.4.4']);
-}
+// Some routers/ISP DNS servers fail to resolve SRV records used by
+// mongodb+srv:// URIs. Fall back to public DNS resolvers to avoid
+// "querySrv ETIMEOUT" errors during local development.
+dns.setServers(['1.1.1.1', '8.8.8.8']);
 
 const connectDB = async () => {
   try {

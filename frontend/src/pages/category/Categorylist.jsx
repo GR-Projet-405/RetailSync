@@ -1,15 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import categoryService from '../../services/categoryService';
+import { toast } from 'react-toastify';
 
 export default function CategoryList({ onView, onCreate, onEdit, onHierarchy }) {
   const [categories, setCategories] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+  const [totalProducts, setTotalProducts] = useState(0);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'true' | 'false'
+  const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [deleteModal, setDeleteModal] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Fetch paginated category list
   const fetchCategories = useCallback(async (page = 1) => {
     try {
       setLoading(true);
@@ -25,16 +28,30 @@ export default function CategoryList({ onView, onCreate, onEdit, onHierarchy }) 
     }
   }, [search, statusFilter]);
 
+  // Fetch total product count across ALL categories — runs only once on mount
+  const fetchTotalProducts = async () => {
+    try {
+      const res = await categoryService.getAll({ limit: 100, isActive: 'true' });
+      const sum = res.data.data.reduce((acc, cat) => acc + (cat.productCount || 0), 0);
+      setTotalProducts(sum);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => { fetchCategories(1); }, [fetchCategories]);
+  useEffect(() => { fetchTotalProducts(); }, []); // only once
 
   const handleDelete = async () => {
     try {
       setDeleteLoading(true);
       await categoryService.remove(deleteModal._id);
+      toast.success(`"${deleteModal.name}" deactivated successfully!`);
       setDeleteModal(null);
       fetchCategories(pagination.page);
+      fetchTotalProducts();
     } catch (err) {
-      alert(err.response?.data?.message || 'Delete failed');
+      toast.error(err.response?.data?.message || 'Delete failed');
     } finally {
       setDeleteLoading(false);
     }
@@ -74,7 +91,7 @@ export default function CategoryList({ onView, onCreate, onEdit, onHierarchy }) 
           { label: 'Total Categories', value: pagination.total, icon: '☰' },
           { label: 'Parent Categories', value: parentCount, icon: '🗂️' },
           { label: 'Sub-Categories', value: subCount, icon: '🗂️' },
-          { label: 'Total Products', value: '—', icon: '📦' },
+          { label: 'Total Products', value: totalProducts, icon: '📦' },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-4">
             <span className="text-2xl">{s.icon}</span>
@@ -91,8 +108,7 @@ export default function CategoryList({ onView, onCreate, onEdit, onHierarchy }) 
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
           <h2 className="text-sm font-semibold text-slate-700">All Categories</h2>
           <div className="flex items-center gap-2">
-
-            {/* ── Status Filter ── */}
+            {/* Status Filter */}
             <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
               {[
                 { key: 'all',   label: 'All' },
@@ -106,7 +122,8 @@ export default function CategoryList({ onView, onCreate, onEdit, onHierarchy }) 
                     statusFilter === f.key
                       ? 'bg-white shadow text-slate-800'
                       : 'text-slate-500 hover:text-slate-700'
-                  } ${f.key === 'true' && statusFilter === f.key ? 'text-green-600' : ''} ${f.key === 'false' && statusFilter === f.key ? 'text-red-500' : ''}`}
+                  } ${f.key === 'true' && statusFilter === f.key ? 'text-green-600' : ''}
+                    ${f.key === 'false' && statusFilter === f.key ? 'text-red-500' : ''}`}
                 >
                   {f.label}
                 </button>
@@ -159,9 +176,13 @@ export default function CategoryList({ onView, onCreate, onEdit, onHierarchy }) 
               </tr>
             ) : (
               categories.map((cat) => (
-                <tr key={cat._id} className={`border-b border-slate-50 hover:bg-slate-50 transition-colors ${!cat.isActive ? 'opacity-60' : ''}`}>
+                <tr
+                  key={cat._id}
+                  className={`border-b border-slate-50 hover:bg-slate-50 transition-colors ${!cat.isActive ? 'opacity-60' : ''}`}
+                >
                   <td className="px-4 py-3"><input type="checkbox" /></td>
 
+                  {/* Category Name */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className="text-lg">{cat.icon || '📦'}</span>
@@ -174,28 +195,38 @@ export default function CategoryList({ onView, onCreate, onEdit, onHierarchy }) 
                     </div>
                   </td>
 
+                  {/* Type */}
                   <td className="px-4 py-3">
                     <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${cat.parentId ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
                       {cat.parentId ? 'Sub' : 'Parent'}
                     </span>
                   </td>
 
+                  {/* Parent */}
                   <td className="px-4 py-3 text-slate-600 text-sm">
                     {cat.parentId?.name || <span className="text-slate-300">—</span>}
                   </td>
 
-                  <td className="px-4 py-3 text-slate-500 text-sm">—</td>
+                  {/* Products */}
+                  <td className="px-4 py-3 text-slate-700 text-sm font-medium">
+                    {cat.productCount ?? 0}
+                  </td>
 
+                  {/* Status */}
                   <td className="px-4 py-3">
                     <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${cat.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {cat.isActive ? '● Active' : '● Inactive'}
                     </span>
                   </td>
 
+                  {/* Created */}
                   <td className="px-4 py-3 text-slate-500 text-xs">
-                    {new Date(cat.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    {new Date(cat.createdAt).toLocaleDateString('en-GB', {
+                      day: '2-digit', month: 'short', year: 'numeric',
+                    })}
                   </td>
 
+                  {/* Actions */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
                       <button onClick={() => onView(cat._id)} title="View"
@@ -227,18 +258,27 @@ export default function CategoryList({ onView, onCreate, onEdit, onHierarchy }) 
 
         {/* Pagination */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
-          <p className="text-xs text-slate-500">Showing {categories.length} of {pagination.total} categories</p>
+          <p className="text-xs text-slate-500">
+            Showing {categories.length} of {pagination.total} categories
+          </p>
           <div className="flex gap-1">
-            <button onClick={() => fetchCategories(pagination.page - 1)} disabled={pagination.page === 1}
-              className="w-7 h-7 text-xs rounded border border-slate-200 disabled:opacity-40 hover:bg-slate-50">‹</button>
+            <button
+              onClick={() => fetchCategories(pagination.page - 1)}
+              disabled={pagination.page === 1}
+              className="w-7 h-7 text-xs rounded border border-slate-200 disabled:opacity-40 hover:bg-slate-50"
+            >‹</button>
             {Array.from({ length: pagination.pages }, (_, i) => i + 1).map((p) => (
-              <button key={p} onClick={() => fetchCategories(p)}
-                className={`w-7 h-7 text-xs rounded ${p === pagination.page ? 'bg-blue-600 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-                {p}
-              </button>
+              <button
+                key={p}
+                onClick={() => fetchCategories(p)}
+                className={`w-7 h-7 text-xs rounded ${p === pagination.page ? 'bg-blue-600 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+              >{p}</button>
             ))}
-            <button onClick={() => fetchCategories(pagination.page + 1)} disabled={pagination.page === pagination.pages}
-              className="w-7 h-7 text-xs rounded border border-slate-200 disabled:opacity-40 hover:bg-slate-50">›</button>
+            <button
+              onClick={() => fetchCategories(pagination.page + 1)}
+              disabled={pagination.page === pagination.pages}
+              className="w-7 h-7 text-xs rounded border border-slate-200 disabled:opacity-40 hover:bg-slate-50"
+            >›</button>
           </div>
         </div>
       </div>
@@ -252,17 +292,21 @@ export default function CategoryList({ onView, onCreate, onEdit, onHierarchy }) 
               <h3 className="font-semibold text-slate-800">Delete Category?</h3>
             </div>
             <p className="text-sm text-slate-500 mb-1">
-<strong className="text-slate-700">{deleteModal.name}</strong> will be deactivated. This action cannot be undone.            </p>
+              <strong className="text-slate-700">{deleteModal.name}</strong> will be deactivated. This action cannot be undone.
+            </p>
             <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg mb-4">
               ⚠️ Categories with active sub-categories cannot be deleted. Please deactivate sub-categories first.
             </p>
             <div className="flex gap-2 justify-end">
-              <button onClick={() => setDeleteModal(null)}
-                className="px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50">Cancel</button>
-              <button onClick={handleDelete} disabled={deleteLoading}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-60">
-                {deleteLoading ? 'Deleting...' : 'Yes, Delete'}
-              </button>
+              <button
+                onClick={() => setDeleteModal(null)}
+                className="px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50"
+              >Cancel</button>
+              <button
+                onClick={handleDelete}
+                disabled={deleteLoading}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-60"
+              >{deleteLoading ? 'Deleting...' : 'Yes, Delete'}</button>
             </div>
           </div>
         </div>

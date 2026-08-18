@@ -11,13 +11,13 @@ export const AuthProvider = ({ children }) => {
 
   const fetchBranches = async (userData) => {
     try {
-      const res = await api.get('/branch-management');
+      const res = await api.get('/branch-management/active');
       if (res.data && res.data.data) {
         const branchNames = res.data.data.map(b => b.name);
         setBranches(branchNames);
         
         // Default to user's branch if it exists, otherwise Central WH
-        const userBranchName = userData?.branchId?.name;
+        const userBranchName = userData?.branchId?.branchName || userData?.branchId?.name;
         if (userBranchName && branchNames.includes(userBranchName)) {
           setActiveBranch(userBranchName);
         } else if (branchNames.includes('Central WH')) {
@@ -58,8 +58,14 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const res = await api.post('/auth/login', { email, password });
-      const { user: userData, token } = res.data.data;
+      const payload = res.data?.data || res.data;
+      const userData = payload?.user || payload?.userData;
+      const token = payload?.token || payload?.accessToken || payload?.jwt;
       
+      if (!userData || !token) {
+        throw new Error('Unexpected login response from server');
+      }
+
       localStorage.setItem('retailsync_token', token);
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setUser(userData);
@@ -67,6 +73,7 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true };
     } catch (error) {
+      console.error('Auth login error:', error);
       const message = error.response?.data?.message || 'Login failed';
       return { success: false, message };
     }

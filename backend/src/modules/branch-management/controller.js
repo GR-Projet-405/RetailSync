@@ -1,19 +1,14 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const service = require('./service');
 
-// ─── GET /api/v1/branch-management/branches ───────────────
 const getBranches = asyncHandler(async (req, res) => {
-  const data = await service.getAllBranches();
-  
+  const branches = await service.getBranches();
+
   res.status(200).json({
     success: true,
     message: 'Branches retrieved successfully',
-    data
+    data: branches,
   });
 });
 
-module.exports = {
-  getBranches,
-};
-
-
+module.exports = { getBranches };

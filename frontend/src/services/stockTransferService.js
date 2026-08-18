@@ -26,7 +26,7 @@ export const updateTransferStatus = async (id, status, notes = '', driverDetails
 
 // Fetch all branches
 export const getBranches = async () => {
-  const { data } = await api.get('/branch-management');
+  const { data } = await api.get('/branch-management/active');
   return data;
 };
 

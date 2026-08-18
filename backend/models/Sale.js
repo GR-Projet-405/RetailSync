@@ -165,4 +165,4 @@ saleSchema.index({ customer: 1, createdAt: -1 });
 saleSchema.index({ status: 1 });
 saleSchema.index({ 'items.product': 1 });
 
-module.exports = mongoose.model('Sale', saleSchema);
+module.exports = mongoose.models.Sale || mongoose.model('Sale', saleSchema);

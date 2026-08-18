@@ -280,7 +280,7 @@ export default function UserListPage() {
   useEffect(() => {
     const loadBranches = async () => {
       try {
-        const res = await api.get("/branch-management/branches");
+        const res = await api.get("/branch-management/active");
         if (res.data?.success && Array.isArray(res.data.data)) {
           setLiveBranches(res.data.data);
         } else if (Array.isArray(res.data)) {
@@ -487,10 +487,10 @@ export default function UserListPage() {
 
           return (
             <div className="flex items-center gap-1.5 text-sm text-slate-600">
-              {branchData && branchData.name ? (
+              {branchData && (branchData.branchName || branchData.name) ? (
                 <>
                   <Building2 size={12} className="text-slate-400" />
-                  {branchData.name}
+                  {branchData.branchName || branchData.name}
                 </>
               ) : (
                 <span className="text-slate-400 italic text-xs">—</span>

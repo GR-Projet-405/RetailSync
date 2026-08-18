@@ -1,21 +1,14 @@
-// 1. PLACE THE FIX AT THE VERY TOP OF THE FILE
-const mongoose = require("mongoose");
-const originalModel = mongoose.model.bind(mongoose);
-mongoose.model = function (name, schema, collection, skipInit) {
-  if (schema && mongoose.models[name]) {
-    return mongoose.models[name];
-  }
-  return originalModel(name, schema, collection, skipInit);
-};
+require('dotenv').config();
 
-const fs = require("fs");
-const path = require("path");
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
-const connectDB = require("./config/db");
-const errorHandler = require("./middleware/errorHandler");
+const fs = require('fs');
+const path = require('path');
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const connectDB = require('./config/db');
+const errorHandler = require('./middleware/errorHandler');
+const recordActivity = require('./middleware/activity.middleware');
 
 const app = express();
 
@@ -23,7 +16,8 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
-app.use(morgan("dev"));
+app.use(morgan('dev'));
+app.use(recordActivity);
 
 // Initialize MongoDB Connection
 connectDB();
@@ -33,17 +27,23 @@ app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok", service: "RetailSync API Server" });
 });
 
-app.use("/api/sales", require("../routes/salesRoutes"));
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/api/sales', require('../routes/salesRoutes'));
 
 // Pre-load core models to avoid MissingSchemaError during population
-require("./modules/branch-management/branch.model");
-require("./modules/role-management/role.model");
-require("./modules/user-management/user.model");
-require("./modules/category-management/model");
-require("./modules/supplier-management/model");
-require("./modules/warehouse-management/model");
-require("./modules/product-management/model");
-require("./modules/inventory-management/model");
+require('./modules/branch-management/branch.model');
+require('./modules/role-management/role.model');
+require('./modules/user-management/user.model');
+require('./modules/goods-receiving/model');
+require('./modules/promotions-discounts/promotion.model');
+require('./modules/promotions-discounts/coupon.model');
+require('./modules/promotions-discounts/discountRule.model');
+require('./modules/category-management/model');
+require('./modules/supplier-management/model');
+require('./modules/warehouse-management/model');
+require('./modules/product-management/model');
+require('./modules/inventory-management/model');
 
 const customerRoutes = require("./modules/customer-management/route");
 app.use("/api/v1/customers", customerRoutes);
@@ -66,3 +66,5 @@ if (fs.existsSync(modulesPath)) {
 app.use(errorHandler);
 
 module.exports = app;
+// Trigger hot-reload for database connection state refreshing
+

@@ -7,79 +7,80 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useDashboardKPIs, useCategoryBreakdown, useDashboardRecentMovements } from '../../hooks/useInventory';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Static 
 
-const BRANCHES = ['Colombo', 'Kandy', 'Galle'];
+const FALLBACK_BRANCHES = ['Colombo', 'Kandy', 'Galle'];
 
 // Colour palette cycled over dynamic categories from the API
-const CAT_COLORS = ['#22C55E','#14B8A6','#8B5CF6','#F97316','#3B82F6','#EC4899','#F59E0B','#EF4444'];
+const CAT_COLORS = ['#22C55E', '#14B8A6', '#8B5CF6', '#F97316', '#3B82F6', '#EC4899', '#F59E0B', '#EF4444'];
 
 // Map API movement type → icon + colour class for the dashboard feed
 const MOVEMENT_META = {
-  SALE:              { Icon: ShoppingCart,      colorClass: 'bg-emerald-100 text-emerald-600' },
-  PURCHASE:          { Icon: FileCheck2,        colorClass: 'bg-blue-100    text-blue-600'    },
-  TRANSFER_IN:       { Icon: ArrowLeftRight,    colorClass: 'bg-violet-100  text-violet-600'  },
-  TRANSFER_OUT:      { Icon: ArrowLeftRight,    colorClass: 'bg-violet-100  text-violet-600'  },
-  ADJUSTMENT_ADD:    { Icon: SlidersHorizontal, colorClass: 'bg-amber-100   text-amber-600'   },
-  ADJUSTMENT_REMOVE: { Icon: SlidersHorizontal, colorClass: 'bg-red-100     text-red-600'     },
-  RETURN_IN:         { Icon: FileCheck2,        colorClass: 'bg-teal-100    text-teal-600'    },
-  RETURN_OUT:        { Icon: ShoppingCart,      colorClass: 'bg-orange-100  text-orange-600'  },
-  DAMAGE_WRITE_OFF:  { Icon: Package,           colorClass: 'bg-red-100     text-red-600'     },
+  SALE: { Icon: ShoppingCart, colorClass: 'bg-emerald-100 text-emerald-600' },
+  PURCHASE: { Icon: FileCheck2, colorClass: 'bg-blue-100    text-blue-600' },
+  TRANSFER_IN: { Icon: ArrowLeftRight, colorClass: 'bg-violet-100  text-violet-600' },
+  TRANSFER_OUT: { Icon: ArrowLeftRight, colorClass: 'bg-violet-100  text-violet-600' },
+  ADJUSTMENT_ADD: { Icon: SlidersHorizontal, colorClass: 'bg-amber-100   text-amber-600' },
+  ADJUSTMENT_REMOVE: { Icon: SlidersHorizontal, colorClass: 'bg-red-100     text-red-600' },
+  RETURN_IN: { Icon: FileCheck2, colorClass: 'bg-teal-100    text-teal-600' },
+  RETURN_OUT: { Icon: ShoppingCart, colorClass: 'bg-orange-100  text-orange-600' },
+  DAMAGE_WRITE_OFF: { Icon: Package, colorClass: 'bg-red-100     text-red-600' },
 };
 
 // Forecast stays static until the AI forecasting module is built
 const BRANCH_KPIS = {
   'All Branches': [
-    { label: 'Total Inventory Value', value: 'LKR 900,000.00', trend: 5.5, up: true,  badWhenUp: false },
-    { label: 'Total SKUs',            value: '4,218',           trend: 2.2, up: true,  badWhenUp: false },
-    { label: 'Low Stock Items',       value: '54',              trend: 2.0, up: true,  badWhenUp: true  },
-    { label: 'Out of Stock Items',    value: '12',              trend: 0.1, up: true,  badWhenUp: true  },
-    { label: 'Stock Turnover',        value: '3.32',            trend: 1.2, up: true,  badWhenUp: false },
+    { label: 'Total Inventory Value', value: 'LKR 900,000.00', trend: 5.5, up: true, badWhenUp: false },
+    { label: 'Total SKUs', value: '4,218', trend: 2.2, up: true, badWhenUp: false },
+    { label: 'Low Stock Items', value: '54', trend: 2.0, up: true, badWhenUp: true },
+    { label: 'Out of Stock Items', value: '12', trend: 0.1, up: true, badWhenUp: true },
+    { label: 'Stock Turnover', value: '3.32', trend: 1.2, up: true, badWhenUp: false },
   ],
   'Colombo': [
-    { label: 'Total Inventory Value', value: 'LKR 420,000.00', trend: 6.1, up: true,  badWhenUp: false },
-    { label: 'Total SKUs',            value: '1,980',           trend: 1.8, up: true,  badWhenUp: false },
-    { label: 'Low Stock Items',       value: '22',              trend: 3.1, up: true,  badWhenUp: true  },
-    { label: 'Out of Stock Items',    value: '5',               trend: 0.5, up: false, badWhenUp: true  },
-    { label: 'Stock Turnover',        value: '3.85',            trend: 2.1, up: true,  badWhenUp: false },
+    { label: 'Total Inventory Value', value: 'LKR 420,000.00', trend: 6.1, up: true, badWhenUp: false },
+    { label: 'Total SKUs', value: '1,980', trend: 1.8, up: true, badWhenUp: false },
+    { label: 'Low Stock Items', value: '22', trend: 3.1, up: true, badWhenUp: true },
+    { label: 'Out of Stock Items', value: '5', trend: 0.5, up: false, badWhenUp: true },
+    { label: 'Stock Turnover', value: '3.85', trend: 2.1, up: true, badWhenUp: false },
   ],
   'Kandy': [
-    { label: 'Total Inventory Value', value: 'LKR 290,000.00', trend: 3.4, up: true,  badWhenUp: false },
-    { label: 'Total SKUs',            value: '1,340',           trend: 2.5, up: true,  badWhenUp: false },
-    { label: 'Low Stock Items',       value: '18',              trend: 1.5, up: true,  badWhenUp: true  },
-    { label: 'Out of Stock Items',    value: '4',               trend: 1.0, up: true,  badWhenUp: true  },
-    { label: 'Stock Turnover',        value: '3.10',            trend: 0.8, up: false, badWhenUp: false },
+    { label: 'Total Inventory Value', value: 'LKR 290,000.00', trend: 3.4, up: true, badWhenUp: false },
+    { label: 'Total SKUs', value: '1,340', trend: 2.5, up: true, badWhenUp: false },
+    { label: 'Low Stock Items', value: '18', trend: 1.5, up: true, badWhenUp: true },
+    { label: 'Out of Stock Items', value: '4', trend: 1.0, up: true, badWhenUp: true },
+    { label: 'Stock Turnover', value: '3.10', trend: 0.8, up: false, badWhenUp: false },
   ],
   'Galle': [
-    { label: 'Total Inventory Value', value: 'LKR 190,000.00', trend: 7.2, up: true,  badWhenUp: false },
-    { label: 'Total SKUs',            value: '898',             trend: 3.0, up: true,  badWhenUp: false },
-    { label: 'Low Stock Items',       value: '14',              trend: 0.5, up: false, badWhenUp: true  },
-    { label: 'Out of Stock Items',    value: '3',               trend: 2.0, up: false, badWhenUp: true  },
-    { label: 'Stock Turnover',        value: '2.80',            trend: 1.5, up: true,  badWhenUp: false },
+    { label: 'Total Inventory Value', value: 'LKR 190,000.00', trend: 7.2, up: true, badWhenUp: false },
+    { label: 'Total SKUs', value: '898', trend: 3.0, up: true, badWhenUp: false },
+    { label: 'Low Stock Items', value: '14', trend: 0.5, up: false, badWhenUp: true },
+    { label: 'Out of Stock Items', value: '3', trend: 2.0, up: false, badWhenUp: true },
+    { label: 'Stock Turnover', value: '2.80', trend: 1.5, up: true, badWhenUp: false },
   ],
 };
 
 const STOCK_CATEGORIES = [
-  { name: 'Groceries',          value: 25, color: '#22C55E' },
-  { name: 'Beverages',          value: 18, color: '#14B8A6' },
-  { name: 'Electronics',        value: 20, color: '#8B5CF6' },
-  { name: 'Household Items',    value: 12, color: '#F97316' },
+  { name: 'Groceries', value: 25, color: '#22C55E' },
+  { name: 'Beverages', value: 18, color: '#14B8A6' },
+  { name: 'Electronics', value: 20, color: '#8B5CF6' },
+  { name: 'Household Items', value: 12, color: '#F97316' },
   { name: 'Clothing & Fashion', value: 10, color: '#3B82F6' },
-  { name: 'Personal Care',      value:  8, color: '#EC4899' },
-  { name: 'Stationery',         value:  7, color: '#F59E0B' },
+  { name: 'Personal Care', value: 8, color: '#EC4899' },
+  { name: 'Stationery', value: 7, color: '#F59E0B' },
 ];
 
 const RECENT_MOVEMENTS = [
-  { id: 'INV-ELE-001', type: 'Sale',             branch: 'Colombo', date: '27 Jun 2026, 09:15 a.m.', Icon: ShoppingCart,      colorClass: 'bg-emerald-100 text-emerald-600' },
-  { id: 'INV-GRO-002', type: 'Purchase Receipt', branch: 'Kandy',   date: '27 Jun 2026, 10:35 a.m.', Icon: FileCheck2,        colorClass: 'bg-blue-100 text-blue-600'       },
-  { id: 'INV-CLO-003', type: 'Stock Transfer',   branch: 'Galle',   date: '26 Jun 2026, 11:30 a.m.', Icon: ArrowLeftRight,    colorClass: 'bg-violet-100 text-violet-600'   },
-  { id: 'INV-BEV-004', type: 'Adjustment',       branch: 'Colombo', date: '26 Jun 2026, 03:45 p.m.', Icon: SlidersHorizontal, colorClass: 'bg-amber-100 text-amber-600'     },
+  { id: 'INV-ELE-001', type: 'Sale', branch: 'Colombo', date: '27 Jun 2026, 09:15 a.m.', Icon: ShoppingCart, colorClass: 'bg-emerald-100 text-emerald-600' },
+  { id: 'INV-GRO-002', type: 'Purchase Receipt', branch: 'Kandy', date: '27 Jun 2026, 10:35 a.m.', Icon: FileCheck2, colorClass: 'bg-blue-100 text-blue-600' },
+  { id: 'INV-CLO-003', type: 'Stock Transfer', branch: 'Galle', date: '26 Jun 2026, 11:30 a.m.', Icon: ArrowLeftRight, colorClass: 'bg-violet-100 text-violet-600' },
+  { id: 'INV-BEV-004', type: 'Adjustment', branch: 'Colombo', date: '26 Jun 2026, 03:45 p.m.', Icon: SlidersHorizontal, colorClass: 'bg-amber-100 text-amber-600' },
 ];
 
 // Feb–Jun = actual data, Jul–Sep = forecast
 const FORECAST_DATA = [
-  { month: 'Feb', actual: 10.2, forecast: 9.8  },
+  { month: 'Feb', actual: 10.2, forecast: 9.8 },
   { month: 'Mar', actual: 11.8, forecast: 11.2 },
   { month: 'Apr', actual: 12.5, forecast: 12.0 },
   { month: 'May', actual: 13.1, forecast: 12.5 },
@@ -190,8 +191,8 @@ function ForecastLineChart({ data }) {
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
       <defs>
         <linearGradient id="inv-actual-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="#3B82F6" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="#3B82F6" stopOpacity="0"    />
+          <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
         </linearGradient>
       </defs>
 
@@ -243,9 +244,9 @@ function ForecastLineChart({ data }) {
 
 //  Branch Dropdown 
 
-function BranchDropdown({ activeBranch, onChange }) {
+function BranchDropdown({ activeBranch, onChange, options = [] }) {
   const [open, setOpen] = useState(false);
-  const options = ['All Branches', ...BRANCHES];
+  const dropdownOptions = ['All Branches', ...(options.length > 0 ? options : FALLBACK_BRANCHES)];
 
   return (
     <div className="relative">
@@ -261,7 +262,7 @@ function BranchDropdown({ activeBranch, onChange }) {
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 fade-in overflow-hidden">
-            {options.map(b => (
+            {dropdownOptions.map(b => (
               <button
                 key={b}
                 onClick={() => { onChange(b); setOpen(false); }}
@@ -317,11 +318,14 @@ function KPICard({ label, value, trend, up, badWhenUp, onClick, linkLabel }) {
 
 export default function InventoryDashboard() {
   const navigate = useNavigate();
+  const { branches = [] } = useAuth();
   const [activeBranch, setActiveBranch] = useState('All Branches');
 
-  const { data: apiKPIs,       isLoading: kpiLoading  } = useDashboardKPIs();
-  const { data: apiCategories, isLoading: catLoading  } = useCategoryBreakdown();
-  const { data: apiMovements,  isLoading: movLoading  } = useDashboardRecentMovements(5);
+  const { data: apiKPIs, isLoading: kpiLoading } = useDashboardKPIs(
+    activeBranch === 'All Branches' ? [] : [activeBranch]
+  );
+  const { data: apiCategories, isLoading: catLoading } = useCategoryBreakdown();
+  const { data: apiMovements, isLoading: movLoading } = useDashboardRecentMovements(5);
 
   const kpiData = apiKPIs ?? BRANCH_KPIS[activeBranch];
 
@@ -355,34 +359,34 @@ export default function InventoryDashboard() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Inventory Dashboard</h1>
         </div>
-        <BranchDropdown activeBranch={activeBranch} onChange={setActiveBranch} />
+        <BranchDropdown activeBranch={activeBranch} onChange={setActiveBranch} options={branches} />
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
         {kpiLoading
           ? Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4 h-24 animate-pulse" />
-            ))
+            <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4 h-24 animate-pulse" />
+          ))
           : kpiData.map((kpi, i) => (
-          <KPICard
-            key={i}
-            {...kpi}
-            onClick={
-              kpi.label === 'Low Stock Items'       ? () => navigate('/low-stock-alerts') :
-              kpi.label === 'Out of Stock Items'    ? () => navigate('/low-stock-alerts') :
-              kpi.label === 'Total Inventory Value' ? () => navigate('/stock-levels')     :
-              kpi.label === 'Total SKUs'            ? () => navigate('/stock-levels')     :
-              undefined
-            }
-            linkLabel={
-              kpi.label === 'Low Stock Items' || kpi.label === 'Out of Stock Items'
-                ? 'View alerts'
-                : kpi.label === 'Total Inventory Value' || kpi.label === 'Total SKUs'
-                ? 'View levels'
-                : undefined
-            }
-          />
-        ))}
+            <KPICard
+              key={i}
+              {...kpi}
+              onClick={
+                kpi.label === 'Low Stock Items' ? () => navigate('/low-stock-alerts') :
+                  kpi.label === 'Out of Stock Items' ? () => navigate('/low-stock-alerts') :
+                    kpi.label === 'Total Inventory Value' ? () => navigate('/stock-levels') :
+                      kpi.label === 'Total SKUs' ? () => navigate('/stock-levels') :
+                        undefined
+              }
+              linkLabel={
+                kpi.label === 'Low Stock Items' || kpi.label === 'Out of Stock Items'
+                  ? 'View alerts'
+                  : kpi.label === 'Total Inventory Value' || kpi.label === 'Total SKUs'
+                    ? 'View levels'
+                    : undefined
+              }
+            />
+          ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
