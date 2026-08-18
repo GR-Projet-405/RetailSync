@@ -212,13 +212,6 @@ class StockTransferService {
     if (driverDetails.vehicleNumber) transfer.vehicleNumber = driverDetails.vehicleNumber;
     if (driverDetails.estimatedTime) transfer.estimatedTime = driverDetails.estimatedTime;
 
-    // Mock details if transition happens to progress steps and none were supplied
-    if (newStatus === 'APPROVED' && !transfer.driverName) {
-      transfer.driverName = 'Kamal Perera';
-      transfer.vehicleNumber = 'WP-CAM-1025';
-      transfer.estimatedTime = '30 Minutes';
-    }
-
     transfer.statusHistory.push({
       status: newStatus,
       updatedBy: userId,
