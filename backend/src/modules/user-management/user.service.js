@@ -158,12 +158,14 @@ const updateUser = async (id, updateData) => {
  */
 const deleteUser = async (id) => {
   const user = await User.findByIdAndDelete(id);
+
   if (!user) {
-    const err = new Error('User not found');
-    err.statusCode = 404;
-    throw err;
+    const error = new Error('User not found');
+    error.statusCode = 404;
+    throw error;
   }
-  return { deleted: true, id };
+
+  return user;
 };
 
 /**
