@@ -10,13 +10,13 @@ const FormField = ({ label, required, children, hint }) => (
   </div>
 );
 
-const Input = ({ value, onChange, placeholder, type = 'text', ...rest }) => (
+const Input = ({ value, onChange, placeholder, type = 'text', hasError, ...rest }) => (
   <input
     type={type}
     value={value}
     onChange={onChange}
     placeholder={placeholder}
-    className="px-3.5 py-2.5 text-sm bg-white text-slate-900 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 outline-none transition-all placeholder:text-slate-400"
+    className={`px-3.5 py-2.5 text-sm bg-white text-slate-900 rounded-xl border focus:ring-2 focus:ring-blue-500/15 outline-none transition-all placeholder:text-slate-400 ${hasError ? 'border-red-400 focus:border-red-400' : 'border-slate-300 focus:border-blue-500'}`}
     {...rest}
   />
 );
@@ -36,7 +36,7 @@ const Select = ({ value, onChange, children, ...rest }) => (
 );
 
 // ─── Step 2: Contact Details ──────────────────────────────────────────────────
-const ContactDetails = ({ data, onChange }) => {
+const ContactDetails = ({ data, onChange, errors = {} }) => {
   const set = (key) => (e) => onChange({ ...data, [key]: e.target.value });
 
   return (
@@ -54,16 +54,19 @@ const ContactDetails = ({ data, onChange }) => {
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="Full Name" required>
-            <Input value={data.primaryName} onChange={set('primaryName')} placeholder="Marcus Chen" />
+            <Input value={data.primaryName} onChange={set('primaryName')} placeholder="Marcus Chen" hasError={!!errors.primaryName} />
+            {errors.primaryName && <p className="text-xs text-red-500 font-medium mt-0.5">{errors.primaryName}</p>}
           </FormField>
           <FormField label="Job Title" required>
             <Input value={data.primaryTitle} onChange={set('primaryTitle')} placeholder="Account Manager" />
           </FormField>
           <FormField label="Email Address" required>
-            <Input type="email" value={data.primaryEmail} onChange={set('primaryEmail')} placeholder="m.chen@supplier.com" />
+            <Input type="email" value={data.primaryEmail} onChange={set('primaryEmail')} placeholder="m.chen@supplier.com" hasError={!!errors.primaryEmail} />
+            {errors.primaryEmail && <p className="text-xs text-red-500 font-medium mt-0.5">{errors.primaryEmail}</p>}
           </FormField>
           <FormField label="Phone Number" required>
-            <Input type="tel" value={data.primaryPhone} onChange={set('primaryPhone')} placeholder="+1 (555) 234-5678" />
+            <Input type="tel" value={data.primaryPhone} onChange={set('primaryPhone')} placeholder="+1 (555) 234-5678" hasError={!!errors.primaryPhone} />
+            {errors.primaryPhone && <p className="text-xs text-red-500 font-medium mt-0.5">{errors.primaryPhone}</p>}
           </FormField>
         </div>
       </div>

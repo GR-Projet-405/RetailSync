@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Filter, Download, Plus, Star, Building2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { getSuppliers, getSupplierStats } from '../../services/supplierService';
+import { toast } from 'react-toastify';
+import { getSuppliers, getSupplierStats, updateSupplierStatus } from '../../services/supplierService';
 
 // ─── Stat Card ───────────────────────────────────────────────────────────────
 const StatCard = ({ icon: Icon, iconBg, value, label }) => (
@@ -47,7 +48,7 @@ const StarRating = ({ value }) => (
 const ITEMS_PER_PAGE = 6;
 
 // ─── All Suppliers Page ───────────────────────────────────────────────────────
-const AllSuppliers = ({ onAddSupplier, onViewProfile }) => {
+const AllSuppliers = ({ onAddSupplier, onViewProfile, onEditSupplier }) => {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [suppliers, setSuppliers] = useState([]);
@@ -56,12 +57,16 @@ const AllSuppliers = ({ onAddSupplier, onViewProfile }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [showFilters, setShowFilters] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const [listRes, statsRes] = await Promise.all([
-        getSuppliers({ search, page, limit: ITEMS_PER_PAGE }),
+        getSuppliers({ search, status: statusFilter, category: categoryFilter, page, limit: ITEMS_PER_PAGE }),
         getSupplierStats(),
       ]);
       setSuppliers(listRes.suppliers ?? []);
@@ -72,11 +77,44 @@ const AllSuppliers = ({ onAddSupplier, onViewProfile }) => {
     } finally {
       setLoading(false);
     }
-  }, [search, page]);
+  }, [search, statusFilter, categoryFilter, page]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter, categoryFilter]);
+
+  const handleExport = () => {
+    if (suppliers.length === 0) {
+      toast.warn('No suppliers to export');
+      return;
+    }
+    const headers = ['Supplier Name', 'ID', 'Category', 'Contact Name', 'Email', 'Phone', 'Rating', 'Status'];
+    const rows = suppliers.map(s => [
+      `"${s.name || ''}"`,
+      `"${s.supplierId || ''}"`,
+      `"${s.industryCategory || ''}"`,
+      `"${s.contacts?.[0]?.name || ''}"`,
+      `"${s.contacts?.[0]?.email || ''}"`,
+      `"${s.contacts?.[0]?.phone || ''}"`,
+      s.rating || 0,
+      `"${s.status || ''}"`
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `suppliers_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Export downloaded successfully');
+  };
 
   const paginated = suppliers;
   const activeCount = stats.active;
@@ -140,25 +178,83 @@ const AllSuppliers = ({ onAddSupplier, onViewProfile }) => {
       </div>
 
       {/* Search + Actions */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="relative flex items-center min-w-[240px]">
-          <Search className="absolute left-3 w-4 h-4 text-slate-400 pointer-events-none" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1); }}
-            placeholder="Search suppliers..."
-            className="pl-9 pr-4 py-2 w-full text-sm bg-white text-slate-900 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 outline-none transition-all placeholder:text-slate-400"
-          />
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="relative flex items-center min-w-[240px]">
+            <Search className="absolute left-3 w-4 h-4 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search suppliers..."
+              className="pl-9 pr-4 py-2 w-full text-sm bg-white text-slate-900 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 outline-none transition-all placeholder:text-slate-400"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={cn(
+                "inline-flex items-center gap-2 text-sm font-medium text-slate-600 border px-3.5 py-2 rounded-xl transition-colors",
+                showFilters ? "bg-slate-100 border-slate-300" : "bg-white hover:bg-slate-50 border-slate-300 hover:text-slate-900"
+              )}
+            >
+              <Filter className="w-4 h-4" /> Filter
+            </button>
+            <button
+              onClick={handleExport}
+              className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2 rounded-xl transition-colors"
+            >
+              <Download className="w-4 h-4" /> Export
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2 rounded-xl transition-colors">
-            <Filter className="w-4 h-4" /> Filter
-          </button>
-          <button className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2 rounded-xl transition-colors">
-            <Download className="w-4 h-4" /> Export
-          </button>
-        </div>
+
+        {/* Filter Bar */}
+        {showFilters && (
+          <div className="flex flex-wrap items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[150px]">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</label>
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-white text-slate-900 rounded-lg border border-slate-300 focus:border-blue-500 outline-none transition-all cursor-pointer appearance-none"
+              >
+                <option value="">All Statuses</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Pending">Pending</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[150px]">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Category</label>
+              <select
+                value={categoryFilter}
+                onChange={e => setCategoryFilter(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-white text-slate-900 rounded-lg border border-slate-300 focus:border-blue-500 outline-none transition-all cursor-pointer appearance-none"
+              >
+                <option value="">All Categories</option>
+                <option value="Raw Materials">Raw Materials</option>
+                <option value="Electronics">Electronics</option>
+                <option value="Packaging">Packaging</option>
+                <option value="Perishables">Perishables</option>
+                <option value="Components">Components</option>
+                <option value="Chemicals">Chemicals</option>
+                <option value="Textiles">Textiles</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            {(statusFilter || categoryFilter) && (
+              <div className="flex items-end h-full">
+                <button
+                  onClick={() => { setStatusFilter(''); setCategoryFilter(''); }}
+                  className="mt-6 text-sm text-slate-500 hover:text-slate-800 font-medium hover:underline transition-colors px-2"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -166,7 +262,8 @@ const AllSuppliers = ({ onAddSupplier, onViewProfile }) => {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50">
-              {['Supplier', 'ID', 'Category', 'Contact', 'Phone', 'Rating', 'Status'].map(h => (
+              {/* BUG-02: Added Actions column */}
+              {['Supplier', 'ID', 'Category', 'Contact', 'Phone', 'Rating', 'Status', 'Actions'].map(h => (
                 <th key={h} className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">{h}</th>
               ))}
             </tr>
@@ -212,10 +309,37 @@ const AllSuppliers = ({ onAddSupplier, onViewProfile }) => {
                 <td className="px-5 py-4 text-slate-600 whitespace-nowrap">{s.contacts?.[0]?.phone ?? '—'}</td>
                 <td className="px-5 py-4"><StarRating value={s.rating ?? 0} /></td>
                 <td className="px-5 py-4"><StatusBadge status={s.status} /></td>
+                {/* BUG-02: Edit and Deactivate actions */}
+                <td className="px-5 py-4" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => onEditSupplier?.(s)}
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition-colors"
+                    >
+                      Edit
+                    </button>
+                    {s.status !== 'Inactive' && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await updateSupplierStatus(s._id, 'Inactive');
+                            toast.success(`${s.name} deactivated`);
+                            fetchData();
+                          } catch (err) {
+                            toast.error(err.message || 'Failed to deactivate');
+                          }
+                        }}
+                        className="text-xs font-semibold text-red-600 hover:text-red-800 border border-red-200 hover:border-red-400 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg transition-colors"
+                      >
+                        Deactivate
+                      </button>
+                    )}
+                  </div>
+                </td>
               </tr>
             )) : (
               <tr>
-                <td colSpan={7} className="px-6 py-14 text-center text-slate-400 text-sm">
+                <td colSpan={8} className="px-6 py-14 text-center text-slate-400 text-sm">
                   No suppliers match your search.
                 </td>
               </tr>

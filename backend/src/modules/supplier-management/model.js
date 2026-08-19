@@ -1,5 +1,11 @@
 const mongoose = require('mongoose');
 
+// ── Contact Note Sub-Schema ──────────────────────────────────────────────
+const ContactNoteSchema = new mongoose.Schema({
+  text:      { type: String, required: true, trim: true },
+  createdAt: { type: Date, default: Date.now },
+}, { _id: true });
+
 // ─── Contact Sub-Schema ───────────────────────────────────────────────────────
 const ContactSchema = new mongoose.Schema({
   name:     { type: String, required: true },
@@ -8,6 +14,7 @@ const ContactSchema = new mongoose.Schema({
   phone:    { type: String },
   tags:     [{ type: String }],
   isPrimary: { type: Boolean, default: false },
+  notes:    [ContactNoteSchema],
 }, { _id: true });
 
 // ─── Address Sub-Schema ───────────────────────────────────────────────────────

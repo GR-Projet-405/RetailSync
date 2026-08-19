@@ -5,12 +5,19 @@ import { useCreateSupplier, useUpdateSupplier } from '../../hooks/useSuppliers';
 const inputClass =
   'w-full px-3 py-2 text-sm bg-white text-slate-900 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 outline-none transition-all duration-150 placeholder:text-slate-400';
 
+const inputErrorClass =
+  'w-full px-3 py-2 text-sm bg-white text-slate-900 rounded-lg border border-red-400 focus:border-red-400 focus:ring-2 focus:ring-red-400/15 outline-none transition-all duration-150 placeholder:text-slate-400';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_RE = /^[\d\s\-+().]{7,20}$/;
+
 const emptyForm = { name: '', contactPerson: '', email: '', phone: '', address: '', notes: '' };
 
 export default function SupplierForm({ supplier, onDone }) {
   const isEditing = Boolean(supplier);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const createSupplier = useCreateSupplier();
   const updateSupplier = useUpdateSupplier();
@@ -35,10 +42,21 @@ export default function SupplierForm({ supplier, onDone }) {
 
   const handleSubmit = async () => {
     setError('');
+    const fErrs = {};
     if (!form.name.trim()) {
-      setError('Supplier name is required 🙏');
+      fErrs.name = 'Supplier name is required';
+    }
+    if (form.email.trim() && !EMAIL_RE.test(form.email.trim())) {
+      fErrs.email = 'Enter a valid email address';
+    }
+    if (form.phone.trim() && !PHONE_RE.test(form.phone.trim())) {
+      fErrs.phone = 'Enter a valid phone number (7–20 digits)';
+    }
+    if (Object.keys(fErrs).length) {
+      setFieldErrors(fErrs);
       return;
     }
+    setFieldErrors({});
 
     try {
       if (isEditing) {
@@ -76,24 +94,26 @@ export default function SupplierForm({ supplier, onDone }) {
             onChange={(e) => updateField('contactPerson', e.target.value)}
           />
         </Field>
-        <Field label="Phone">
-          <input
-            className={inputClass}
-            placeholder="+94 77 123 4567"
-            value={form.phone}
-            onChange={(e) => updateField('phone', e.target.value)}
-          />
-        </Field>
+      <Field label="Phone">
+        <input
+          className={fieldErrors.phone ? inputErrorClass : inputClass}
+          placeholder="+94 77 123 4567"
+          value={form.phone}
+          onChange={(e) => updateField('phone', e.target.value)}
+        />
+        {fieldErrors.phone && <p className="text-xs text-red-500 mt-0.5 font-medium">{fieldErrors.phone}</p>}
+      </Field>
       </div>
 
       <Field label="Email">
         <input
           type="email"
-          className={inputClass}
+          className={fieldErrors.email ? inputErrorClass : inputClass}
           placeholder="supplier@example.com"
           value={form.email}
           onChange={(e) => updateField('email', e.target.value)}
         />
+        {fieldErrors.email && <p className="text-xs text-red-500 mt-0.5 font-medium">{fieldErrors.email}</p>}
       </Field>
 
       <Field label="Address">

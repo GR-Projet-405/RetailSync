@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  Plus, Phone, Mail, FileText, CheckCircle, MoreHorizontal, X, Loader2
+  Plus, Phone, Mail, FileText, CheckCircle, MoreHorizontal, X, Loader2, AlertCircle
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { getContacts, addContact as apiAddContact } from '../../services/supplierService';
+import {
+  getContacts,
+  addContact as apiAddContact,
+  addContactNote as apiAddContactNote,
+} from '../../services/supplierService';
 
 // ─── Tag Badge ────────────────────────────────────────────────────────────────
 const TagBadge = ({ tag }) => {
@@ -25,30 +29,38 @@ const TagBadge = ({ tag }) => {
   );
 };
 
-// ─── Activity icon map ────────────────────────────────────────────────────────
-const activityMap = {
-  email:  { Icon: Mail,        cls: 'bg-blue-50 text-blue-500' },
-  call:   { Icon: Phone,       cls: 'bg-emerald-50 text-emerald-500' },
-  note:   { Icon: FileText,    cls: 'bg-amber-50 text-amber-500' },
-  system: { Icon: CheckCircle, cls: 'bg-slate-100 text-slate-400' },
-};
-
 // ─── Add Contact Modal ────────────────────────────────────────────────────────
 const AddContactModal = ({ onClose, onAdd }) => {
   const [form, setForm] = useState({ name: '', role: '', email: '', phone: '', tags: '' });
+  const [errors, setErrors] = useState({});
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
+  const validate = () => {
+    const errs = {};
+    if (!form.name.trim()) errs.name = 'Full name is required';
+    if (!form.email.trim()) {
+      errs.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      errs.email = 'Enter a valid email address';
+    }
+    if (form.phone && !/^[\d\s\-+().]{7,20}$/.test(form.phone.trim())) {
+      errs.phone = 'Enter a valid phone number';
+    }
+    return errs;
+  };
+
   const handleSubmit = () => {
-    if (!form.name || !form.email) return;
-    const initials = form.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    const colors = ['bg-blue-500', 'bg-violet-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-cyan-500'];
-    const color = colors[Math.floor(Math.random() * colors.length)];
+    const errs = validate();
+    if (Object.keys(errs).length) { setErrors(errs); return; }
     const tags = form.tags.split(',').map(t => t.trim()).filter(Boolean);
-    onAdd({ id: `C${Date.now()}`, initials, name: form.name, role: form.role, email: form.email, phone: form.phone, tags, lastContact: 'Just now', color });
+    onAdd({ name: form.name.trim(), role: form.role.trim(), email: form.email.trim(), phone: form.phone.trim(), tags });
     onClose();
   };
 
-  const inputCls = 'w-full px-3.5 py-2.5 text-sm bg-white text-slate-900 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 outline-none transition-all placeholder:text-slate-400';
+  const inputCls = (field) => cn(
+    'w-full px-3.5 py-2.5 text-sm bg-white text-slate-900 rounded-xl border focus:ring-2 focus:ring-blue-500/15 outline-none transition-all placeholder:text-slate-400',
+    errors[field] ? 'border-red-400 focus:border-red-400' : 'border-slate-300 focus:border-blue-500'
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -62,15 +74,16 @@ const AddContactModal = ({ onClose, onAdd }) => {
         </div>
         <div className="space-y-4">
           {[
-            { label: 'Full Name *', key: 'name', placeholder: 'Marcus Chen' },
-            { label: 'Job Title', key: 'role', placeholder: 'Account Manager' },
-            { label: 'Email *', key: 'email', placeholder: 'marcus@supplier.com' },
-            { label: 'Phone', key: 'phone', placeholder: '+1 (555) 234-5678' },
-            { label: 'Tags (comma-separated)', key: 'tags', placeholder: 'Primary, Sales' },
-          ].map(({ label, key, placeholder }) => (
+            { label: 'Full Name *', key: 'name', placeholder: 'Marcus Chen', type: 'text' },
+            { label: 'Job Title', key: 'role', placeholder: 'Account Manager', type: 'text' },
+            { label: 'Email *', key: 'email', placeholder: 'marcus@supplier.com', type: 'email' },
+            { label: 'Phone', key: 'phone', placeholder: '+1 (555) 234-5678', type: 'tel' },
+            { label: 'Tags (comma-separated)', key: 'tags', placeholder: 'Primary, Sales', type: 'text' },
+          ].map(({ label, key, placeholder, type }) => (
             <div key={key} className="flex flex-col gap-1.5">
               <label className="text-sm font-semibold text-slate-700">{label}</label>
-              <input type="text" value={form[key]} onChange={set(key)} placeholder={placeholder} className={inputCls} />
+              <input type={type} value={form[key]} onChange={set(key)} placeholder={placeholder} className={inputCls(key)} />
+              {errors[key] && <p className="text-xs text-red-500 font-medium">{errors[key]}</p>}
             </div>
           ))}
         </div>
@@ -83,19 +96,31 @@ const AddContactModal = ({ onClose, onAdd }) => {
   );
 };
 
+// ─── Toast Notification ───────────────────────────────────────────────────────
+const Toast = ({ message, onDismiss }) => (
+  <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-sm font-medium px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 animate-fade-in">
+    <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+    <span>{message}</span>
+    <button onClick={onDismiss} className="ml-2 text-slate-400 hover:text-white"><X size={14} /></button>
+  </div>
+);
+
 // ─── Contacts Page ────────────────────────────────────────────────────────────
 const Contacts = ({ supplier }) => {
   const supplierId = supplier?._id ?? supplier?.id;
   const [contacts, setContacts] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [notes, setNotes] = useState([]);
   const [newNote, setNewNote] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [toast, setToast] = useState(null);
+  const noteRef = useRef(null);
 
+  // BUG-04: Don't enter loading state at all if there's no supplierId
   useEffect(() => {
-    if (!supplierId) return;
+    if (!supplierId) return; // no loading spinner — handled gracefully below
     setLoading(true);
     setError(null);
     getContacts(supplierId)
@@ -108,13 +133,34 @@ const Contacts = ({ supplier }) => {
       .finally(() => setLoading(false));
   }, [supplierId]);
 
-  const handleAddNote = () => {
-    if (!newNote.trim()) return;
-    setNotes(prev => [
-      { id: Date.now(), text: newNote, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), author: 'You' },
-      ...prev,
-    ]);
-    setNewNote('');
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  // BUG-01: Persist note to backend; merge returned note into local state
+  const handleAddNote = async () => {
+    if (!newNote.trim() || !selected || !supplierId) return;
+    setSavingNote(true);
+    try {
+      const contactId = selected._id ?? selected.id;
+      const res = await apiAddContactNote(supplierId, contactId, newNote.trim());
+      const savedNote = res.data ?? { _id: Date.now(), text: newNote.trim(), createdAt: new Date().toISOString() };
+      // Merge note into the contacts list so it shows immediately without reload
+      setContacts(prev => prev.map(c => {
+        if ((c._id ?? c.id) === contactId) {
+          return { ...c, notes: [savedNote, ...(c.notes ?? [])] };
+        }
+        return c;
+      }));
+      setSelected(prev => ({ ...prev, notes: [savedNote, ...(prev.notes ?? [])] }));
+      setNewNote('');
+      showToast('Note saved successfully');
+    } catch (err) {
+      showToast(`Failed to save note: ${err.message}`);
+    } finally {
+      setSavingNote(false);
+    }
   };
 
   const handleAddContact = async (contactPayload) => {
@@ -131,9 +177,24 @@ const Contacts = ({ supplier }) => {
       setContacts(prev => [newContact, ...prev]);
       setSelected(newContact);
     } catch (err) {
-      alert(err.message || 'Failed to add contact');
+      showToast(err.message || 'Failed to add contact');
     }
   };
+
+  // BUG-04: No supplier selected — show a clear prompt instead of hanging
+  if (!supplierId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-28 gap-4 text-center fade-up">
+        <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center">
+          <AlertCircle className="w-7 h-7 text-blue-400" />
+        </div>
+        <div>
+          <p className="text-base font-semibold text-slate-800">No Supplier Selected</p>
+          <p className="text-sm text-slate-500 mt-1">Please open a supplier profile first, then navigate to Contacts.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 fade-up">
@@ -171,13 +232,15 @@ const Contacts = ({ supplier }) => {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           {/* Contact List */}
           <div className="md:col-span-2 space-y-2">
-            {contacts.map(c => (
+            {contacts.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-10">No contacts yet. Add one above.</p>
+            ) : contacts.map(c => (
               <button
-                key={c.id}
+                key={c._id ?? c.id}
                 onClick={() => setSelected(c)}
                 className={cn(
                   'w-full text-left p-4 rounded-2xl border transition-all duration-150',
-                  selected?._id === c._id || selected?.id === c.id
+                  (selected?._id ?? selected?.id) === (c._id ?? c.id)
                     ? 'bg-blue-50 border-blue-200 shadow-sm'
                     : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                 )}
@@ -189,7 +252,9 @@ const Contacts = ({ supplier }) => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold text-slate-900">{c.name}</p>
-                      <span className="text-xs text-slate-400 shrink-0">{c.lastContact ?? '—'}</span>
+                      <span className="text-xs text-slate-400 shrink-0">
+                        {c.notes?.length ? `${c.notes.length} note${c.notes.length > 1 ? 's' : ''}` : '—'}
+                      </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-0.5">{c.role}</p>
                     <div className="flex flex-wrap gap-1 mt-2">
@@ -219,22 +284,35 @@ const Contacts = ({ supplier }) => {
                       </div>
                     </div>
                   </div>
-                  <button className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+                  <button className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" onClick={() => showToast('Contact options coming soon')}>
                     <MoreHorizontal className="w-4 h-4" />
                   </button>
                 </div>
-                {/* Quick Actions */}
+
+                {/* BUG-05: Quick Actions wired with real handlers */}
                 <div className="flex items-center gap-2 mb-4">
-                  <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-colors">
+                  <a
+                    href={selected.phone ? `tel:${selected.phone}` : '#'}
+                    onClick={!selected.phone ? (e) => { e.preventDefault(); showToast('No phone number on record'); } : undefined}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-colors"
+                  >
                     <Phone className="w-3.5 h-3.5" /> Call
-                  </button>
-                  <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-colors">
+                  </a>
+                  <a
+                    href={selected.email ? `mailto:${selected.email}` : '#'}
+                    onClick={!selected.email ? (e) => { e.preventDefault(); showToast('No email on record'); } : undefined}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-colors"
+                  >
                     <Mail className="w-3.5 h-3.5" /> Email
-                  </button>
-                  <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-colors">
+                  </a>
+                  <button
+                    onClick={() => noteRef.current?.focus()}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-colors"
+                  >
                     <FileText className="w-3.5 h-3.5" /> Note
                   </button>
                 </div>
+
                 {/* Contact Info Row */}
                 <div className="flex flex-wrap items-center gap-6 text-sm">
                   <div>
@@ -244,10 +322,6 @@ const Contacts = ({ supplier }) => {
                   <div>
                     <p className="text-xs text-slate-400 mb-0.5">Phone</p>
                     <p className="font-medium text-slate-800">{selected.phone ?? '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-400 mb-0.5">Last Contact</p>
-                    <p className="font-medium text-slate-800">{selected.lastContact ?? '—'}</p>
                   </div>
                 </div>
               </div>
@@ -262,23 +336,33 @@ const Contacts = ({ supplier }) => {
                   </div>
                 </div>
 
-                {/* Notes */}
+                {/* Notes — BUG-01 fixed: persisted to DB */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.04)] p-5 flex flex-col">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold text-slate-900">Notes</h3>
-                    <button className="text-xs text-blue-600 font-medium hover:underline">+ Add Note</button>
+                    <button
+                      onClick={() => noteRef.current?.focus()}
+                      className="text-xs text-blue-600 font-medium hover:underline"
+                    >
+                      + Add Note
+                    </button>
                   </div>
                   <div className="space-y-3 flex-1 overflow-y-auto max-h-[220px]">
-                    {notes.map(n => (
-                      <div key={n.id} className="p-3 bg-amber-50 rounded-xl border border-amber-100">
+                    {(selected.notes ?? []).length === 0 ? (
+                      <p className="text-xs text-slate-400 text-center py-4">No notes yet. Add one below.</p>
+                    ) : (selected.notes ?? []).map(n => (
+                      <div key={n._id ?? n.id} className="p-3 bg-amber-50 rounded-xl border border-amber-100">
                         <p className="text-xs text-slate-700 leading-relaxed">{n.text}</p>
-                        <p className="text-[10px] text-slate-400 mt-1.5">{n.date} · {n.author}</p>
+                        <p className="text-[10px] text-slate-400 mt-1.5">
+                          {n.createdAt ? new Date(n.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Just now'}
+                        </p>
                       </div>
                     ))}
                   </div>
                   {/* Add Note Input */}
                   <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
                     <textarea
+                      ref={noteRef}
                       rows={2}
                       value={newNote}
                       onChange={e => setNewNote(e.target.value)}
@@ -287,9 +371,10 @@ const Contacts = ({ supplier }) => {
                     />
                     <button
                       onClick={handleAddNote}
-                      className="w-full py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors"
+                      disabled={savingNote || !newNote.trim()}
+                      className="w-full py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2"
                     >
-                      Save Note
+                      {savingNote ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Save Note'}
                     </button>
                   </div>
                 </div>
@@ -307,8 +392,12 @@ const Contacts = ({ supplier }) => {
       {showAddModal && (
         <AddContactModal onClose={() => setShowAddModal(false)} onAdd={handleAddContact} />
       )}
+
+      {/* Toast */}
+      {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
     </div>
   );
 };
 
 export default Contacts;
+

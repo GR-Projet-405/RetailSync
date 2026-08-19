@@ -106,6 +106,16 @@ export const deleteContact = async (supplierId, contactId) => {
   return data;
 };
 
+/**
+ * POST /api/v1/supplier-management/:id/contacts/:contactId/notes
+ * Persist a note to a contact in the database.
+ */
+export const addContactNote = async (supplierId, contactId, text) => {
+  const { data } = await api.post(`${BASE}/${supplierId}/contacts/${contactId}/notes`, { text });
+  return data;
+};
+
+
 // ─── Performance ─────────────────────────────────────────
 
 /**

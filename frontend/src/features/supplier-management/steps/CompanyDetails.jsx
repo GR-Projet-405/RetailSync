@@ -10,13 +10,13 @@ const FormField = ({ label, required, children, hint }) => (
   </div>
 );
 
-const Input = ({ value, onChange, placeholder, type = 'text', ...rest }) => (
+const Input = ({ value, onChange, placeholder, type = 'text', hasError, ...rest }) => (
   <input
     type={type}
     value={value}
     onChange={onChange}
     placeholder={placeholder}
-    className="px-3.5 py-2.5 text-sm bg-white text-slate-900 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 outline-none transition-all placeholder:text-slate-400"
+    className={`px-3.5 py-2.5 text-sm bg-white text-slate-900 rounded-xl border focus:ring-2 focus:ring-blue-500/15 outline-none transition-all placeholder:text-slate-400 ${hasError ? 'border-red-400 focus:border-red-400' : 'border-slate-300 focus:border-blue-500'}`}
     {...rest}
   />
 );
@@ -44,7 +44,7 @@ const Textarea = ({ value, onChange, placeholder, rows = 4, ...rest }) => (
 );
 
 // ─── Step 1: Company Details ──────────────────────────────────────────────────
-const CompanyDetails = ({ data, onChange }) => {
+const CompanyDetails = ({ data, onChange, errors = {} }) => {
   const set = (key) => (e) => onChange({ ...data, [key]: e.target.value });
 
   return (
@@ -55,7 +55,8 @@ const CompanyDetails = ({ data, onChange }) => {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <FormField label="Company Name" required>
-          <Input value={data.companyName} onChange={set('companyName')} placeholder="Apex Global Trading Co." />
+          <Input value={data.companyName} onChange={set('companyName')} placeholder="Apex Global Trading Co." hasError={!!errors.companyName} />
+          {errors.companyName && <p className="text-xs text-red-500 font-medium mt-0.5">{errors.companyName}</p>}
         </FormField>
         <FormField label="Business Type" required>
           <div className="relative">
@@ -73,7 +74,11 @@ const CompanyDetails = ({ data, onChange }) => {
         </FormField>
         <FormField label="Industry Category" required>
           <div className="relative">
-            <Select value={data.industryCategory} onChange={set('industryCategory')}>
+            <Select
+              value={data.industryCategory}
+              onChange={set('industryCategory')}
+              style={errors.industryCategory ? { borderColor: '#f87171' } : {}}
+            >
               <option value="">Select category...</option>
               <option>Raw Materials</option>
               <option>Electronics</option>
@@ -86,6 +91,7 @@ const CompanyDetails = ({ data, onChange }) => {
             </Select>
             <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">▾</div>
           </div>
+          {errors.industryCategory && <p className="text-xs text-red-500 font-medium mt-0.5">{errors.industryCategory}</p>}
         </FormField>
         <FormField label="Registration Number">
           <Input value={data.registrationNumber} onChange={set('registrationNumber')} placeholder="REG-20241234" />

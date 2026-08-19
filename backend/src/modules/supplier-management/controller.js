@@ -124,6 +124,16 @@ const deleteContact = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Contact removed successfully', data: result });
 });
 
+/**
+ * POST /api/v1/supplier-management/:id/contacts/:contactId/notes
+ * Add a note to a specific contact (persisted to DB)
+ */
+const addContactNote = asyncHandler(async (req, res) => {
+  const { text } = req.body;
+  const note = await service.addContactNote(req.params.id, req.params.contactId, text);
+  res.status(201).json({ success: true, message: 'Note added successfully', data: note });
+});
+
 // ─── Performance ──────────────────────────────────────────────────────────────
 
 /**
@@ -157,6 +167,7 @@ module.exports = {
   addContact,
   updateContact,
   deleteContact,
+  addContactNote,
   getPerformance,
   updatePerformance,
 };

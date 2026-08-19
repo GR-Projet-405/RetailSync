@@ -35,6 +35,16 @@ class SupplierService {
 
   // ─── Create new supplier ──────────────────────────────────────────────────
   async createSupplier(data) {
+    // ── TC003: explicit 400 before hitting Mongoose ──────────────────────────
+    const missing = [];
+    if (!data || !String(data.name || '').trim()) missing.push('name');
+    if (!data || !String(data.industryCategory || '').trim()) missing.push('industryCategory');
+    if (missing.length) {
+      throw Object.assign(
+        new Error(`Missing required fields: ${missing.join(', ')}`),
+        { statusCode: 400 }
+      );
+    }
     const supplier = new Supplier(data);
     await supplier.save();
     return supplier;
@@ -127,6 +137,28 @@ class SupplierService {
   }
 
   async updatePerformance(supplierId, metricsData) {
+    // ── TC020: manual bounds check before attempting DB write ──────────────────
+    const PERCENT_FIELDS = ['onTimeDelivery', 'qualityScore', 'defectRate'];
+    for (const field of PERCENT_FIELDS) {
+      if (metricsData[field] !== undefined) {
+        const val = Number(metricsData[field]);
+        if (isNaN(val) || val < 0 || val > 100) {
+          throw Object.assign(
+            new Error(`'${field}' must be a number between 0 and 100 (received: ${metricsData[field]})`),
+            { statusCode: 400 }
+          );
+        }
+      }
+    }
+    if (metricsData.responseTime !== undefined) {
+      const val = Number(metricsData.responseTime);
+      if (isNaN(val) || val < 0) {
+        throw Object.assign(
+          new Error(`'responseTime' must be a non-negative number (received: ${metricsData.responseTime})`),
+          { statusCode: 400 }
+        );
+      }
+    }
     const supplier = await Supplier.findByIdAndUpdate(
       supplierId,
       { $set: { performance: metricsData } },
@@ -134,6 +166,22 @@ class SupplierService {
     ).select('name supplierId performance');
     if (!supplier) throw Object.assign(new Error('Supplier not found'), { statusCode: 404 });
     return supplier;
+  }
+
+  // ── Contact Notes ───────────────────────────────────────────────────
+  async addContactNote(supplierId, contactId, text) {
+    if (!text || !String(text).trim()) {
+      throw Object.assign(new Error('Note text is required'), { statusCode: 400 });
+    }
+    const note = { text: String(text).trim(), createdAt: new Date() };
+    const supplier = await Supplier.findOneAndUpdate(
+      { _id: supplierId, 'contacts._id': contactId },
+      { $push: { 'contacts.$.notes': note } },
+      { new: true }
+    ).select('contacts');
+    if (!supplier) throw Object.assign(new Error('Supplier or contact not found'), { statusCode: 404 });
+    const contact = supplier.contacts.id(contactId);
+    return contact.notes[contact.notes.length - 1];
   }
 
   // ─── Summary stats ────────────────────────────────────────────────────────

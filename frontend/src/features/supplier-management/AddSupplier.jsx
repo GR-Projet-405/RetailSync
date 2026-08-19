@@ -76,17 +76,52 @@ const StepIndicator = ({ steps, current }) => (
 const AddSupplier = ({ onCancel, onComplete }) => {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState(INITIAL_FORM);
+  const [stepErrors, setStepErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
   const updateForm = (updates) => setFormData(prev => ({ ...prev, ...updates }));
 
+  // ── BUG-03: Per-step validation before advancing ─────────────────────────────
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const PHONE_RE = /^[\d\s\-+().]{7,20}$/;
+
+  const validateStep = (currentStep, data) => {
+    const errs = {};
+    if (currentStep === 1) {
+      if (!String(data.companyName || '').trim())
+        errs.companyName = 'Company name is required';
+      if (!String(data.industryCategory || '').trim())
+        errs.industryCategory = 'Industry category is required';
+    }
+    if (currentStep === 2) {
+      if (!String(data.primaryName || '').trim())
+        errs.primaryName = 'Primary contact name is required';
+      if (!String(data.primaryEmail || '').trim()) {
+        errs.primaryEmail = 'Email address is required';
+      } else if (!EMAIL_RE.test(data.primaryEmail.trim())) {
+        errs.primaryEmail = 'Enter a valid email address';
+      }
+      if (data.primaryPhone && !PHONE_RE.test(data.primaryPhone.trim())) {
+        errs.primaryPhone = 'Enter a valid phone number (7–20 digits)';
+      }
+    }
+    return errs;
+  };
+
   const handleNext = () => {
+    const errs = validateStep(step, formData);
+    if (Object.keys(errs).length) {
+      setStepErrors(errs);
+      return;
+    }
+    setStepErrors({});
     if (step < STEPS.length) setStep(s => s + 1);
   };
 
   const handleBack = () => {
+    setStepErrors({});
     if (step > 1) setStep(s => s - 1);
   };
 
@@ -162,8 +197,8 @@ const AddSupplier = ({ onCancel, onComplete }) => {
 
   const renderStep = () => {
     switch (step) {
-      case 1: return <CompanyDetails data={formData} onChange={updateForm} />;
-      case 2: return <ContactDetails data={formData} onChange={updateForm} />;
+      case 1: return <CompanyDetails data={formData} onChange={updateForm} errors={stepErrors} />;
+      case 2: return <ContactDetails data={formData} onChange={updateForm} errors={stepErrors} />;
       case 3: return <BankingInfo data={formData} onChange={updateForm} />;
       case 4: return <TaxCompliance data={formData} onChange={updateForm} />;
       case 5: return <Documents data={formData} onChange={updateForm} />;

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { updateSupplierStatus } from '../../services/supplierService';
+import { toast } from 'react-toastify';
 
 const EditableStatusBadge = ({ status, onChange, saving }) => {
   const map = {
@@ -242,7 +243,12 @@ const SupplierProfile = ({ supplier, onBack, onGoToContacts, onGoToPerformance, 
             <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.04)] p-5">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-slate-900">Documents</h3>
-                <button className="text-xs text-blue-600 font-medium hover:underline">Upload</button>
+                <button
+                  onClick={() => toast.info('Document upload — Feature coming soon')}
+                  className="text-xs text-blue-600 font-medium hover:underline"
+                >
+                  Upload
+                </button>
               </div>
               <div className="space-y-2">
                 {recentDocs.map((doc, i) => (
@@ -299,7 +305,10 @@ const SupplierProfile = ({ supplier, onBack, onGoToContacts, onGoToPerformance, 
           <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.04)] p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-slate-900">Recent Orders</h3>
-              <button className="text-xs text-blue-600 font-medium hover:underline inline-flex items-center gap-1">
+              <button
+                onClick={() => toast.info('View all orders — Feature coming soon')}
+                className="text-xs text-blue-600 font-medium hover:underline inline-flex items-center gap-1"
+              >
                 View all <ChevronRight className="w-3 h-3" />
               </button>
             </div>
