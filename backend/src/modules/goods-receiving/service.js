@@ -401,7 +401,14 @@ class GoodsReceivingPageService {
     // levels for each item.product should be incremented here via your
     // Inventory / Product module/service, e.g.:
     // await Promise.all(receipt.items.map(i => inventoryService.incrementStock(i.product, receipt.branchId, i.receivedQty)));
-
+    // Resolved the error
+    if (inventoryService) {
+      await Promise.all(
+        receipt.items.map((item) =>
+          inventoryService.incrementStock(item.product, receipt.branchId, item.receivedQty)
+        )
+      );
+    }
     return receipt;
   }
 
