@@ -63,6 +63,8 @@ const updateStatusSchema = Joi.object({
 const convertToPurchaseOrderSchema = Joi.object({
   supplierId: objectId.allow('', null).optional(),
   supplierName: Joi.string().trim().max(160).allow('').optional(),
+  expectedDeliveryDate: Joi.date().iso().optional(),
+  shippingAddress: Joi.string().trim().max(500).optional(),
   note: Joi.string().trim().max(500).allow('').default('Generated from AI reorder recommendation.'),
 });
 
