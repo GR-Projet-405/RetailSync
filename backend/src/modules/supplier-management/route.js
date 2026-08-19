@@ -13,17 +13,17 @@ router.get('/stats', hasPermission(PERMISSIONS.SUPPLIERS_VIEW), controller.getSt
 router.get('/',    hasPermission(PERMISSIONS.SUPPLIERS_VIEW), controller.listSuppliers);   // GET  /api/v1/supplier-management
 router.post('/',   hasPermission(PERMISSIONS.SUPPLIERS_MANAGE), controller.createSupplier);  // POST /api/v1/supplier-management
 
-<<<<<<< HEAD
+
 router.get('/:id',    controller.getSupplier);    // GET    /api/v1/supplier-management/:id
 router.put('/:id',    controller.updateSupplier); // PUT    /api/v1/supplier-management/:id
 router.patch('/:id/status', controller.updateStatus); // PATCH /api/v1/supplier-management/:id/status
 router.delete('/:id', controller.deleteSupplier); // DELETE /api/v1/supplier-management/:id
-=======
+
 router.get('/:id',    hasPermission(PERMISSIONS.SUPPLIERS_VIEW), controller.getSupplier);    // GET    /api/v1/supplier-management/:id
 router.put('/:id',    hasPermission(PERMISSIONS.SUPPLIERS_MANAGE), controller.updateSupplier); // PUT    /api/v1/supplier-management/:id
 router.patch('/:id/deactivate', hasPermission(PERMISSIONS.SUPPLIERS_MANAGE), controller.deactivateSupplier); // PATCH /api/v1/supplier-management/:id/deactivate
 router.delete('/:id', hasPermission(PERMISSIONS.SUPPLIERS_MANAGE), controller.deleteSupplier); // DELETE /api/v1/supplier-management/:id
->>>>>>> dev
+
 
 // ─── Contacts ─────────────────────────────────────────────────────────────────
 router.get('/:id/contacts',                    hasPermission(PERMISSIONS.SUPPLIERS_VIEW), controller.getContacts);    // GET    contacts
