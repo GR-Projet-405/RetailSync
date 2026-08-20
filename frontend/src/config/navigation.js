@@ -23,14 +23,14 @@ export const NAVIGATION_GROUPS = [
         name: 'Audit Dashboard',
         path: '/audit-dashboard',
         icon: 'BarChart3',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.AUDITOR]
       },
       {
         id: 'activity-logs',
         name: 'Activity Logs',
         path: '/activity-logs',
         icon: 'FileText',
-        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.AUDITOR]
       },
       {
         id: 'system-events',
