@@ -391,7 +391,7 @@ export default function POSBillingPage() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    queryClient.resetQueries({ queryKey: ['products'] });
+    queryClient.invalidateQueries({ queryKey: ['products'] });
   }, [queryClient]);
 
   const restoredState = location.state || {};
@@ -591,9 +591,7 @@ export default function POSBillingPage() {
       return;
     }
 
-    let prev;
     setCart((cur) => {
-      prev = cur;
       const existing = cur.find((i) => i.id === product.id);
       if (existing) {
         return cur.map((i) => {
@@ -605,14 +603,6 @@ export default function POSBillingPage() {
     });
 
     notify(`✓ ${product.name} added to cart.`, 'success');
-
-    try {
-      await api.post('/pos-billing/adjust-stock', { productId: product.id, delta: -1 });
-    } catch (error) {
-      console.error(error);
-      notify(`⚠️ Failed to sync database stock: ${error.response?.data?.message || error.message}`, 'error');
-      if (prev) setCart(prev);
-    }
   }, []);
 
   const findProduct = useCallback((raw) => {
@@ -665,13 +655,11 @@ export default function POSBillingPage() {
     setManualCode('');
   };
 
-  const updateCartQuantity = async (id, delta) => {
+  const updateCartQuantity = (id, delta) => {
     const item = cart.find(i => i.id === id);
     if (!item) return;
 
-    let prev;
     setCart((cur) => {
-      prev = cur;
       return cur.map((i) => {
         if (i.id !== id) return i;
         const next = i.quantity + delta;
@@ -681,59 +669,31 @@ export default function POSBillingPage() {
     });
 
     notify(delta > 0 ? `✓ Added 1 unit.` : `✓ Removed 1 unit.`, 'success');
-
-    try {
-      await api.post('/pos-billing/adjust-stock', { productId: id, delta: -delta });
-    } catch (error) {
-      console.error(error);
-      notify(`⚠️ Failed to update stock: ${error.response?.data?.message || error.message}`, 'error');
-      if (prev) setCart(prev);
-    }
   };
 
-  const setCartQuantity = async (id, qty) => {
+  const setCartQuantity = (id, qty) => {
     const item = cart.find(i => i.id === id);
     if (!item) return;
 
     const diff = qty - item.quantity;
     if (diff === 0) return;
 
-    let prev;
     setCart((cur) => {
-      prev = cur;
       return cur.map((i) => (i.id === id ? { ...i, quantity: qty } : i));
     });
 
     notify(`✓ Updated quantity to ${qty}.`, 'success');
-
-    try {
-      await api.post('/pos-billing/adjust-stock', { productId: id, delta: -diff });
-    } catch (error) {
-      console.error(error);
-      notify(`⚠️ Failed to update stock: ${error.response?.data?.message || error.message}`, 'error');
-      if (prev) setCart(prev);
-    }
   };
 
-  const removeCartItem = async (id) => {
+  const removeCartItem = (id) => {
     const item = cart.find(i => i.id === id);
     if (!item) return;
 
-    let prev;
     setCart((cur) => {
-      prev = cur;
       return cur.filter((i) => i.id !== id);
     });
 
     notify(`✓ ${item.name} removed from cart.`, 'success');
-
-    try {
-      await api.post('/pos-billing/adjust-stock', { productId: id, delta: item.quantity });
-    } catch (error) {
-      console.error(error);
-      notify(`⚠️ Failed to remove item: ${error.response?.data?.message || error.message}`, 'error');
-      if (prev) setCart(prev);
-    }
   };
 
   const applyItemDiscount = (id, value, mode) => {
@@ -742,23 +702,13 @@ export default function POSBillingPage() {
     );
   };
 
-  const clearSale = async () => {
+  const clearSale = () => {
     if (cart.length === 0) return;
 
-    const currentCart = [...cart];
     setCart([]);
     setOrderDiscount('');
     setOrderDiscountMode(DISCOUNT_MODES.NONE);
-    notify('Sale cleared and database stock restored.', 'info');
-
-    try {
-      const adjustments = currentCart.map(item => ({ productId: item.id, delta: item.quantity }));
-      await api.post('/pos-billing/adjust-stock', { adjustments });
-    } catch (error) {
-      console.error(error);
-      notify(`⚠️ Failed to clear sale: ${error.response?.data?.message || error.message}`, 'error');
-      setCart(currentCart);
-    }
+    notify('Sale cleared.', 'info');
   };
 
   /* Tax rate editing */
