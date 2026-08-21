@@ -72,6 +72,14 @@ export const deleteSupplier = async (id) => {
   return data;
 };
 
+/**
+ * PATCH /api/v1/supplier-management/:id/deactivate
+ */
+export const deactivateSupplier = async (id) => {
+  const { data } = await api.patch(`${BASE}/${id}/deactivate`);
+  return data;
+};
+
 // ─── Contacts ────────────────────────────────────────────
 
 /**
