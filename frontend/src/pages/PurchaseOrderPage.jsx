@@ -25,6 +25,14 @@ import {
 const API_BASE = "/api/v1/purchase-orders";
 const PAGE_SIZE = 5;
 
+const getAuthHeaders = (extra = {}) => {
+  const token = localStorage.getItem('token');
+  return {
+    ...extra,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 const STATUS_CONFIG = {
   FULLY_RECEIVED: {
     label: "FULLY RECEIVED",
@@ -50,6 +58,12 @@ const STATUS_CONFIG = {
     Icon: PackageCheck,
     iconClass: "text-yellow-500",
   },
+  CANCELLED: {
+    label: "CANCELLED",
+    className: "bg-red-50 text-red-600 border border-red-200",
+    Icon: AlertCircle,
+    iconClass: "text-red-500",
+  },
 };
 
 // Map the status filter dropdown labels to the values the API expects
@@ -59,6 +73,7 @@ const STATUS_FILTER_MAP = {
   "Sent": "SENT",
   "Draft": "DRAFT",
   "Partially Received": "PARTIALLY_RECEIVED",
+  "Cancelled": "CANCELLED",
 };
 
 const currency = (n) =>
@@ -160,7 +175,7 @@ export default function PurchaseOrderPage() {
 
   // Load supplier options once for the filter dropdown
   useEffect(() => {
-    fetch(`${API_BASE}/suppliers`)
+    fetch(`${API_BASE}/suppliers`, { headers: getAuthHeaders() })
       .then((res) => res.json())
       .then((json) => {
         if (json.success) setSuppliers(json.data || []);
@@ -188,7 +203,7 @@ export default function PurchaseOrderPage() {
     params.set("limit", PAGE_SIZE);
 
     const timer = setTimeout(() => {
-      fetch(`${API_BASE}?${params.toString()}`, { signal: controller.signal })
+      fetch(`${API_BASE}?${params.toString()}`, { signal: controller.signal, headers: getAuthHeaders() })
         .then((res) => res.json())
         .then((json) => {
           if (!json.success) throw new Error(json.message || "Failed to load purchase orders");
@@ -256,7 +271,7 @@ export default function PurchaseOrderPage() {
       params.set("page", 1);
       params.set("limit", 10000); // effectively "all" matching rows
 
-      const res = await fetch(`${API_BASE}?${params.toString()}`);
+      const res = await fetch(`${API_BASE}?${params.toString()}`, { headers: getAuthHeaders() });
       const json = await res.json();
       if (!json.success) throw new Error(json.message || "Failed to export purchase orders");
 
@@ -322,7 +337,7 @@ export default function PurchaseOrderPage() {
               className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
             >
               <Plus className="w-4 h-4" />
-              Create New PO
+              Create Purchase Order
             </button>
           )}
         </div>
@@ -355,6 +370,7 @@ export default function PurchaseOrderPage() {
               <option>Sent</option>
               <option>Draft</option>
               <option>Partially Received</option>
+              <option>Cancelled</option>
             </select>
           </div>
 
