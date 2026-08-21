@@ -201,6 +201,7 @@ export default function PaymentProcessingPage() {
       const lineFinal = Math.max(lineTotal - discountAmt, 0);
 
       return {
+        productId: item.id || item._id || null,
         name: item.name || 'Unknown',
         category: item.category || 'Uncategorised',
         sku: item.sku || 'N/A',
