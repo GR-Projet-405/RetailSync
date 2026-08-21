@@ -113,15 +113,14 @@ const updateUser = asyncHandler(async (req, res) => {
 
 // ─── DELETE /api/users/:id ─────────────────────────────────
 const deleteUser = asyncHandler(async (req, res) => {
-  const result = await service.updateUserStatus(req.params.id, 'INACTIVE');
+  const result = await service.deleteUser(req.params.id);
 
   res.status(200).json({
     success: true,
-    message: 'User deleted successfully',
+    message: 'User permanently deleted successfully',
     data: result,
   });
 });
-
 // ─── PATCH /api/users/:id/status ──────────────────────────
 const updateUserStatus = asyncHandler(async (req, res) => {
   const targetUser = await service.getUserById(req.params.id);

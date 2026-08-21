@@ -6,4 +6,4 @@ const ProfileSettingsPageSchema = new mongoose.Schema({
   timestamps: true 
 });
 
-module.exports = mongoose.model('ProfileSettingsPage', ProfileSettingsPageSchema);
+module.exports = mongoose.models.ProfileSettingsPage || mongoose.model('ProfileSettingsPage', ProfileSettingsPageSchema);

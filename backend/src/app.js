@@ -23,8 +23,8 @@ app.use(recordActivity);
 connectDB();
 
 // Global health check router
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', service: 'RetailSync API Server' });
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", service: "RetailSync API Server" });
 });
 
 // Serve uploaded files statically
@@ -45,16 +45,16 @@ require('./modules/warehouse-management/model');
 require('./modules/product-management/model');
 require('./modules/inventory-management/model');
 
-const customerRoutes = require('./modules/customer-management/route');
-app.use('/api/v1/customers', customerRoutes);
+const customerRoutes = require("./modules/customer-management/route");
+app.use("/api/v1/customers", customerRoutes);
 
 // Dynamically register routes for all 28 modular folders
-const modulesPath = path.join(__dirname, 'modules');
+const modulesPath = path.join(__dirname, "modules");
 if (fs.existsSync(modulesPath)) {
   fs.readdirSync(modulesPath).forEach((folderName) => {
-    if (folderName === 'customer-management') return;
+    if (folderName === "customer-management") return;
 
-    const routePath = path.join(modulesPath, folderName, 'route.js');
+    const routePath = path.join(modulesPath, folderName, "route.js");
     if (fs.existsSync(routePath)) {
       const router = require(routePath);
       app.use(`/api/v1/${folderName}`, router);
