@@ -4,6 +4,90 @@ const nodemailer = require('nodemailer');
 
 const { Transaction } = require('./model');
 const Customer = require('../customer-management/model');
+const User = require('../user-management/user.model');
+const Product = require('../product-management/model');
+const Sale = require('../../../models/Sale');
+
+/**
+ * Map a POS billing transaction into the shape expected by the centralized
+ * `Sale` model, which is what Sales History / Sales Dashboard reads from.
+ *
+ * The POS flow persists a `Transaction` (used by Payment History + Returns),
+ * while Sales History reads the `sales` collection. Writing both keeps the
+ * two sides consistent so history requests no longer return empty/404.
+ */
+const mapPaymentMethodToSale = (method) => {
+  const normalized = String(method || 'cash').trim().toLowerCase();
+  // Sale schema supports: cash, card, qr_pay, bank_transfer
+  if (normalized === 'qr') return 'qr_pay';
+  return normalized;
+};
+
+const buildSaleRecord = async (transactionData) => {
+  const {
+    receiptId,
+    customerId = null,
+    cashierId = null,
+    branchId = null,
+    items = [],
+    subTotal = 0,
+    posDiscount = 0,
+    memberDiscount = 0,
+    taxAmount = 0,
+    finalTotal = 0,
+    paymentMethod = 'cash',
+  } = transactionData;
+
+  // Resolve the cashier's branch (falling back to the explicitly passed branch)
+  let branch = branchId;
+  if (!branch && cashierId) {
+    const cashier = await User.findById(cashierId).select('branchId');
+    branch = cashier?.branchId || null;
+  }
+
+  // Map POS cart items to the Sale item schema (which references the Product).
+  const saleItems = [];
+  for (const item of items || []) {
+    const sku = String(item.sku || '').trim().toUpperCase();
+    let productId = item.productId;
+
+    if (productId && !mongoose.Types.ObjectId.isValid(productId)) {
+      productId = null;
+    }
+
+    if (!productId && sku) {
+      const product = await Product.findOne({ sku }).select('_id name').lean();
+      if (product) productId = product._id;
+    } else if (productId) {
+      const product = await Product.findById(productId).select('_id name').lean();
+      if (!product) productId = null;
+    }
+
+    saleItems.push({
+      product: productId || null,
+      productName: item.name || 'Unknown',
+      sku,
+      quantity: Number(item.qty) || 1,
+      unitPrice: Number(item.price) || 0,
+      discount: 0,
+      lineTotal: Number(item.total ?? (Number(item.price) * Number(item.qty))) || 0,
+    });
+  }
+
+  return {
+    transactionId: receiptId,
+    branch: branch || undefined,
+    customer: customerId || null,
+    cashier: cashierId,
+    items: saleItems,
+    subtotal: Number(subTotal) || 0,
+    discountTotal: Number(posDiscount || 0) + Number(memberDiscount || 0),
+    tax: Number(taxAmount) || 0,
+    totalAmount: Number(finalTotal) || 0,
+    paymentMethod: mapPaymentMethodToSale(paymentMethod),
+    status: 'completed',
+  };
+};
 
 class PaymentProcessingService {
 
@@ -63,6 +147,17 @@ class PaymentProcessingService {
         populate: { path: 'branchId', model: 'Branch' }
       }
     ]);
+
+    // Also persist a Sale record into the `sales` collection.
+    // POS Billing writes to `transactions` while Sales History reads `sales`,
+    // so keeping both in-sync prevents history requests from returning empty/404.
+    try {
+      const saleRecord = await buildSaleRecord(transactionData);
+      const sale = new Sale(saleRecord);
+      await sale.save();
+    } catch (saleError) {
+      console.error('POS Billing: failed to persist Sale record:', saleError.message);
+    }
 
     // If a registered customer made the payment, update their points
     if (customerId) {

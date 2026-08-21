@@ -2,7 +2,7 @@
   "info": {
     "name": "RetailSync - AI Modules Backend",
     "_postman_id": "35b588a7-4027-4c3d-bc4f-731d492a79cc",
-    "description": "Postman collection for testing RetailSync AI Reordering and AI Assistant backend endpoints. Run Login first. Create the sample analytics snapshot before generating reorder recommendations.",
+    "description": "Postman collection for testing RetailSync AI Reordering and AI Assistant backend endpoints. Run the collection in order after `npm run seed`: login, discover seeded supplier/product data, create the analytics snapshot, verify the missing-product error, then convert a linked recommendation to a PO draft.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -33,6 +33,36 @@
     },
     {
       "key": "recommendationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "unlinkedRecommendationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "supplierId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productSku",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productName",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "purchaseOrderId",
       "value": "",
       "type": "string"
     },
@@ -122,7 +152,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"snapshotDate\": \"2026-07-09T00:00:00.000Z\",\n  \"branchName\": \"Main Branch HQ\",\n  \"branchCode\": \"HQ-001\",\n  \"channel\": \"POS\",\n  \"sales\": {\n    \"orderCount\": 58,\n    \"itemCount\": 176,\n    \"grossRevenue\": 14250,\n    \"discounts\": 620,\n    \"tax\": 740,\n    \"refunds\": 90,\n    \"cogs\": 8600\n  },\n  \"inventory\": {\n    \"stockValue\": 51200\n  },\n  \"customers\": {\n    \"newCustomers\": 12,\n    \"returningCustomers\": 44,\n    \"loyaltyPointsIssued\": 1840\n  },\n  \"products\": [\n    {\n      \"sku\": \"SKU-COKE-1L\",\n      \"name\": \"Coca Cola 1L\",\n      \"category\": \"Beverages\",\n      \"quantitySold\": 52,\n      \"revenue\": 2600,\n      \"grossProfit\": 930,\n      \"currentStock\": 6,\n      \"reorderLevel\": 24,\n      \"daysOfSupply\": 2,\n      \"inventoryStatus\": \"LOW_STOCK\"\n    },\n    {\n      \"sku\": \"SKU-MILK-1L\",\n      \"name\": \"Fresh Milk 1L\",\n      \"category\": \"Dairy\",\n      \"quantitySold\": 34,\n      \"revenue\": 1700,\n      \"grossProfit\": 510,\n      \"currentStock\": 0,\n      \"reorderLevel\": 20,\n      \"daysOfSupply\": 0,\n      \"inventoryStatus\": \"OUT_OF_STOCK\"\n    },\n    {\n      \"sku\": \"SKU-RICE-5KG\",\n      \"name\": \"Premium Rice 5kg\",\n      \"category\": \"Grocery\",\n      \"quantitySold\": 18,\n      \"revenue\": 4500,\n      \"grossProfit\": 1350,\n      \"currentStock\": 42,\n      \"reorderLevel\": 15,\n      \"daysOfSupply\": 14,\n      \"inventoryStatus\": \"HEALTHY\"\n    }\n  ],\n  \"notes\": \"Sample snapshot for testing AI modules.\"\n}"
+              "raw": "{\n  \"snapshotDate\": \"{{$isoTimestamp}}\",\n  \"branchName\": \"Main Branch HQ\",\n  \"branchCode\": \"HQ-001\",\n  \"channel\": \"POS\",\n  \"sales\": {\n    \"orderCount\": 58,\n    \"itemCount\": 176,\n    \"grossRevenue\": 14250,\n    \"discounts\": 620,\n    \"tax\": 740,\n    \"refunds\": 90,\n    \"cogs\": 8600\n  },\n  \"inventory\": {\n    \"stockValue\": 51200\n  },\n  \"customers\": {\n    \"newCustomers\": 12,\n    \"returningCustomers\": 44,\n    \"loyaltyPointsIssued\": 1840\n  },\n  \"products\": [\n    {\n      \"sku\": \"SKU-COKE-1L\",\n      \"name\": \"Coca Cola 1L\",\n      \"category\": \"Beverages\",\n      \"quantitySold\": 52,\n      \"revenue\": 2600,\n      \"grossProfit\": 930,\n      \"currentStock\": 6,\n      \"reorderLevel\": 24,\n      \"daysOfSupply\": 2,\n      \"inventoryStatus\": \"LOW_STOCK\"\n    },\n    {\n      \"sku\": \"SKU-MILK-1L\",\n      \"name\": \"Fresh Milk 1L\",\n      \"category\": \"Dairy\",\n      \"quantitySold\": 34,\n      \"revenue\": 1700,\n      \"grossProfit\": 510,\n      \"currentStock\": 0,\n      \"reorderLevel\": 20,\n      \"daysOfSupply\": 0,\n      \"inventoryStatus\": \"OUT_OF_STOCK\"\n    },\n    {\n      \"sku\": \"SKU-RICE-5KG\",\n      \"name\": \"Premium Rice 5kg\",\n      \"category\": \"Grocery\",\n      \"quantitySold\": 18,\n      \"revenue\": 4500,\n      \"grossProfit\": 1350,\n      \"currentStock\": 42,\n      \"reorderLevel\": 15,\n      \"daysOfSupply\": 14,\n      \"inventoryStatus\": \"HEALTHY\"\n    }\n  ],\n  \"notes\": \"Sample snapshot for testing AI modules.\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/business-analytics/snapshots",
@@ -161,6 +191,114 @@
       "name": "AI Reordering",
       "item": [
         {
+          "name": "Find Active Supplier - Save ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/purchase-orders/suppliers?search=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchase-orders",
+                "suppliers"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('At least one seeded active supplier exists', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const suppliers = pm.response.json()?.data || [];",
+                  "  pm.expect(suppliers.length, 'Run `npm run seed` before this collection').to.be.above(0);",
+                  "});",
+                  "const supplier = pm.response.json()?.data?.[0];",
+                  "if (supplier?._id) pm.collectionVariables.set('supplierId', supplier._id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Find Product For Supplier - Save ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/purchase-orders/catalog?supplierId={{supplierId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "purchase-orders",
+                "catalog"
+              ],
+              "query": [
+                {
+                  "key": "supplierId",
+                  "value": "{{supplierId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Seeded supplier has at least one linked product', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const products = pm.response.json()?.data || [];",
+                  "  pm.expect(products.length, 'Seeded products must be linked to suppliers').to.be.above(0);",
+                  "});",
+                  "const product = pm.response.json()?.data?.[0];",
+                  "if (product?.productId) {",
+                  "  pm.collectionVariables.set('productId', product.productId);",
+                  "  pm.collectionVariables.set('productSku', product.sku);",
+                  "  pm.collectionVariables.set('productName', product.name);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Module Details",
           "request": {
             "auth": {
@@ -186,7 +324,24 @@
                 "ai-reordering"
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('AI Reordering conversion requirements are documented', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const conversion = pm.response.json()?.data?.purchaseOrderConversion;",
+                  "  pm.expect(conversion?.requiresLinkedProduct).to.eql(true);",
+                  "  pm.expect(conversion?.requiresExistingSupplier).to.eql(true);",
+                  "  pm.expect(conversion?.resultStatus).to.eql('DRAFT');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Generate Reorder Recommendations",
@@ -238,6 +393,7 @@
                   "const first = json && json.data && json.data.recommendations && json.data.recommendations[0];",
                   "if (first && first._id) {",
                   "  pm.collectionVariables.set('recommendationId', first._id);",
+                  "  pm.collectionVariables.set('unlinkedRecommendationId', first._id);",
                   "}"
                 ]
               }
@@ -314,6 +470,124 @@
           }
         },
         {
+          "name": "Convert Unlinked Recommendation - Clean Error (TC007)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"supplierId\": \"{{supplierId}}\",\n  \"note\": \"Negative conversion regression test.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai-reordering/recommendations/{{unlinkedRecommendationId}}/convert-to-po",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai-reordering",
+                "recommendations",
+                "{{unlinkedRecommendationId}}",
+                "convert-to-po"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Unlinked recommendation returns a clean 400 validation response', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.eql(false);",
+                  "  pm.expect(json.code).to.eql('AI_REORDER_PRODUCT_REQUIRED');",
+                  "  pm.expect(json.errors?.[0]?.field).to.eql('productId');",
+                  "});",
+                  "pm.test('Validation response exposes no stack trace or server path', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).not.to.have.property('stack');",
+                  "  pm.expect(pm.response.text()).not.to.match(/(?:backend[\\/]|service\\.js:\\d+|node_modules[\\/])/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Supplier-Linked Recommendation (TC007 Setup)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"sku\": \"{{productSku}}\",\n  \"productName\": \"{{productName}}\",\n  \"category\": \"Postman Test\",\n  \"branchName\": \"Main Branch HQ\",\n  \"branchCode\": \"HQ-001\",\n  \"supplierId\": \"{{supplierId}}\",\n  \"currentStock\": 2,\n  \"reorderLevel\": 10,\n  \"averageDailySales\": 4,\n  \"projectedStockoutDays\": 0.5,\n  \"recommendedQuantity\": 20,\n  \"confidenceScore\": 90,\n  \"urgency\": \"HIGH\",\n  \"reason\": \"Supplier-linked recommendation for TC007 end-to-end conversion.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai-reordering/recommendations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai-reordering",
+                "recommendations"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Supplier-linked recommendation created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  const recommendation = pm.response.json()?.data;",
+                  "  pm.expect(recommendation?.productId).to.be.ok;",
+                  "  pm.expect(recommendation?.supplierId).to.be.ok;",
+                  "});",
+                  "const recommendation = pm.response.json()?.data;",
+                  "if (recommendation?._id) pm.collectionVariables.set('recommendationId', recommendation._id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Approve Recommendation",
           "request": {
             "auth": {
@@ -375,7 +649,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"supplierName\": \"Default Test Supplier\",\n  \"note\": \"Converted from AI recommendation during Postman test.\"\n}"
+              "raw": "{\n  \"supplierId\": \"{{supplierId}}\",\n  \"expectedDeliveryDate\": \"2030-12-31T00:00:00.000Z\",\n  \"shippingAddress\": \"RetailSync Main Warehouse\",\n  \"note\": \"Converted from AI recommendation during Postman test.\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/ai-reordering/recommendations/{{recommendationId}}/convert-to-po",
@@ -391,7 +665,27 @@
                 "convert-to-po"
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Recommendation converts to a real PO draft', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.eql(true);",
+                  "  pm.expect(json.data?.recommendation?.status).to.eql('CONVERTED_TO_PO');",
+                  "  pm.expect(json.data?.purchaseOrder?.status).to.eql('DRAFT');",
+                  "  pm.expect(json.data?.purchaseOrder?.supplier?.toString()).to.eql(pm.collectionVariables.get('supplierId'));",
+                  "});",
+                  "const purchaseOrderId = pm.response.json()?.data?.purchaseOrder?._id;",
+                  "if (purchaseOrderId) pm.collectionVariables.set('purchaseOrderId', purchaseOrderId);"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -424,7 +718,24 @@
                 "ai-assistant"
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('External AI behavior is documented accurately', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const details = pm.response.json()?.data;",
+                  "  pm.expect(details?.externalAI?.required).to.eql(false);",
+                  "  pm.expect(details?.externalAI?.provider).to.eql('Google Gemini');",
+                  "  pm.expect(details?.externalAI?.fallbackBehavior).to.include('without exposing provider errors');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Chat - Business Summary",
@@ -473,6 +784,10 @@
                   "  pm.response.to.have.status(200);",
                   "});",
                   "const json = pm.response.json();",
+                  "pm.test('Assistant response does not expose external provider errors', function () {",
+                  "  pm.expect(json?.data?.answer || '').not.to.include('[AI Offline:');",
+                  "  pm.expect(['rule-based', 'external-refinement']).to.include(json?.data?.responseSource);",
+                  "});",
                   "if (json && json.data && json.data.conversationId) {",
                   "  pm.collectionVariables.set('conversationId', json.data.conversationId);",
                   "}"
@@ -517,7 +832,23 @@
                 "chat"
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reordering answer uses a safe response source', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const data = pm.response.json()?.data;",
+                  "  pm.expect(data?.answer || '').not.to.include('[AI Offline:');",
+                  "  pm.expect(['rule-based', 'external-refinement']).to.include(data?.responseSource);",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "List Conversation History",
@@ -556,7 +887,23 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Conversation history sanitizes legacy provider errors', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const conversations = pm.response.json()?.data?.conversations || [];",
+                  "  const assistantMessages = conversations.flatMap((conversation) => conversation.messages || []).filter((message) => message.role === 'assistant');",
+                  "  assistantMessages.forEach((message) => pm.expect(message.content).not.to.include('[AI Offline:'));",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Get Conversation By ID",
@@ -586,7 +933,24 @@
                 "{{conversationId}}"
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Conversation detail sanitizes legacy provider errors', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const messages = pm.response.json()?.data?.messages || [];",
+                  "  messages.filter((message) => message.role === 'assistant').forEach((message) => {",
+                  "    pm.expect(message.content).not.to.include('[AI Offline:');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Delete Conversation",

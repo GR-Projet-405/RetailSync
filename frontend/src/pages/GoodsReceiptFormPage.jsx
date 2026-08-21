@@ -1,5 +1,5 @@
 import WorkspaceContainer from '../components/WorkspaceContainer';
-import GoodsReceiptForm from '../features/goods-receiving/GoodsReceiptForm';
+import GoodsReceiptForm from '../features/Goods-receiving/GoodsReceiptForm';
 
 // 📝 New Receipt page - route: /goods-receiving/new
 export default function GoodsReceiptFormPage() {

@@ -229,14 +229,14 @@ export const AppRoutes = () => {
 
         {/* Audit Dashboard */}
         <Route path="/audit-dashboard" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.AUDITOR]}>
             <AuditDashboardPage />
           </ProtectedRoute>
         } />
 
         {/* Activity Logs */}
         <Route path="/activity-logs" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.AUDITOR]}>
             <ActivityLogsPage />
           </ProtectedRoute>
         } />
