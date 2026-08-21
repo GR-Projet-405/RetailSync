@@ -889,9 +889,9 @@ export default function UserListPage() {
         onClose={closeModal}
         onConfirm={handleDelete}
         type="danger"
-        title="Delete User"
+        title="Permanently Delete User"
         message={`Are you sure you want to permanently delete ${modal.user?.firstName} ${modal.user?.lastName}? This action cannot be undone.`}
-        confirmText="Delete User"
+        confirmText="Permanently Delete"
       />
 
       {/* Toggle Status Confirm */}
