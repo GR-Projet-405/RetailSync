@@ -1,36 +1,44 @@
 const PERMISSIONS = {
   // Users
-  USERS_VIEW: 'users.view',
-  USERS_CREATE: 'users.create',
-  USERS_EDIT: 'users.edit',
-  USERS_DELETE: 'users.delete',
+  USERS_VIEW: "users.view",
+  USERS_CREATE: "users.create",
+  USERS_EDIT: "users.edit",
+  USERS_DELETE: "users.delete",
 
   // Roles
-  ROLES_VIEW: 'roles.view',
-  ROLES_MANAGE: 'roles.manage',
+  ROLES_VIEW: "roles.view",
+  ROLES_MANAGE: "roles.manage",
 
   // Products
-  PRODUCTS_VIEW: 'products.view',
-  PRODUCTS_CREATE: 'products.create',
-  PRODUCTS_EDIT: 'products.edit',
-  PRODUCTS_DELETE: 'products.delete',
+  PRODUCTS_VIEW: "products.view",
+  PRODUCTS_CREATE: "products.create",
+  PRODUCTS_EDIT: "products.edit",
+  PRODUCTS_DELETE: "products.delete",
 
   // Inventory
-  INVENTORY_VIEW: 'inventory.view',
-  INVENTORY_MANAGE: 'inventory.manage',
+  INVENTORY_VIEW: "inventory.view",
+  INVENTORY_MANAGE: "inventory.manage",
+
+  // Goods Receiving
+  GOODS_RECEIVING_VIEW: "goods_receiving.view",
+  GOODS_RECEIVING_CREATE: "goods_receiving.create",
+  GOODS_RECEIVING_VERIFY: "goods_receiving.verify",
+  //Suppliers
+  SUPPLIERS_VIEW: "suppliers.view",
+  SUPPLIERS_MANAGE: "suppliers.manage",
 
   // Branches
-  BRANCHES_VIEW: 'branches.view',
-  BRANCHES_MANAGE: 'branches.manage',
+  BRANCHES_VIEW: "branches.view",
+  BRANCHES_MANAGE: "branches.manage",
 
   // Reports
-  REPORTS_VIEW: 'reports.view',
-  AUDITLOGS_VIEW: 'auditlogs.view',
-  DASHBOARD_VIEW: 'dashboard.view',
+  REPORTS_VIEW: "reports.view",
+  AUDITLOGS_VIEW: "auditlogs.view",
+  DASHBOARD_VIEW: "dashboard.view",
 
   // Sales
-  SALES_VIEW: 'sales.view',
-  SALES_MANAGE: 'sales.manage',
+  SALES_VIEW: "sales.view",
+  SALES_MANAGE: "sales.manage",
 };
 
 // Flatten to an array for validation

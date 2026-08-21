@@ -1,11 +1,205 @@
-class SupplierPageService {
-  async fetchDetails() {
-    // Skeletons to be populated by development teams
+const Supplier = require('./model');
+
+class SupplierService {
+  // ─── List all suppliers (with optional filtering) ─────────────────────────
+  async listSuppliers({ status, category, search, page = 1, limit = 20 } = {}) {
+    const query = {};
+    if (status)   query.status = status;
+    if (category) query.industryCategory = category;
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { supplierId: { $regex: search, $options: 'i' } },
+        { industryCategory: { $regex: search, $options: 'i' } },
+      ];
+    }
+    const skip = (page - 1) * limit;
+    const [suppliers, total] = await Promise.all([
+      Supplier.find(query)
+        .select('-payment.accountNumber -payment.routingNumber') // mask sensitive fields
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Supplier.countDocuments(query),
+    ]);
+    return { suppliers, total, page, totalPages: Math.ceil(total / limit) };
+  }
+
+  // ─── Get single supplier by id ────────────────────────────────────────────
+  async getSupplierById(id) {
+    const supplier = await Supplier.findById(id)
+      .select('-payment.accountNumber -payment.routingNumber');
+    if (!supplier) throw Object.assign(new Error('Supplier not found'), { statusCode: 404 });
+    return supplier;
+  }
+
+  // ─── Create new supplier ──────────────────────────────────────────────────
+  async createSupplier(data) {
+    // ── TC003: explicit 400 before hitting Mongoose ──────────────────────────
+    const missing = [];
+    if (!data || !String(data.name || '').trim()) missing.push('name');
+    if (!data || !String(data.industryCategory || '').trim()) missing.push('industryCategory');
+    if (missing.length) {
+      throw Object.assign(
+        new Error(`Missing required fields: ${missing.join(', ')}`),
+        { statusCode: 400 }
+      );
+    }
+    const supplier = new Supplier(data);
+    await supplier.save();
+    return supplier;
+  }
+
+  // ─── Update supplier ──────────────────────────────────────────────────────
+  async updateSupplier(id, data) {
+    const supplier = await Supplier.findByIdAndUpdate(
+      id,
+      { $set: data },
+      { new: true, runValidators: true }
+    ).select('-payment.accountNumber -payment.routingNumber');
+    if (!supplier) throw Object.assign(new Error('Supplier not found'), { statusCode: 404 });
+    return supplier;
+  }
+
+  // ─── Update supplier status ───────────────────────────────────────────────
+  async updateStatus(id, status) {
+    const VALID = ['Active', 'Inactive', 'Pending'];
+    if (!VALID.includes(status)) {
+      throw Object.assign(new Error(`Invalid status: ${status}`), { statusCode: 400 });
+    }
+    // runValidators is intentionally omitted — Mongoose enum validators
+    // behave unreliably on findByIdAndUpdate in some versions.
+    // We validate manually above instead.
+    const supplier = await Supplier.findByIdAndUpdate(
+      id,
+      { $set: { status } },
+      { new: true }
+    ).select('-payment.accountNumber -payment.routingNumber');
+    if (!supplier) throw Object.assign(new Error('Supplier not found'), { statusCode: 404 });
+    return supplier;
+  }
+
+  // ─── Delete supplier ──────────────────────────────────────────────────────
+  async deleteSupplier(id) {
+    const supplier = await Supplier.findByIdAndDelete(id);
+    if (!supplier) throw Object.assign(new Error('Supplier not found'), { statusCode: 404 });
+    return { deleted: true, supplierId: supplier.supplierId };
+  }
+
+  // ─── Deactivate supplier (soft delete for Goods Receiving) ──────────────────
+  async deactivateSupplier(id) {
+    const supplier = await Supplier.findByIdAndUpdate(id, { status: 'Inactive' }, { new: true });
+    if (!supplier) throw Object.assign(new Error('Supplier not found'), { statusCode: 404 });
+    return supplier;
+  }
+
+  // ─── Contacts ─────────────────────────────────────────────────────────────
+  async getContacts(supplierId) {
+    const supplier = await Supplier.findById(supplierId).select('contacts name supplierId');
+    if (!supplier) throw Object.assign(new Error('Supplier not found'), { statusCode: 404 });
+    return { supplier: { name: supplier.name, id: supplier.supplierId }, contacts: supplier.contacts };
+  }
+
+  async addContact(supplierId, contactData) {
+    const supplier = await Supplier.findByIdAndUpdate(
+      supplierId,
+      { $push: { contacts: contactData } },
+      { new: true, runValidators: true }
+    ).select('contacts name supplierId');
+    if (!supplier) throw Object.assign(new Error('Supplier not found'), { statusCode: 404 });
+    return supplier.contacts[supplier.contacts.length - 1];
+  }
+
+  async updateContact(supplierId, contactId, data) {
+    const supplier = await Supplier.findOneAndUpdate(
+      { _id: supplierId, 'contacts._id': contactId },
+      { $set: { 'contacts.$': { ...data, _id: contactId } } },
+      { new: true }
+    ).select('contacts');
+    if (!supplier) throw Object.assign(new Error('Contact not found'), { statusCode: 404 });
+    return supplier.contacts.id(contactId);
+  }
+
+  async deleteContact(supplierId, contactId) {
+    await Supplier.findByIdAndUpdate(
+      supplierId,
+      { $pull: { contacts: { _id: contactId } } }
+    );
+    return { deleted: true };
+  }
+
+  // ─── Performance ──────────────────────────────────────────────────────────
+  async getPerformance(supplierId) {
+    const supplier = await Supplier.findById(supplierId)
+      .select('name supplierId performance rating status');
+    if (!supplier) throw Object.assign(new Error('Supplier not found'), { statusCode: 404 });
+    return supplier;
+  }
+
+  async updatePerformance(supplierId, metricsData) {
+    // ── TC020: manual bounds check before attempting DB write ──────────────────
+    const PERCENT_FIELDS = ['onTimeDelivery', 'qualityScore', 'defectRate'];
+    for (const field of PERCENT_FIELDS) {
+      if (metricsData[field] !== undefined) {
+        const val = Number(metricsData[field]);
+        if (isNaN(val) || val < 0 || val > 100) {
+          throw Object.assign(
+            new Error(`'${field}' must be a number between 0 and 100 (received: ${metricsData[field]})`),
+            { statusCode: 400 }
+          );
+        }
+      }
+    }
+    if (metricsData.responseTime !== undefined) {
+      const val = Number(metricsData.responseTime);
+      if (isNaN(val) || val < 0) {
+        throw Object.assign(
+          new Error(`'responseTime' must be a non-negative number (received: ${metricsData.responseTime})`),
+          { statusCode: 400 }
+        );
+      }
+    }
+    const supplier = await Supplier.findByIdAndUpdate(
+      supplierId,
+      { $set: { performance: metricsData } },
+      { new: true }
+    ).select('name supplierId performance');
+    if (!supplier) throw Object.assign(new Error('Supplier not found'), { statusCode: 404 });
+    return supplier;
+  }
+
+  // ── Contact Notes ───────────────────────────────────────────────────
+  async addContactNote(supplierId, contactId, text) {
+    if (!text || !String(text).trim()) {
+      throw Object.assign(new Error('Note text is required'), { statusCode: 400 });
+    }
+    const note = { text: String(text).trim(), createdAt: new Date() };
+    const supplier = await Supplier.findOneAndUpdate(
+      { _id: supplierId, 'contacts._id': contactId },
+      { $push: { 'contacts.$.notes': note } },
+      { new: true }
+    ).select('contacts');
+    if (!supplier) throw Object.assign(new Error('Supplier or contact not found'), { statusCode: 404 });
+    const contact = supplier.contacts.id(contactId);
+    return contact.notes[contact.notes.length - 1];
+  }
+
+  // ─── Summary stats ────────────────────────────────────────────────────────
+  async getStats() {
+    const [total, active, pending, spend] = await Promise.all([
+      Supplier.countDocuments(),
+      Supplier.countDocuments({ status: 'Active' }),
+      Supplier.countDocuments({ status: 'Pending' }),
+      Supplier.aggregate([{ $group: { _id: null, totalSpend: { $sum: '$performance.ytdSpend' } } }]),
+    ]);
     return {
-      module: 'Supplier Management',
-      status: 'Under Development'
+      total,
+      active,
+      pending,
+      inactive: total - active - pending,
+      totalSpendYTD: spend[0]?.totalSpend ?? 0,
     };
   }
 }
 
-module.exports = new SupplierPageService();
+module.exports = new SupplierService();
