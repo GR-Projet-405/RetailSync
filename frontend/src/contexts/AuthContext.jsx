@@ -13,7 +13,14 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await api.get('/branch-management/active');
       if (res.data && res.data.data) {
-        const branchNames = res.data.data.map(b => b.name);
+        // Only allow these 5 QA branch codes
+        const qaBranchCodes = ['CWH-001', 'WWH-002', 'R-001', 'R-002', 'BR001'];
+        
+        // Filter by checking if the branch's code is in our approved list
+        const filteredBranches = res.data.data.filter(b => qaBranchCodes.includes(b.code));
+        
+        // Extract names to use in the frontend UI
+        const branchNames = filteredBranches.map(b => b.name);
         setBranches(branchNames);
         
         // Default to user's branch if it exists, otherwise Central WH

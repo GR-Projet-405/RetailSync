@@ -110,6 +110,10 @@ const updateBranch = async (id, updateData, performedBy) => {
 
   // Prevent manager assignment via regular update, must use specific endpoint
   delete updateData.managerId;
+  
+  // Sanitize immutable identifiers from update payload to prevent MongoServerError
+  delete updateData._id;
+  delete updateData.id;
 
   const oldValues = branch.toObject();
   const updatedBranch = await Branch.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
