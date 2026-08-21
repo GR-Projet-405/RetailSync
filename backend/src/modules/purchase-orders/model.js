@@ -103,9 +103,36 @@ PurchaseOrderPageSchema.virtual('totalAmount').get(function () {
 // ─── Auto-generate poNumber before save ────────────────────────────────────
 PurchaseOrderPageSchema.pre('save', async function (next) {
   if (this.poNumber) return next();
-  const count = await mongoose.model('PurchaseOrderPage').countDocuments();
-  this.poNumber = `PO-${String(count + 1).padStart(3, '0')}`;
-  next();
+
+  try {
+    const Model = mongoose.model('PurchaseOrderPage');
+    const lastOrder = await Model.findOne({}, { poNumber: 1 })
+      .sort({ createdAt: -1, _id: -1 })
+      .lean();
+
+    let maxNum = 0;
+    if (lastOrder && lastOrder.poNumber) {
+      const match = lastOrder.poNumber.match(/\d+/);
+      if (match) {
+        maxNum = parseInt(match[0], 10);
+      }
+    }
+
+    let nextNum = maxNum + 1;
+    let candidate = `PO-${String(nextNum).padStart(3, '0')}`;
+
+    let exists = await Model.exists({ poNumber: candidate });
+    while (exists) {
+      nextNum++;
+      candidate = `PO-${String(nextNum).padStart(3, '0')}`;
+      exists = await Model.exists({ poNumber: candidate });
+    }
+
+    this.poNumber = candidate;
+    next();
+  } catch (err) {
+    next(err);
+  }
 });
 
 // ─── Auto-calculate totals before save ─────────────────────────────────────

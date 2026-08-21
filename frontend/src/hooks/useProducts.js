@@ -59,6 +59,33 @@ export const useDeleteProduct = () => {
       queryClient.invalidateQueries({ queryKey: [PRODUCTS_KEY] });
       toast.success('Product deleted successfully.');
     },
-    onError: (error) => toast.error(error.message || 'Failed to delete product.'),
+    onError: (error) => {
+      const status = error.response?.status;
+      const backendMessage = error.response?.data?.message;
+
+      if (status === 409) {
+        // BR-INV-005: product is referenced by sales/purchase orders
+        toast.error(
+          backendMessage ||
+          'This product cannot be deleted because it is linked to existing sales or purchase orders.'
+        );
+      } else if (status === 404) {
+        toast.error(backendMessage || 'Product not found. It may have already been deleted.');
+      } else {
+        toast.error(backendMessage || 'Failed to delete product.');
+      }
+    },
   });
 };
+
+// export const useDeleteProduct = () => {
+//   const queryClient = useQueryClient();
+//   return useMutation({
+//     mutationFn: (id) => productService.remove(id),
+//     onSuccess: () => {
+//       queryClient.invalidateQueries({ queryKey: [PRODUCTS_KEY] });
+//       toast.success('Product deleted successfully.');
+//     },
+//     onError: (error) => toast.error(error.message || 'Failed to delete product.'),
+//   });
+// };

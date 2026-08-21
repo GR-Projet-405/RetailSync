@@ -23,6 +23,14 @@ import {
 /* Backend auto-mounts every modules/<folderName> at /api/v1/<folderName> — see app.js */
 const API_BASE = "/api/v1/purchase-orders";
 
+const getAuthHeaders = (extra = {}) => {
+  const token = localStorage.getItem('token');
+  return {
+    ...extra,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 /* ───────────────────────── Status presentation ───────────────────────── */
 /* Matches the real enum on PurchaseOrderPageSchema.status */
 const STATUS_STYLES = {
@@ -154,7 +162,7 @@ export default function ApprovalWorkflowPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/${id}`);
+      const res = await fetch(`${API_BASE}/${id}`, { headers: getAuthHeaders() });
       const json = await res.json();
       if (!res.ok || !json.success) {
         throw new Error(json.message || "Failed to load purchase order");
@@ -181,15 +189,27 @@ export default function ApprovalWorkflowPage() {
     navigate(`/purchase-orders/${po._id}/edit`);
   };
 
-  const handlePreviewEmail = () => {
-    window.open(`${API_BASE}/${id}/email-preview`, "_blank", "noopener,noreferrer");
+  const handlePreviewEmail = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/${id}/email-preview`, {
+        headers: getAuthHeaders(),
+      });
+      const htmlText = await res.text();
+      const win = window.open("", "_blank");
+      if (win) {
+        win.document.write(htmlText);
+        win.document.close();
+      }
+    } catch (err) {
+      console.error("Failed to load email preview:", err);
+    }
   };
 
   const handleSendToSupplier = async () => {
     setSending(true);
     setActionError(null);
     try {
-      const res = await fetch(`${API_BASE}/${id}/send`, { method: "POST" });
+      const res = await fetch(`${API_BASE}/${id}/send`, { method: "POST", headers: getAuthHeaders() });
       const json = await res.json();
       if (!res.ok || !json.success) {
         throw new Error(json.message || "Failed to send this purchase order to the supplier");
@@ -206,7 +226,7 @@ export default function ApprovalWorkflowPage() {
     setWithdrawing(true);
     setActionError(null);
     try {
-      const res = await fetch(`${API_BASE}/${id}/withdraw`, { method: "POST" });
+      const res = await fetch(`${API_BASE}/${id}/withdraw`, { method: "POST", headers: getAuthHeaders() });
       const json = await res.json();
       if (!res.ok || !json.success) {
         throw new Error(json.message || "Failed to withdraw purchase order");
@@ -266,7 +286,7 @@ export default function ApprovalWorkflowPage() {
     dotClassName: "bg-gray-400",
   };
 
-  const canEdit = !["PARTIALLY_RECEIVED", "FULLY_RECEIVED", "CANCELLED"].includes(po.status);
+  const canEdit = po.status === "DRAFT";
   const canWithdraw = po.status === "SENT";
   const isDraft = po.status === "DRAFT";
 
