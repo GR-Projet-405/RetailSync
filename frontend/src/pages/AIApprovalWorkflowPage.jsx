@@ -13,6 +13,7 @@ export default function AIApprovalWorkflowPage() {
 
   const { data: response, isLoading: loading } = useAIRecommendations();
   const items = response?.data?.recommendations || [];
+  const pendingCount = items.filter((item) => item.status === "PENDING").length;
 
   const handleViewDetails = (recommendation) => {
     setSelectedRecommendation(recommendation);
@@ -34,7 +35,7 @@ export default function AIApprovalWorkflowPage() {
         description="Review AI-generated purchase recommendations before submitting purchase orders."
       />
 
-      <ApprovalBanner />
+      <ApprovalBanner pendingCount={pendingCount} />
 
       {loading ? (
         <div className="text-center py-10">

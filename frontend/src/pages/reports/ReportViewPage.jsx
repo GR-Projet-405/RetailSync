@@ -1,5 +1,8 @@
 import { useState, useMemo, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { generateReportPDF } from '../../utils/reportPdfExport';
+import { resolveBranchLabel } from '../../utils/branchLabel';
+import { reportService, REPORT_KEYS } from '../../services/reportService';
 import { useParams, useLocation, Link } from 'react-router-dom';
 import {
   BarChart2, Package, DollarSign, Users, UserCheck,
@@ -625,9 +628,12 @@ function MetaBit({ label, value, icon: Icon }) {
   );
 }
 
-function ChipTag({ icon: Icon, label }) {
+function ChipTag({ icon: Icon, label, title }) {
   return (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 rounded-full text-sm font-medium text-slate-600">
+    <span
+      title={title}
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 rounded-full text-sm font-medium text-slate-600"
+    >
       <Icon className="w-3.5 h-3.5 text-slate-400" />
       {label}
     </span>
@@ -737,6 +743,15 @@ export default function ReportViewPage() {
   const nb              = allBranches ? 3 : Math.max(selectedBranchIds.length, 1);
   const displayBranches = allBranches ? BRANCH_NAMES : BRANCH_NAMES.slice(0, nb);
 
+  // ── Resolve real branch names for the selection (id -> name lookup) ─────
+  const { data: branchesResp } = useQuery({
+    queryKey: REPORT_KEYS.branches(),
+    queryFn: reportService.getBranches,
+    staleTime: 60_000,
+  });
+  const branchNameById = new Map((branchesResp?.data ?? []).map((b) => [b._id, b.name]));
+  const selectedBranchNames = selectedBranchIds.map((id) => branchNameById.get(id)).filter(Boolean);
+
   // ── Compute all view data once ───────────────────────────────────────────
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const vd = useMemo(() => computeViewData({
@@ -798,7 +813,11 @@ export default function ReportViewPage() {
   const dateLabel   = (fmtDate(dateFrom) && fmtDate(dateTo))
     ? `${fmtDate(dateFrom)} – ${fmtDate(dateTo)}`
     : 'All Time';
-  const branchLabel = allBranches ? 'All Branches' : `${nb} Branch${nb !== 1 ? 'es' : ''}`;
+  const { label: branchLabel, title: branchLabelTitle } = resolveBranchLabel({
+    allBranches,
+    names: selectedBranchNames,
+    count: selectedBranchIds.length,
+  });
   const { Icon }    = meta;
 
   const hasMetaBar = report.name || generatedByName() || report.metadata?.executionTimeMs || report.status;
@@ -827,7 +846,7 @@ export default function ReportViewPage() {
             </h1>
             <div className="flex items-center gap-2 flex-wrap mt-1.5">
               <ChipTag icon={Calendar} label={dateLabel} />
-              <ChipTag icon={MapPin} label={branchLabel} />
+              <ChipTag icon={MapPin} label={branchLabel} title={branchLabelTitle} />
             </div>
           </div>
         </div>
