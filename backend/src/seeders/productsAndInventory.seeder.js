@@ -1,7 +1,7 @@
 const User = require('../modules/user-management/user.model');
 require('../modules/role-management/role.model');
 const Category = require('../modules/category-management/model');
-require('../modules/supplier-management/model');
+const Supplier = require('../modules/supplier-management/model');
 const Branch = require('../modules/branch-management/branch.model');
 const Warehouse = require('../modules/warehouse-management/model');
 const Product = require('../modules/product-management/model');
@@ -87,6 +87,14 @@ const seedProductsAndInventory = async () => {
       categoryMap[cat.name] = cat._id;
     }
 
+    // The AI reordering -> purchase-order flow requires real supplier links.
+    // Suppliers are seeded before products in seed.js, so every seeded product
+    // can be assigned to an active supplier for deterministic end-to-end tests.
+    const activeSuppliers = await Supplier.find({ status: 'Active' }).sort({ supplierId: 1 });
+    if (activeSuppliers.length === 0) {
+      throw new Error('Please seed at least one active supplier before seeding products.');
+    }
+
     // Clear existing products and inventory to make seed clean
     console.log('Clearing old products and legacy inventory records...');
     await Product.deleteMany({});
@@ -119,7 +127,7 @@ const seedProductsAndInventory = async () => {
     ];
 
     const productMap = {};
-    for (const pData of productsToSeed) {
+    for (const [index, pData] of productsToSeed.entries()) {
       const product = await Product.create({
         sku: pData.sku,
         name: pData.name,
@@ -130,6 +138,7 @@ const seedProductsAndInventory = async () => {
           costPrice: pData.costPrice || 0
         },
         branch: branchMap['Central WH'],
+        supplier: activeSuppliers[index % activeSuppliers.length]._id,
         status: pData.status || 'ACTIVE',
         barcode: pData.barcode || null,
         createdBy: admin._id
