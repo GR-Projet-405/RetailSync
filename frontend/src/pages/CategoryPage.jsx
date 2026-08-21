@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import CategoryList from './category/CategoryList';
-import CategoryDetail from './category/CategoryDetail';
-import CategoryCreate from './category/CategoryCreate';
-import CategoryEdit from './category/CategoryEdit';
+import CategoryList from './category/Categorylist';
+import CategoryDetail from './category/Categorydetail';
+import CategoryCreate from './category/Categorycreate';
+import CategoryEdit from './category/Categoryedit';
 import CategoryHierarchy from './category/CategoryHierarchy';
 
 export default function CategoryPage() {
