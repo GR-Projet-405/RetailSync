@@ -126,16 +126,27 @@ export default function ReceiptPage() {
                     <div className="space-y-1 text-[11px] font-bold text-black">
                         <div className="flex justify-between">
                             <span>Subtotal</span>
-                            <span>{formatCurrency(transaction.subTotal)}</span>
+                            <span>{formatCurrency(transaction.subTotal || 0)}</span>
                         </div>
+
+                        {/* --- POS Discount --- */}
+                        {transaction.posDiscount > 0 && (
+                            <div className="flex justify-between">
+                                <span>POS Discount</span>
+                                <span>- {formatCurrency(transaction.posDiscount)}</span>
+                            </div>
+                        )}
+
+                        {/* --- Member Discount--- */}
                         {transaction.memberDiscount > 0 && (
                             <div className="flex justify-between">
-                                <span>Discount</span>
+                                <span>Member Discount</span>
                                 <span>- {formatCurrency(transaction.memberDiscount)}</span>
                             </div>
                         )}
+
                         <div className="flex justify-between">
-                            <span>VAT (15%)</span>
+                            <span>TAX </span>
                             <span>{formatCurrency(transaction.taxAmount)}</span>
                         </div>
                     </div>
@@ -171,7 +182,6 @@ export default function ReceiptPage() {
                     {/* Loyalty Customer Information */}
                     {customer && (
                         <div className="flex flex-col items-center mb-4 text-center text-black">
-                            {/* Updated to display firstName and lastName */}
                             <p className="text-[11px] font-extrabold">Customer: {customer.firstName} {customer.lastName}</p>
 
                             {transaction.pointsEarned > 0 && (

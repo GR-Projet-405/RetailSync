@@ -1,4 +1,4 @@
-import React from 'react';
+/*import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { branchApi } from '../services/branchApi';
 import { useAuth } from '../contexts/AuthContext';
@@ -65,12 +65,12 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-               <div className="bg-white rounded-xl border border-slate-200 p-6 h-80 flex flex-col justify-center items-center">
+               <div className="relative bg-white rounded-xl border border-slate-200 p-6 h-80 flex flex-col justify-center items-center">
                  <h3 className="text-sm font-semibold text-slate-700 absolute top-6 left-6">Revenue By Branch</h3>
                  <Icons.BarChart3 className="w-12 h-12 text-slate-300 mb-4" />
                  <p className="text-slate-500">Revenue Distribution Chart Placeholder</p>
                </div>
-               <div className="bg-white rounded-xl border border-slate-200 p-6 h-80 flex flex-col justify-center items-center">
+               <div className="relative bg-white rounded-xl border border-slate-200 p-6 h-80 flex flex-col justify-center items-center">
                  <h3 className="text-sm font-semibold text-slate-700 absolute top-6 left-6">Profit Distribution</h3>
                  <Icons.PieChart className="w-12 h-12 text-slate-300 mb-4" />
                  <p className="text-slate-500">Profit Donut Chart Placeholder</p>
@@ -85,5 +85,53 @@ export default function DashboardPage() {
       )}
     </div>
   );
-}
+}*/
+import React from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { ROLES } from '../config/roles';
+import AdminDashboard from './AdminDashboard';
+import ManagerDashboard from './ManagerDashboard';
+import EmployeeDashboard from './EmployeeDashboard';
 
+export default function DashboardPage() {
+  const { hasRole, user } = useAuth();
+
+  // Debug
+  console.log("Current user role:", user?.role);
+
+  // Show loading
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-500">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Route to correct dashboard
+  if (hasRole(ROLES.SUPER_ADMIN, ROLES.ADMIN)) {
+    return <AdminDashboard />;
+  }
+
+  if (hasRole(ROLES.BRANCH_MANAGER, ROLES.INVENTORY_MANAGER)) {
+    return <ManagerDashboard />;
+  }
+
+  if (hasRole(ROLES.EMPLOYEE)) {
+    return <EmployeeDashboard />;
+  }
+
+  // No valid role
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-red-600">Access Denied</h2>
+        <p className="text-gray-500 mt-2">You don't have permission to view this page.</p>
+        <p className="text-gray-400 text-sm mt-4">Role: {user?.role || 'Unknown'}</p>
+      </div>
+    </div>
+  );
+}

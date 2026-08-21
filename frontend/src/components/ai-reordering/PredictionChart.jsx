@@ -22,12 +22,20 @@ export default function PredictionChart({ level }) {
     { day: 10, actual: null, forecast: 12 },
   ];
 
-  const endColor =
+ /* const endColor =
     level === "Critical"
       ? "#dc2626"
       : level === "Warning"
       ? "#d97706"
-      : "#16a34a";
+      : "#16a34a"; */
+
+      const colors = {
+          CRITICAL: "#dc2626",
+          HIGH: "#d97706",
+          LOW: "#16a34a",
+        };
+
+const endColor = colors[level] || "#16a34a";
 
   return (
     <div className="h-52 w-full">

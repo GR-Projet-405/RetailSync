@@ -1,6 +1,6 @@
 import { Info } from "lucide-react";
 
-export default function ApprovalBanner() {
+export default function ApprovalBanner({ pendingCount = 0 }) {
   return (
     <div className="bg-blue-50 border border-blue-200 rounded-2xl px-8 py-7 flex items-center gap-5">
 
@@ -16,7 +16,7 @@ export default function ApprovalBanner() {
         </p>
 
         <p className="font-semibold text-slate-900 mt-2 text-lg">
-          1 orders awaiting review.
+          {pendingCount} {pendingCount === 1 ? "order" : "orders"} awaiting review.
         </p>
 
       </div>

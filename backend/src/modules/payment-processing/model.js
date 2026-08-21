@@ -21,6 +21,7 @@ const TransactionSchema = new mongoose.Schema({
 
   // Bill Details (Summary)
   subTotal: { type: Number, required: true },
+  posDiscount: { type: Number, default: 0 },
   memberDiscount: { type: Number, default: 0 },
   taxAmount: { type: Number, required: true },
   finalTotal: { type: Number, required: true },

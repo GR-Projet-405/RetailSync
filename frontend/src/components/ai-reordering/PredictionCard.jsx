@@ -6,27 +6,33 @@ import {
 } from "lucide-react";
 
 export default function PredictionCard({ item }) {
+
+  const days = Math.max(
+    0,
+    Math.round(item.projectedStockoutDays ?? 0)
+  );
+
   const getBadge = () => {
-    switch (item.level) {
-      case "Critical":
+    switch (item.urgency) {
+      case "CRITICAL":
         return {
           bg: "bg-red-100 text-red-700",
           icon: <AlertTriangle size={16} className="text-red-600" />,
-          text: `${item.days} days (Critical)`,
+          text: `${days} days (Critical)`,
         };
 
-      case "Warning":
+      case "HIGH":
         return {
           bg: "bg-yellow-100 text-yellow-700",
           icon: <AlertCircle size={16} className="text-yellow-600" />,
-          text: `${item.days} days (Warning)`,
+          text: `${days} days (Warning)`,
         };
 
       default:
         return {
           bg: "bg-green-100 text-green-700",
           icon: <CheckCircle size={16} className="text-green-600" />,
-          text: `${item.days} days (Safe)`,
+          text: `${days} days (Safe)`,
         };
     }
   };
@@ -40,11 +46,11 @@ export default function PredictionCard({ item }) {
       <div className="px-6 py-5 border-b border-slate-100">
 
         <h3 className="text-xl font-semibold text-slate-900 leading-snug">
-          {item.product}
+          {item.productName}
         </h3>
 
         <p className="mt-2 text-base text-slate-500">
-          {item.branch}
+          {item.branchName}
         </p>
 
       </div>
@@ -62,7 +68,7 @@ export default function PredictionCard({ item }) {
           <div className="mt-2 flex items-end gap-2">
 
             <span className="text-4xl font-bold text-slate-900">
-              {item.current}
+              {item.currentStock}
             </span>
 
             <span className="text-slate-500 mb-1">
@@ -93,7 +99,7 @@ export default function PredictionCard({ item }) {
 
       {/* Chart */}
       <div className="px-4 pb-4 h-56">
-        <PredictionChart level={item.level} />
+        <PredictionChart level={item.urgency} />
       </div>
 
     </div>

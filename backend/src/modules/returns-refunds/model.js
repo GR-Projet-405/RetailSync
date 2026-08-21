@@ -23,6 +23,8 @@ const ReturnsRefundsPageSchema = new mongoose.Schema({
 
   estimatedRefundTotal: { type: Number, required: true }, 
 
+  cashierId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+
   status: {
     type: String,
     enum: ['Pending', 'Approved', 'Refund Issued', 'Rejected'],

@@ -274,7 +274,11 @@ export default function PaymentHistoryPage() {
                                                                 >
                                                                     <Eye size={18} />
                                                                 </button>
-                                                                <button className="transition-colors text-slate-400 hover:text-red-500" title="Refund">
+                                                                <button
+                                                                    onClick={() => navigate('/returns-refunds', { state: { autoLoadReceiptId: txn.receiptId } })}
+                                                                    className="transition-colors text-slate-400 hover:text-red-500"
+                                                                    title="Issue Refund"
+                                                                >
                                                                     <RotateCcw size={18} />
                                                                 </button>
                                                                 {/* Close Icon to hide actions */}
