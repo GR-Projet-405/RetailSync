@@ -76,4 +76,4 @@ warehouseSchema.virtual('manager').get(function () {
 warehouseSchema.set('toJSON', { virtuals: true });
 warehouseSchema.set('toObject', { virtuals: true });
 
-module.exports = mongoose.model('Warehouse', warehouseSchema);
+module.exports = mongoose.models.Warehouse || mongoose.model('Warehouse', warehouseSchema);
