@@ -26,6 +26,7 @@ import DataTable from '../../components/DataTable';
 import { cn } from '../../utils/cn';
 import { reportService, REPORT_KEYS } from '../../services/reportService';
 import { computeReportData, generateReportPDF } from '../../utils/reportPdfExport';
+import { resolveBranchLabel, namesFromBranchRefs } from '../../utils/branchLabel';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -321,6 +322,20 @@ export default function ReportsPage() {
     navigate(`/reports/configure/${typeId}`);
   }
 
+  function handleViewReport(row) {
+    const filters = row.filters || {};
+    navigate(`/reports/view/${row.type?.toLowerCase()}`, {
+      state: {
+        report: row,
+        dateFrom: filters.dateFrom,
+        dateTo: filters.dateTo,
+        allBranches: filters.allBranches,
+        selectedBranchIds: (filters.branches || []).map((b) => b._id || b),
+        additionalFilters: filters.additionalFilters,
+      },
+    });
+  }
+
   const ACCENT_HEX = {
     SALES: '#3B82F6', INVENTORY: '#10B981', FINANCE: '#F59E0B', EMPLOYEE: '#8B5CF6', CUSTOMER: '#F43F5E',
   };
@@ -339,7 +354,11 @@ export default function ReportsPage() {
 
     const fmtD = (d) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
     const dateLabel   = (fmtD(dateFrom) && fmtD(dateTo)) ? `${fmtD(dateFrom)} – ${fmtD(dateTo)}` : 'All Time';
-    const branchLabel = allBranches ? 'All Branches' : `${nb} Branch${nb !== 1 ? 'es' : ''}`;
+    const { label: branchLabel } = resolveBranchLabel({
+      allBranches,
+      names: namesFromBranchRefs(filters.branches),
+      count: (filters.branches || []).length,
+    });
 
     const vd = computeReportData({
       reportType,
@@ -419,7 +438,7 @@ export default function ReportsPage() {
       render: (row) => (
         <div className="flex items-center gap-2">
           <button
-            onClick={() => navigate(`/reports/view/${row.type?.toLowerCase()}`)}
+            onClick={() => handleViewReport(row)}
             className="w-8 h-8 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-blue-600 transition-colors duration-150"
             title="View report"
           >

@@ -28,8 +28,8 @@ export default function ActivityLogsPage() {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(15);
 
-  const { data: logsData, isLoading, error, refetch } = useQuery({
-    queryKey: ['audit', 'activity-logs', filters, page],
+  const { data: logsData, isLoading, error } = useQuery({
+    queryKey: ['audit', 'activity-logs', filters, page, rowsPerPage],
     queryFn: () => getActivityLogs({
       dateStart: filters.dateRange.start,
       dateEnd: filters.dateRange.end,

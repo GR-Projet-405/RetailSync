@@ -1,7 +1,14 @@
 import DataTable from "../DataTable";
 import { Check, X, TrendingUp } from "lucide-react";
+import { useUpdateAIRecommendationStatus } from "../../hooks/useAIReordering";
 
 export default function PurchaseTable({ items }) {
+  const updateStatusMutation = useUpdateAIRecommendationStatus();
+
+  const handleStatusUpdate = (id, status) => {
+    updateStatusMutation.mutate({ id, status });
+  };
+
   const columns = [
     {
       header: "Product",
@@ -92,13 +99,19 @@ export default function PurchaseTable({ items }) {
       header: "Action",
       key: "action",
 
-      render: () => (
+      render: (row) => (
         <div className="flex items-center gap-5">
-          <button className="text-slate-400 hover:text-red-500 transition">
+          <button 
+            onClick={() => handleStatusUpdate(row._id, "REJECTED")}
+            className="text-slate-400 hover:text-red-500 transition"
+          >
             <X size={20} />
           </button>
 
-          <button className="text-blue-600 hover:text-blue-700 transition">
+          <button 
+            onClick={() => handleStatusUpdate(row._id, "APPROVED")}
+            className="text-blue-600 hover:text-blue-700 transition"
+          >
             <Check size={20} />
           </button>
         </div>

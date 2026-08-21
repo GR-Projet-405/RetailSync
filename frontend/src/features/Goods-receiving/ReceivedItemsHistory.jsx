@@ -6,6 +6,9 @@ import Badge from '../../components/Badge';
 import DataTable from '../../components/DataTable';
 import SearchInput from '../../components/SearchInput';
 import { useReceivedItemsHistory } from '../../hooks/useGoodsReceiving';
+import { getReceivedItemsHistory } from '../../services/goodsReceivingService';
+// 🔔 Adjust this import if your toast utility exports something different
+import { toast } from '../../utils/toast';
 
 const STATUS_VARIANT = {
   MATCHED: 'success',
@@ -26,11 +29,63 @@ export default function ReceivedItemsHistory() {
   const navigate = useNavigate();
   const [filters, setFilters] = useState({ search: '', status: '', page: 1, limit: 10 });
   const { data, isLoading, isError } = useReceivedItemsHistory(filters);
+  const [isExporting, setIsExporting] = useState(false);
 
   const rows = data?.data || [];
   const summary = data?.summary || { totalItems: 0, verified: 0, discrepancy: 0 };
 
   const updateFilter = (field, value) => setFilters((f) => ({ ...f, [field]: value, page: 1 }));
+
+  const escapeCsvCell = (value) => {
+    const str = String(value ?? '');
+    return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+  };
+
+  const handleExportCSV = async () => {
+    setIsExporting(true);
+    try {
+      // Pull every row matching the current search/status filters, ignoring
+      // pagination, so the export isn't limited to just the visible page.
+      const { search, status } = filters;
+      const full = await getReceivedItemsHistory({ search, status, page: 1, limit: 10000 });
+      const exportRows = full?.data || [];
+
+      if (exportRows.length === 0) {
+        toast.error('No items to export for the current filters 😕');
+        return;
+      }
+
+      const headers = ['Item', 'SKU', 'Supplier', 'Qty', 'Date', 'Receipt Number', 'Status'];
+      const csvLines = [
+        headers,
+        ...exportRows.map((row) => [
+          row.item,
+          row.sku,
+          row.supplier || '',
+          row.qty,
+          new Date(row.date).toLocaleDateString(),
+          row.receiptNumber,
+          row.status,
+        ]),
+      ].map((line) => line.map(escapeCsvCell).join(','));
+
+      const blob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `received-items-history-${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success('CSV exported 📄');
+    } catch (err) {
+      toast.error(err.message || 'Could not export CSV 😕');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const columns = [
     { key: 'item', header: 'Item' },
@@ -67,7 +122,11 @@ export default function ReceivedItemsHistory() {
       <PageHeader
         title="Received Items History"
         description="Every item received, across all suppliers and receipts 📜"
-        actions={<Button variant="outline">Export CSV</Button>}
+        actions={
+          <Button variant="outline" onClick={handleExportCSV} disabled={isExporting}>
+            {isExporting ? 'Exporting… ⏳' : 'Export CSV'}
+          </Button>
+        }
       />
 
       <div className="flex flex-wrap gap-3 mb-4">
@@ -130,3 +189,4 @@ export default function ReceivedItemsHistory() {
     </>
   );
 }
+
