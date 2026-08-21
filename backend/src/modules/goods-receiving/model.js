@@ -146,4 +146,4 @@ GoodsReceivingPageSchema.pre("save", async function (next) {
 GoodsReceivingPageSchema.index({ branchId: 1, createdAt: -1 });
 GoodsReceivingPageSchema.index({ status: 1 });
 
-module.exports = mongoose.model("GoodsReceivingPage", GoodsReceivingPageSchema);
+module.exports = mongoose.models.GoodsReceivingPage || mongoose.model("GoodsReceivingPage", GoodsReceivingPageSchema);

@@ -402,7 +402,7 @@ class GoodsReceivingPageService {
     // Inventory / Product module/service, e.g.:
     // await Promise.all(receipt.items.map(i => inventoryService.incrementStock(i.product, receipt.branchId, i.receivedQty)));
     // Resolved the error
-    if (inventoryService) {
+    if (typeof inventoryService !== 'undefined' && inventoryService) {
       await Promise.all(
         receipt.items.map((item) =>
           inventoryService.incrementStock(item.product, receipt.branchId, item.receivedQty)
