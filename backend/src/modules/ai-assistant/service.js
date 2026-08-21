@@ -1,7 +1,12 @@
 const mongoose = require('mongoose');
+const { OpenAI } = require('openai');
 const AIAssistantConversation = require('./model');
 const businessAnalyticsService = require('../business-analytics/service');
 const aiReorderingService = require('../ai-reordering/service');
+
+const EXTERNAL_AI_PROVIDER = 'Google Gemini';
+const EXTERNAL_AI_MODELS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-2.5-flash'];
+const LEGACY_OFFLINE_PREFIX = /^\[AI Offline:[^\]\r\n]*\]\s*/i;
 
 const buildError = (message, statusCode = 400) => {
   const error = new Error(message);
@@ -19,10 +24,43 @@ const formatCurrency = (value = 0) => {
 
 const formatNumber = (value = 0) => Number(value || 0).toLocaleString('en-US');
 
+const isExternalAIConfigured = () => Boolean(process.env.GEMINI_API_KEY?.trim());
+
+const sanitizeLegacyAssistantContent = (content = '') => {
+  const sanitized = String(content).replace(LEGACY_OFFLINE_PREFIX, '').trim();
+  return sanitized || 'The assistant used its built-in rule-based response.';
+};
+
+const sanitizeConversation = (conversation) => {
+  const plain = typeof conversation?.toObject === 'function'
+    ? conversation.toObject()
+    : conversation;
+
+  if (!plain) return plain;
+
+  return {
+    ...plain,
+    messages: (plain.messages || []).map((message) => ({
+      ...message,
+      content:
+        message.role === 'assistant'
+          ? sanitizeLegacyAssistantContent(message.content)
+          : message.content,
+    })),
+  };
+};
+
 const getModuleDetails = async () => ({
   module: 'AI Assistant',
   status: 'Active',
-  strategy: 'Rule-based business assistant using analytics and reorder data. No external LLM is required.',
+  strategy: 'Rule-based business answers with optional external language refinement.',
+  externalAI: {
+    provider: EXTERNAL_AI_PROVIDER,
+    required: false,
+    configured: isExternalAIConfigured(),
+    purpose: 'Optionally rewrites rule-based analytics answers into more natural language.',
+    fallbackBehavior: 'Returns the rule-based answer without exposing provider errors when refinement is unavailable.',
+  },
   examples: [
     'What are total sales this month?',
     'Which products are low stock?',
@@ -235,10 +273,101 @@ const buildAssistantAnswer = async (intent, filters) => {
   };
 };
 
+const createExternalAIClient = () => {
+  if (!isExternalAIConfigured()) return null;
+
+  return new OpenAI({
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    apiKey: process.env.GEMINI_API_KEY,
+  });
+};
+
+const callExternalModel = async (client, messages, modelName, retries = 2) => {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const completion = await client.chat.completions.create({
+        messages,
+        model: modelName,
+        stream: false,
+      });
+      const content = completion.choices?.[0]?.message?.content?.trim();
+      if (!content) throw new Error('External AI returned an empty response.');
+      return content;
+    } catch (error) {
+      const status = error?.status || error?.statusCode;
+      const canRetry = [429, 502, 503].includes(status) && attempt < retries;
+      if (!canRetry) throw error;
+
+      const delay = 3000 * (attempt + 1);
+      console.warn(`LLM ${modelName} returned ${status}, retrying in ${delay}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  return null;
+};
+
 const chat = async ({ message, conversationId, filters = {} }, userId) => {
   const conversation = await getConversation({ conversationId, userId, firstMessage: message });
   const intent = classifyIntent(message);
   const assistantResult = await buildAssistantAnswer(intent, filters);
+
+  const systemPrompt = `You are the RetailSync AI Assistant, a professional business assistant for a retail platform.
+You answer user queries about sales, inventory, and business performance.
+We have retrieved the following business data based on the user's intent:
+${JSON.stringify(assistantResult.data)}
+
+Here is a basic summary:
+${assistantResult.answer}
+
+Provide a helpful, natural language response to the user's message using this data. Be concise and format nicely.`;
+
+  const messagesPayload = [
+    { role: 'system', content: systemPrompt },
+    ...conversation.messages.map((conversationMessage) => ({
+      role: conversationMessage.role,
+      content:
+        conversationMessage.role === 'assistant'
+          ? sanitizeLegacyAssistantContent(conversationMessage.content)
+          : conversationMessage.content,
+    })),
+    { role: 'user', content: message }
+  ];
+
+  let finalAnswer = assistantResult.answer;
+  let responseSource = 'rule-based';
+  const externalAI = {
+    provider: EXTERNAL_AI_PROVIDER,
+    configured: isExternalAIConfigured(),
+    attempted: false,
+    used: false,
+    status: isExternalAIConfigured() ? 'available' : 'not-configured',
+  };
+
+  const externalAIClient = createExternalAIClient();
+  if (externalAIClient) {
+    externalAI.attempted = true;
+    externalAI.status = 'fallback';
+
+    for (const model of EXTERNAL_AI_MODELS) {
+      try {
+        finalAnswer = await callExternalModel(externalAIClient, messagesPayload, model);
+        responseSource = 'external-refinement';
+        externalAI.used = true;
+        externalAI.status = 'success';
+        externalAI.model = model;
+        break;
+      } catch (error) {
+        // Provider details remain in server logs; clients receive the safe,
+        // deterministic rule-based answer if every model is unavailable.
+        console.warn(`Model ${model} failed: ${error.message}`);
+      }
+    }
+
+    if (!externalAI.used) {
+      console.error('All external AI models failed; using the rule-based answer.');
+    }
+  }
 
   conversation.messages.push({
     role: 'user',
@@ -247,10 +376,12 @@ const chat = async ({ message, conversationId, filters = {} }, userId) => {
   });
   conversation.messages.push({
     role: 'assistant',
-    content: assistantResult.answer,
+    content: finalAnswer,
     intent,
     metadata: {
       contextUsed: assistantResult.contextUsed,
+      responseSource,
+      externalAI,
     },
   });
   conversation.lastIntent = intent;
@@ -264,9 +395,11 @@ const chat = async ({ message, conversationId, filters = {} }, userId) => {
   return {
     conversationId: conversation._id,
     intent,
-    answer: assistantResult.answer,
+    answer: finalAnswer,
     contextUsed: assistantResult.contextUsed,
-    conversation,
+    responseSource,
+    externalAI,
+    conversation: sanitizeConversation(conversation),
   };
 };
 
@@ -290,7 +423,7 @@ const getHistory = async (userId, filters = {}) => {
   ]);
 
   return {
-    conversations,
+    conversations: conversations.map(sanitizeConversation),
     pagination: {
       total,
       page,
@@ -300,7 +433,7 @@ const getHistory = async (userId, filters = {}) => {
   };
 };
 
-const getConversationById = async (id, userId) => {
+const findConversationById = async (id, userId) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw buildError('Invalid conversation ID format');
   }
@@ -313,8 +446,13 @@ const getConversationById = async (id, userId) => {
   return conversation;
 };
 
+const getConversationById = async (id, userId) => {
+  const conversation = await findConversationById(id, userId);
+  return sanitizeConversation(conversation);
+};
+
 const deleteConversation = async (id, userId) => {
-  const conversation = await getConversationById(id, userId);
+  const conversation = await findConversationById(id, userId);
   await conversation.deleteOne();
   return { deleted: true, id };
 };

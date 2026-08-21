@@ -15,15 +15,14 @@ const promotionSchema = new mongoose.Schema(
     },
     discount: {
       type: String,
-      required: [true, 'Discount value is required'],
       trim: true,
+      default: '',
     },
     type: {
       type: String,
-      required: [true, 'Promotion type is required'],
       enum: {
-        values: ['Percentage', 'Fixed Amount'],
-        message: 'Type must be either Percentage or Fixed Amount',
+        values: ['Percentage', 'Fixed Amount', 'Free Shipping'],
+        message: 'Type must be either Percentage, Fixed Amount, or Free Shipping',
       },
       default: 'Percentage',
     },
@@ -60,7 +59,7 @@ const promotionSchema = new mongoose.Schema(
     categories: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'CategoryPage',
+        ref: 'Category',
       },
     ],
     createdBy: {

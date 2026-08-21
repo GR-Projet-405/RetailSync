@@ -68,7 +68,7 @@ const GoodsReceivingPageSchema = new mongoose.Schema(
     branchId: {
       type: mongoose.Schema.Types.ObjectId, // was String — fixed
       ref: "Branch",
-      required: true,
+      required: false,
     },
 
     destinationWarehouse: { type: String, required: true, trim: true },
@@ -146,4 +146,4 @@ GoodsReceivingPageSchema.pre("save", async function (next) {
 GoodsReceivingPageSchema.index({ branchId: 1, createdAt: -1 });
 GoodsReceivingPageSchema.index({ status: 1 });
 
-module.exports = mongoose.model("GoodsReceivingPage", GoodsReceivingPageSchema);
+module.exports = mongoose.models.GoodsReceivingPage || mongoose.model("GoodsReceivingPage", GoodsReceivingPageSchema);

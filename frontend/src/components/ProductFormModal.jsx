@@ -146,7 +146,7 @@ export default function ProductFormModal({
       inventory: {
         trackInventory: form.trackInventory,
         reorderPoint: Number(form.reorderPoint) || 0,
-        warehouse: form.warehouse || undefined,
+        // warehouse: form.warehouse || undefined,
       },
       supplier: form.supplier || undefined,
       leadTimeDays: form.leadTimeDays.trim(),
@@ -380,7 +380,7 @@ export default function ProductFormModal({
                 className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:border-blue-500 outline-none"
               />
             </div>
-            <div>
+            {/* <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Warehouse</label>
               <select
                 value={form.warehouse}
@@ -392,7 +392,7 @@ export default function ProductFormModal({
                   <option key={w._id} value={w._id}>{w.name}</option>
                 ))}
               </select>
-            </div>
+            </div> */}
           </div>
 
           <label className="flex items-center gap-2 text-sm text-slate-700">

@@ -54,7 +54,8 @@ class PurchaseOrderPageService {
   async fetchById(id) {
     const order = await PurchaseOrderPage.findById(id)
       .populate('supplier')
-      .populate('items.product');
+      .populate('items.product')
+      .populate('createdBy', 'firstName lastName username email');
     if (!order) {
       const err = new Error('Purchase order not found');
       err.statusCode = 404;
@@ -65,7 +66,10 @@ class PurchaseOrderPageService {
 
   // ── Step 1: supplier typeahead search ──
   async searchSuppliers(search = '') {
-    const filter = search ? { name: { $regex: search, $options: 'i' } } : {};
+    const filter = { status: 'Active' };
+   if (search) {
+     filter.name = { $regex: search, $options: 'i' };
+ }
     const suppliers = await Supplier.find(filter).select('name supplierId').limit(20);
 
     return suppliers.map((s) => ({
@@ -274,7 +278,7 @@ class PurchaseOrderPageService {
     const order = new PurchaseOrderPage({
       ...payload,
       orderDate: new Date(),
-      createdBy: userId,
+      createdBy: userId || null,
     });
     await order.save();
     return order;

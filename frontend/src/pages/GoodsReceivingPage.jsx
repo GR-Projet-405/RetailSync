@@ -1,6 +1,6 @@
 import PageHeader from '../components/PageHeader';
 import WorkspaceContainer from '../components/WorkspaceContainer';
-import GoodsReceivingDashboard from '../features/goods-receiving/GoodsReceivingDashboard';
+import GoodsReceivingDashboard from '../features/Goods-receiving/GoodsReceivingDashboard';
 
 
 export default function GoodsReceivingPage() {

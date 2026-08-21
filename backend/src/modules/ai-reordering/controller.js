@@ -41,6 +41,15 @@ const updateRecommendationStatus = asyncHandler(async (req, res) => {
 });
 
 const convertToPurchaseOrder = asyncHandler(async (req, res) => {
+  const recommendation = await service.getRecommendationById(req.params.id);
+
+  if (!recommendation.productId) {
+    return res.status(400).json({
+      success: false,
+      message: 'This recommendation does not have a linked product and cannot be converted to a Purchase Order. Please ensure the recommendation is linked to a valid product before converting.',
+    });
+  }
+
   const data = await service.convertToPurchaseOrder(req.params.id, req.body, req.user?._id);
   sendSuccess(res, 200, 'AI reorder recommendation converted to purchase order draft.', data);
 });

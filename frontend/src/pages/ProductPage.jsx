@@ -11,6 +11,8 @@ import { cn } from '../utils/cn';
 import ProductFormModal from '../components/ProductFormModal';
 import ProductDetailsModal from '../components/ProductDetailsModal';
 import { useCategories } from '../hooks/useCategories';
+import {useSuppliers}from '../hooks/useSuppliers';
+// import{useWarehouses}from '../hooks/useWarehouses';
 import {
   useProductsList,
   useProduct,
@@ -43,6 +45,8 @@ function useDebouncedValue(value, delay = 350) {
 export default function ProductPage() {
   // ---- Categories for filter dropdown + Add/Edit form ----
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+  const { data: suppliers = [] } = useSuppliers({ status: 'Active' });
+  // const {data:warehouses = []} = useWarehouses();
 
   // ---- Filters / pagination state (Product List + Product Search combined) ----
   const [searchTerm, setSearchTerm] = useState('');
@@ -303,6 +307,8 @@ export default function ProductPage() {
         isSubmitting={isSaving}
         product={formModal.product}
         categories={categories}
+        suppliers={suppliers}
+        //warehouses = {warehouses}
       />
 
       {/* Details modal */}

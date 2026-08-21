@@ -15,6 +15,7 @@ const seedCategories           = require('./categories.seeder');
 const seedSuppliers            = require('./suppliers.seeder');
 const seedReports              = require('./reports.seeder');
 const seedProductsAndInventory = require('./productsAndInventory.seeder');
+const seedAIModules = require('./aiModules.seeder');
 
 const runSeeders = async () => {
   try {
@@ -33,8 +34,12 @@ const runSeeders = async () => {
     await seedCategories();
     await seedSuppliers();
     await seedReports();
-    await seedProductsAndInventory();
-
+    try {
+      await seedProductsAndInventory();
+    } catch (err) {
+      console.warn('Warning: Products/Inventory seeder had errors (non-fatal):', err.message);
+    }
+    await seedAIModules();
     console.log('--- Seed Process Completed Successfully ---');
 
     process.exit(0);
