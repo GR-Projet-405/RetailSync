@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 const Product = require('./model');
+const SaleTransaction = require('../sales-history/model')
+const PurchaseOrder = require('../purchase-orders/model')
 
 class ProductService {
   /**
@@ -216,22 +218,31 @@ class ProductService {
    * wire it up to the Sales/PurchaseOrder models once those modules expose them.
    */
   async deleteProduct(id) {
-    const product = await Product.findById(id);
-    if (!product) {
-      const err = new Error('Product not found.');
-      err.statusCode = 404;
-      throw err;
-    }
-
-    // TODO: integrate real checks once sales-management / purchase-order-management
-    // modules are available, e.g.:
-    // const hasSales = await SaleTransaction.exists({ 'items.product': id });
-    // const hasOpenPO = await PurchaseOrder.exists({ 'items.product': id, status: { $ne: 'FULLY_RECEIVED' } });
-    // if (hasSales || hasOpenPO) { throw 409 error }
-
-    await product.deleteOne();
-    return { deleted: true, id };
+  const product = await Product.findById(id);
+  if (!product) {
+    const err = new Error('Product not found.');
+    err.statusCode = 404;
+    throw err;
   }
+
+  // BR-INV-005: block delete if the product is referenced by any sale
+  // or any purchase order that hasn't been fully received.
+  const [hasSales, hasOpenPO] = await Promise.all([
+    SaleTransaction.exists({ 'items.product': id }),
+    PurchaseOrder.exists({ 'items.product': id, status: { $ne: 'FULLY_RECEIVED' } })
+  ]);
+
+  if (hasSales || hasOpenPO) {
+    const err = new Error(
+      'Cannot delete product: it is referenced by existing sales transactions or open purchase orders.'
+    );
+    err.statusCode = 409; // Conflict
+    throw err;
+  }
+
+  await product.deleteOne();
+  return { deleted: true, id };
+}
 }
 
 module.exports = new ProductService();
