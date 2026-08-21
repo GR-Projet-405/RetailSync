@@ -27,6 +27,7 @@ const processPayment = asyncHandler(async (req, res) => {
   const paymentData = req.body;
 
   paymentData.cashierId = req.user._id; // Attach the cashier's ID from the authenticated user
+  paymentData.branchId = req.user?.branchId?._id || req.user?.branchId || null; // Branch context for the Sale record
 
   const transaction = await service.processTransaction(paymentData);
   res.status(201).json({

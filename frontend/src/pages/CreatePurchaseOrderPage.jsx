@@ -19,6 +19,14 @@ import {
 /* API base */
 const API_BASE = "/api/v1/purchase-orders";
 
+const getAuthHeaders = (extra = {}) => {
+  const token = localStorage.getItem('token');
+  return {
+    ...extra,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 const TAX_RATE = 0.085;
 const SHIPPING_FLAT = 45.0;
 
@@ -107,7 +115,7 @@ function SupplierStep({ data, setData, onNext, onCancel }) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetch(`${API_BASE}/suppliers?search=${encodeURIComponent(query)}`)
+      fetch(`${API_BASE}/suppliers?search=${encodeURIComponent(query)}`, { headers: getAuthHeaders() })
         .then((res) => res.json())
         .then((json) => {
           if (json.success) setSuppliers(json.data || []);
@@ -120,8 +128,20 @@ function SupplierStep({ data, setData, onNext, onCancel }) {
   const filtered = suppliers;
 
   const selectSupplier = async (supplier) => {
+    // Set supplier state and query optimistically so selection happens instantly
+    setData((prev) => ({
+      ...prev,
+      supplier: {
+        _id: supplier._id,
+        id: supplier.supplierId,
+        name: supplier.name,
+      },
+    }));
+    setQuery(supplier.name);
+    setShowDropdown(false);
+
     try {
-      const res = await fetch(`${API_BASE}/suppliers/${supplier._id}`);
+      const res = await fetch(`${API_BASE}/suppliers/${supplier._id}`, { headers: getAuthHeaders() });
       const json = await res.json();
       if (!json.success) throw new Error(json.message);
       const detail = json.data;
@@ -129,20 +149,17 @@ function SupplierStep({ data, setData, onNext, onCancel }) {
       setData((prev) => ({
         ...prev,
         supplier: {
-          _id: detail.supplierId,
-          id: detail.supplierCode,
-          name: detail.name,
+          _id: detail.supplierId || supplier._id,
+          id: detail.supplierCode || supplier.supplierId,
+          name: detail.name || supplier.name,
           contactTitle: detail.contact?.role || "",
         },
         contactPerson: detail.contact?.name || "",
         email: detail.contact?.email || "",
         phone: detail.contact?.phone || "",
       }));
-      setQuery(detail.name);
     } catch (err) {
       console.error("Failed to load supplier details:", err);
-    } finally {
-      setShowDropdown(false);
     }
   };
 
@@ -172,18 +189,25 @@ function SupplierStep({ data, setData, onNext, onCancel }) {
                 onChange={(e) => {
                   setQuery(e.target.value);
                   setShowDropdown(true);
-                  if (data.supplier) setData((p) => ({ ...p, supplier: null }));
+                  if (data.supplier && e.target.value.trim() !== (data.supplier.name || "").trim()) {
+                    setData((p) => ({ ...p, supplier: null }));
+                  }
                 }}
                 onFocus={() => setShowDropdown(true)}
+                onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
               />
             </div>
-            {showDropdown && query && filtered.length > 0 && (
-              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+            {showDropdown && filtered.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden max-h-60 overflow-y-auto">
                 {filtered.map((s) => (
                   <button
                     key={s._id}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      selectSupplier(s);
+                    }}
                     onClick={() => selectSupplier(s)}
-                    className="w-full text-left px-3 py-2.5 hover:bg-blue-50 transition-colors flex items-center gap-2 border-b border-gray-100 last:border-0"
+                    className="w-full text-left px-3 py-2.5 hover:bg-blue-50 transition-colors flex items-center gap-2 border-b border-gray-100 last:border-0 cursor-pointer"
                   >
                     <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     <div>
@@ -192,6 +216,11 @@ function SupplierStep({ data, setData, onNext, onCancel }) {
                     </div>
                   </button>
                 ))}
+              </div>
+            )}
+            {showDropdown && filtered.length === 0 && (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm text-gray-500 text-center">
+                No suppliers found.
               </div>
             )}
           </div>
@@ -305,7 +334,8 @@ function AddItemsStep({ data, setData, onNext, onBack }) {
   const [loadingCatalog, setLoadingCatalog] = useState(false);
 
   useEffect(() => {
-    if (!data.supplier?._id) {
+    const supplierId = data.supplier?._id || data.supplier?.id || (typeof data.supplier === "string" ? data.supplier : null);
+    if (!supplierId) {
       setCatalog([]);
       setLoadingCatalog(false);
       return;
@@ -313,7 +343,7 @@ function AddItemsStep({ data, setData, onNext, onBack }) {
 
     setLoadingCatalog(true);
     const timer = setTimeout(() => {
-      fetch(`${API_BASE}/catalog?search=${encodeURIComponent(search)}&supplierId=${data.supplier._id}`)
+      fetch(`${API_BASE}/catalog?search=${encodeURIComponent(search)}&supplierId=${supplierId}`, { headers: getAuthHeaders() })
         .then((res) => res.json())
         .then((json) => {
           if (json.success) {
@@ -330,9 +360,17 @@ function AddItemsStep({ data, setData, onNext, onBack }) {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [search, data.supplier?._id]);
+  }, [search, data.supplier]);
 
-  const filteredCatalog = catalog;
+  const filteredCatalog = catalog.filter((product) => {
+    if (!search || !search.trim()) return true;
+    const term = search.toLowerCase().trim();
+    return (
+      (product.name && product.name.toLowerCase().includes(term)) ||
+      (product.sku && product.sku.toLowerCase().includes(term)) ||
+      (product.category && String(product.category).toLowerCase().includes(term))
+    );
+  });
 
   const getQty = (sku) => data.items.find((i) => i.sku === sku)?.qty || 0;
 
@@ -373,6 +411,8 @@ function AddItemsStep({ data, setData, onNext, onBack }) {
   const shipping = data.items.length > 0 ? SHIPPING_FLAT : 0;
   const total = subtotal + tax + shipping;
 
+  const hasSupplier = Boolean(data.supplier?._id || data.supplier?.id || data.supplier);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6">
       <div className="border border-gray-200 rounded-xl bg-white p-5">
@@ -388,25 +428,23 @@ function AddItemsStep({ data, setData, onNext, onBack }) {
         </div>
 
         <div className="flex flex-col gap-3 max-h-[520px] overflow-y-auto pr-1">
-          {!data.supplier?._id && (
+          {!hasSupplier && (
             <p className="text-sm text-gray-500 text-center py-8">
               Select a supplier in step 1 to load that supplier&apos;s items.
             </p>
           )}
 
-          {data.supplier?._id && loadingCatalog && (
+          {hasSupplier && loadingCatalog && (
             <p className="text-sm text-gray-500 text-center py-8">Loading supplier items...</p>
           )}
 
-          {data.supplier?._id && !loadingCatalog && filteredCatalog.map((product) => {
+          {hasSupplier && !loadingCatalog && filteredCatalog.map((product) => {
             const qty = getQty(product.sku);
             const outOfStock = product.availableStock === 0;
             return (
               <div
                 key={product.sku}
-                className={`border border-gray-200 rounded-lg p-4 flex items-center gap-3 ${
-                  outOfStock ? "opacity-60" : ""
-                }`}
+                className="border border-gray-200 rounded-lg p-4 flex items-center gap-3"
               >
                 <ProductThumbnail src={product.imageUrl} alt={product.name} />
 
@@ -423,7 +461,7 @@ function AddItemsStep({ data, setData, onNext, onBack }) {
 
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button
-                    disabled={outOfStock || qty === 0}
+                    disabled={qty === 0}
                     onClick={() => setQty(product, qty - 1)}
                     className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
@@ -431,9 +469,8 @@ function AddItemsStep({ data, setData, onNext, onBack }) {
                   </button>
                   <span className="w-6 text-center text-sm font-semibold text-gray-700">{qty}</span>
                   <button
-                    disabled={outOfStock}
                     onClick={() => setQty(product, qty + 1)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5" />
                   </button>
@@ -442,7 +479,7 @@ function AddItemsStep({ data, setData, onNext, onBack }) {
             );
           })}
 
-          {data.supplier?._id && !loadingCatalog && filteredCatalog.length === 0 && (
+          {hasSupplier && !loadingCatalog && filteredCatalog.length === 0 && (
             <p className="text-sm text-gray-500 text-center py-8">
               No items are available for this supplier yet. Add products and link them to the supplier in Product Management.
             </p>
@@ -771,7 +808,7 @@ export default function CreatePurchaseOrderPage() {
     setLoadingOrder(true);
     setLoadError(null);
 
-    fetch(`${API_BASE}/${orderId}`)
+    fetch(`${API_BASE}/${orderId}`, { headers: getAuthHeaders() })
       .then((res) => res.json())
       .then((json) => {
         if (cancelled) return;
@@ -855,7 +892,7 @@ export default function CreatePurchaseOrderPage() {
 
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(buildPayload(true)),
       });
       const json = await res.json();
@@ -873,7 +910,7 @@ export default function CreatePurchaseOrderPage() {
   const handleDiscard = async () => {
     if (orderId) {
       try {
-        const res = await fetch(`${API_BASE}/${orderId}`, { method: "DELETE" });
+        const res = await fetch(`${API_BASE}/${orderId}`, { method: "DELETE", headers: getAuthHeaders() });
         const json = await res.json();
         if (!json.success) throw new Error(json.message || "Failed to discard purchase order");
       } catch (err) {

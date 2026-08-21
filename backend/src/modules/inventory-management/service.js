@@ -4,9 +4,6 @@ const InventoryItem = require('./inventoryItem.model');
 const StockMovement = require('./stockMovement.model');
 const StockAdjustment = require('./stockAdjustment.model');
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
 
 function notFound(entity) {
   const err = new Error(`${entity} not found`);
@@ -36,9 +33,7 @@ const ADD_TYPES = new Set(['PURCHASE', 'TRANSFER_IN', 'ADJUSTMENT_ADD', 'RETURN_
 // Movement types that decrease stock
 const SUB_TYPES = new Set(['SALE', 'TRANSFER_OUT', 'ADJUSTMENT_REMOVE', 'RETURN_OUT', 'DAMAGE_WRITE_OFF']);
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Dashboard
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Aggregate KPI numbers for the dashboard.
@@ -131,9 +126,7 @@ const getRecentMovementsForDashboard = async (limit = 5) => {
     .lean();
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Stock Levels
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Paginated stock levels with optional filters.
@@ -238,7 +231,7 @@ const getStockLevels = async ({
  */
 const getStockLevelById = async (id) => {
   const item = await InventoryItem.findById(id)
-    .populate({ path: 'productId', populate: [{ path: 'categoryId' }, { path: 'supplierId' }] })
+    .populate({ path: 'productId', populate: [{ path: 'category' }, { path: 'supplier' }] })
     .populate('warehouseId')
     .lean();
   if (!item) throw notFound('Inventory item');
@@ -259,9 +252,7 @@ const updateReorderLevel = async (id, reorderLevel) => {
   return item;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Stock Movements
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * KPI counts for the stock movements screen header.
@@ -380,9 +371,7 @@ const recordMovement = async ({
   ]);
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Stock Adjustments
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Paginated stock adjustments with filters.
@@ -504,9 +493,7 @@ const rejectAdjustment = async (id, reviewedBy, rejectionReason) => {
   ]);
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Low Stock Alerts
-// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Items where currentStock <= reorderLevel, with severity computed server-side.
@@ -625,7 +612,6 @@ const getLowStockStats = async () => {
   return stats;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
 
 module.exports = {
   // Dashboard

@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useDashboardKPIs, useCategoryBreakdown, useDashboardRecentMovements } from '../../hooks/useInventory';
+import { useBranches } from '../../hooks/useBranches';
+import { useWarehouses } from '../../hooks/useWarehouses';
 import { useAuth } from '../../contexts/AuthContext';
 
 // Static 
@@ -321,13 +323,25 @@ export default function InventoryDashboard() {
   const { branches = [] } = useAuth();
   const [activeBranch, setActiveBranch] = useState('All Branches');
 
-  const { data: apiKPIs, isLoading: kpiLoading } = useDashboardKPIs(
-    activeBranch === 'All Branches' ? [] : [activeBranch]
+  const { data: branchRes } = useBranches();
+  const activeBranchObject = useMemo(
+    () => branchRes?.data?.find(branch => branch.name === activeBranch || branch.branchName === activeBranch),
+    [branchRes, activeBranch]
   );
+  const activeBranchId = activeBranchObject?._id;
+  const { data: warehousesRes } = useWarehouses(activeBranchId ? { branchId: activeBranchId } : {});
+  const activeWarehouseIds = useMemo(
+    () => activeBranch === 'All Branches' || !activeBranchId
+      ? []
+      : (warehousesRes?.data ?? []).map(warehouse => warehouse._id).filter(Boolean),
+    [activeBranch, activeBranchId, warehousesRes]
+  );
+
+  const { data: apiKPIs, isLoading: kpiLoading } = useDashboardKPIs(activeWarehouseIds);
   const { data: apiCategories, isLoading: catLoading } = useCategoryBreakdown();
   const { data: apiMovements, isLoading: movLoading } = useDashboardRecentMovements(5);
 
-  const kpiData = apiKPIs ?? BRANCH_KPIS[activeBranch];
+  const kpiData = apiKPIs ?? BRANCH_KPIS[activeBranch] ?? BRANCH_KPIS['All Branches'];
 
   const categoryData = useMemo(() => {
     if (apiCategories?.length) {

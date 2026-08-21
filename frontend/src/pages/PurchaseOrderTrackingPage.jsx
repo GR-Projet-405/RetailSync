@@ -16,6 +16,14 @@ import { ROLES } from '../config/roles';
 
 const API_BASE = "/api/v1/purchase-orders";
 
+const getAuthHeaders = (extra = {}) => {
+  const token = localStorage.getItem('token');
+  return {
+    ...extra,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 // ── Status config (mirrors list / details pages) ─────────────────────────────
 const STATUS_CONFIG = {
   FULLY_RECEIVED: { label: "Fully Received", badgeClass: "bg-green-100 text-green-700 border-green-200" },
@@ -104,20 +112,63 @@ function getProductImage(product) {
   return primary?.url || null;
 }
 
+function ReceiveConfirmModal({ mode, onConfirm, onCancel, submitting }) {
+  const isAll = mode === "ALL";
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+        <div className="flex items-center gap-3 mb-3">
+          <div className={`w-9 h-9 rounded-full ${isAll ? "bg-green-50" : "bg-blue-50"} flex items-center justify-center flex-shrink-0`}>
+            <CheckCircle2 className={`w-5 h-5 ${isAll ? "text-green-600" : "text-blue-600"}`} />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900">
+            {isAll ? "Receive All Items?" : "Receive Partially?"}
+          </h3>
+        </div>
+        <p className="text-sm text-gray-500 mb-6">
+          {isAll
+            ? "Are you sure you want to mark this entire purchase order as fully received?"
+            : "Are you sure you want to open the partial receipt process for this purchase order?"}
+        </p>
+        <div className="flex items-center justify-end gap-3">
+          <button
+            onClick={onCancel}
+            disabled={submitting}
+            className="px-4 py-2.5 rounded-lg border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={submitting}
+            className={`px-4 py-2.5 rounded-lg ${isAll ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"} text-white text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2`}
+          >
+            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isAll ? "Receive All" : "Receive Partially"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function PurchaseOrderTrackingPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { hasRole } = useAuth();
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [receiveModalMode, setReceiveModalMode] = useState(null);
+  const [submittingReceive, setSubmittingReceive] = useState(false);
 
   const fetchOrder = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/${id}`);
+      const res = await fetch(`${API_BASE}/${id}`, { headers: getAuthHeaders() });
       const json = await res.json();
       if (!res.ok || !json.success) {
         throw new Error(json.message || "Failed to load tracking details");
@@ -134,7 +185,7 @@ export default function PurchaseOrderTrackingPage() {
     if (id) fetchOrder();
   }, [id, fetchOrder]);
 
-  const goBack = () => navigate(-1);
+  const goBack = () => navigate("/purchase-orders");
 
   /* ── Loading state ── */
   if (loading) {
@@ -178,32 +229,14 @@ export default function PurchaseOrderTrackingPage() {
 
   const totalUnits = items.reduce((sum, i) => sum + (i.quantity || 0), 0);
   const recordedReceivedUnits = items.reduce((sum, i) => sum + (i.receivedQuantity || 0), 0);
-
-  // The schema only stamps per-item `receivedQuantity` when an order goes
-  // FULLY_RECEIVED — there's no per-item receiving UI yet for partial
-  // receipts. Until that exists, show an estimated 50% progress whenever
-  // the order is PARTIALLY_RECEIVED and nothing's actually been recorded,
-  // so the bar isn't stuck at 0%.
-  const hasRecordedPartialData = order.status === "PARTIALLY_RECEIVED" && recordedReceivedUnits > 0;
-  const isEstimatedPartial = order.status === "PARTIALLY_RECEIVED" && !hasRecordedPartialData;
-
-  const receivedUnits = isEstimatedPartial
-    ? Math.round(totalUnits * 0.5)
-    : recordedReceivedUnits;
-
-  const receivedPct = isEstimatedPartial
-    ? 50
-    : totalUnits > 0
-    ? Math.round((receivedUnits / totalUnits) * 100)
-    : 0;
-
+  const receivedUnits = recordedReceivedUnits;
+  const receivedPct = totalUnits > 0 ? Math.round((receivedUnits / totalUnits) * 100) : 0;
   const remainingUnits = Math.max(totalUnits - receivedUnits, 0);
 
   const daysLeft = daysUntil(order.expectedDeliveryDate);
   const isFullyReceived = order.status === "FULLY_RECEIVED";
   const isCancelled = order.status === "CANCELLED";
   const onTrack = !isCancelled && (isFullyReceived || (daysLeft !== null && daysLeft >= 0));
-  const { hasRole } = useAuth();
   const isInventoryStaff = hasRole(ROLES.INVENTORY_MANAGER);
 
   const stepDates = [
@@ -215,8 +248,32 @@ export default function PurchaseOrderTrackingPage() {
     order.status === "FULLY_RECEIVED" ? formatDate(order.fullyReceivedAt) : null,
   ];
 
+  const handleConfirmReceive = async () => {
+    if (!receiveModalMode) return;
+    setSubmittingReceive(true);
+    try {
+      const res = await fetch(`${API_BASE}/${id}/receive?mode=${receiveModalMode}`, { method: 'POST', headers: getAuthHeaders() });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || 'Failed to process receipt');
+      setReceiveModalMode(null);
+      await fetchOrder();
+    } catch (err) {
+      setError(err.message || 'Failed to process receipt.');
+    } finally {
+      setSubmittingReceive(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 px-6 py-8">
+      {receiveModalMode && (
+        <ReceiveConfirmModal
+          mode={receiveModalMode}
+          onConfirm={handleConfirmReceive}
+          onCancel={() => setReceiveModalMode(null)}
+          submitting={submittingReceive}
+        />
+      )}
       {/* ── Header ── */}
       <div className="flex items-start justify-between mb-8 flex-wrap gap-3">
         <div>
@@ -292,7 +349,6 @@ export default function PurchaseOrderTrackingPage() {
                 {!isFullyReceived && (
                   <p className="mt-2 text-xs text-blue-500 font-medium italic">
                     Remaining: {remainingUnits} units pending from Supplier
-                    {isEstimatedPartial && " (estimated)"}
                   </p>
                 )}
               </div>
@@ -400,34 +456,14 @@ export default function PurchaseOrderTrackingPage() {
               <div className="mt-4 flex gap-2">
                 <button
                   type="button"
-                  onClick={async () => {
-                    if (!window.confirm('Mark entire order as received?')) return;
-                    try {
-                      const res = await fetch(`${API_BASE}/${id}/receive?mode=ALL`, { method: 'POST' });
-                      const json = await res.json();
-                      if (!res.ok || !json.success) throw new Error(json.message || 'Failed to receive order');
-                      await fetchOrder();
-                    } catch (err) {
-                      alert(err.message || 'Failed to receive order');
-                    }
-                  }}
+                  onClick={() => setReceiveModalMode("ALL")}
                   className="flex-1 px-3 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors"
                 >
                   Receive All
                 </button>
                 <button
                   type="button"
-                  onClick={async () => {
-                    if (!window.confirm('Open partial receive flow?')) return;
-                    try {
-                      const res = await fetch(`${API_BASE}/${id}/receive?mode=PARTIAL`, { method: 'POST' });
-                      const json = await res.json();
-                      if (!res.ok || !json.success) throw new Error(json.message || 'Failed to partially receive order');
-                      await fetchOrder();
-                    } catch (err) {
-                      alert(err.message || 'Failed to partially receive order');
-                    }
-                  }}
+                  onClick={() => setReceiveModalMode("PARTIAL")}
                   className="flex-1 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   Receive Partially

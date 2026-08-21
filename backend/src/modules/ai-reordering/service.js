@@ -1,13 +1,16 @@
 const mongoose = require('mongoose');
 const AIReorderRecommendation = require('./model');
 const BusinessAnalyticsSnapshot = require('../business-analytics/model');
+const Product = require('../product-management/model');
 const PurchaseOrderPageService = require('../purchase-orders/service');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const buildError = (message, statusCode = 400) => {
+const buildError = (message, statusCode = 400, code, details) => {
   const error = new Error(message);
   error.statusCode = statusCode;
+  if (code) error.code = code;
+  if (details) error.details = details;
   return error;
 };
 
@@ -125,6 +128,12 @@ const getModuleDetails = async () => ({
   module: 'AI Reordering',
   status: 'Active',
   strategy: 'Rule-based recommendation engine using Business Analytics snapshots.',
+  purchaseOrderConversion: {
+    allowedRecommendationStatuses: ['PENDING', 'APPROVED'],
+    requiresLinkedProduct: true,
+    requiresExistingSupplier: true,
+    resultStatus: 'DRAFT',
+  },
   endpoints: [
     'POST /api/v1/ai-reordering/generate',
     'GET /api/v1/ai-reordering/recommendations',
@@ -176,7 +185,34 @@ const getProductDemandSignals = async (filters = {}) => {
   );
 
   const signals = await BusinessAnalyticsSnapshot.aggregate(pipeline);
-  return { signals, startDate, endDate, demandWindowDays: getWindowDays(startDate, endDate) };
+  const productIds = signals.map((signal) => signal.productId).filter(Boolean);
+  const products = productIds.length
+    ? await Product.find({ _id: { $in: productIds } })
+        .select('_id supplier')
+        .populate('supplier', 'name')
+        .lean()
+    : [];
+  const supplierByProductId = new Map(
+    products.map((product) => [String(product._id), product.supplier || null])
+  );
+
+  const enrichedSignals = signals.map((signal) => {
+    const supplier = signal.productId
+      ? supplierByProductId.get(String(signal.productId))
+      : null;
+    return {
+      ...signal,
+      supplierId: supplier?._id || null,
+      supplierName: supplier?.name || '',
+    };
+  });
+
+  return {
+    signals: enrichedSignals,
+    startDate,
+    endDate,
+    demandWindowDays: getWindowDays(startDate, endDate),
+  };
 };
 
 const buildRecommendationPayload = (signal, config, generatedBy) => {
@@ -230,6 +266,8 @@ const buildRecommendationPayload = (signal, config, generatedBy) => {
     branchId: signal.branchId || null,
     branchName: signal.branchName || 'All Branches',
     branchCode: signal.branchCode || 'ALL',
+    supplierId: signal.supplierId || null,
+    supplierName: signal.supplierName || '',
     currentStock: signal.currentStock || 0,
     reorderLevel: signal.reorderLevel || 0,
     averageDailySales,
@@ -392,7 +430,7 @@ const updateRecommendationStatus = async (id, payload, userId) => {
   return recommendation;
 };
 
-const convertToPurchaseOrder = async (id, payload, userId) => {
+const convertToPurchaseOrder = async (id, payload = {}, userId) => {
   const recommendation = await getRecommendationById(id);
 
   if (!['PENDING', 'APPROVED'].includes(recommendation.status)) {
@@ -400,12 +438,32 @@ const convertToPurchaseOrder = async (id, payload, userId) => {
   }
 
   if (!recommendation.productId) {
-    throw buildError('This recommendation does not have a linked product.', 400);
+    throw buildError(
+      'This recommendation cannot be converted because it is not linked to a product.',
+      400,
+      'AI_REORDER_PRODUCT_REQUIRED',
+      [
+        {
+          field: 'productId',
+          message: 'Create or regenerate the recommendation with a valid productId before converting it.',
+        },
+      ]
+    );
   }
 
   const supplierId = payload.supplierId || recommendation.supplierId;
   if (!supplierId) {
-    throw buildError('A supplier must be selected to generate a purchase order draft.', 400);
+    throw buildError(
+      'A supplier must be selected to generate a purchase order draft.',
+      400,
+      'AI_REORDER_SUPPLIER_REQUIRED',
+      [
+        {
+          field: 'supplierId',
+          message: 'Provide an existing supplierId or link a supplier to the recommendation.',
+        },
+      ]
+    );
   }
 
   // Create a real draft purchase order via the canonical service
