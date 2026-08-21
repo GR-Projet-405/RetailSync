@@ -38,4 +38,4 @@ require('./inventoryItem.model');
 require('./stockMovement.model');
 require('./stockAdjustment.model');
 
-module.exports = mongoose.model('Inventory', inventorySchema);
+module.exports = mongoose.models.Inventory || mongoose.model('Inventory', inventorySchema);

@@ -56,4 +56,4 @@ inventoryItemSchema.virtual('stockStatus').get(function () {
   return 'IN_STOCK';
 });
 
-module.exports = mongoose.model('InventoryItem', inventoryItemSchema);
+module.exports = mongoose.models.InventoryItem || mongoose.model('InventoryItem', inventoryItemSchema);

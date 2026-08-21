@@ -99,4 +99,4 @@ stockAdjustmentSchema.index({ status: 1 });
 stockAdjustmentSchema.index({ requestedBy: 1 });
 stockAdjustmentSchema.index({ createdAt: -1 });
 
-module.exports = mongoose.model('StockAdjustment', stockAdjustmentSchema);
+module.exports = mongoose.models.StockAdjustment || mongoose.model('StockAdjustment', stockAdjustmentSchema);
