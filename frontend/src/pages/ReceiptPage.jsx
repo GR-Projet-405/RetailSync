@@ -37,6 +37,14 @@ export default function ReceiptPage() {
 
     const qrVerificationData = `Receipt ID: ${shortTxnId}\nTotal: Rs. ${formatCurrency(transaction.finalTotal)}\nDate: ${formatDate(transaction.createdAt)}`;
 
+    // Resolve branch name from cashier data; fall back to a neutral label
+    const cashierObj = transaction.cashierId || {};
+    const branchObj = cashierObj.branchId || {};
+    const receiptBranchName = branchObj.branchName || branchObj.name || 'Store';
+    const cashierFirstName = cashierObj.firstName || '';
+    const cashierLastName = cashierObj.lastName || '';
+    const receiptCashierName = [cashierFirstName, cashierLastName].filter(Boolean).join(' ') || 'Cashier';
+
     return (
         <>
             <style>
@@ -91,7 +99,7 @@ export default function ReceiptPage() {
                             <Store size={22} />
                         </div>
                         <h1 className="text-xl font-extrabold tracking-tight text-black uppercase">RetailOS Pro</h1>
-                        <p className="text-xs font-bold text-gray-800 mt-0.5">Downtown Flagship Store</p>
+                        <p className="text-xs font-bold text-gray-800 mt-0.5">{receiptBranchName}</p>
                         <p className="text-[10px] text-gray-600 mt-0.5">123 Commerce Str, Colombo 03</p>
                         <p className="text-[10px] text-gray-600">Tel: +94 11 234 5678</p>
                     </div>
@@ -99,7 +107,7 @@ export default function ReceiptPage() {
                     <div className="space-y-1 text-[11px] font-medium text-black">
                         <div className="flex justify-between"><span>Date:</span> <span className="font-bold">{formatDate(transaction.createdAt)}</span></div>
                         <div className="flex justify-between"><span>Receipt No:</span> <span className="font-bold">{shortTxnId}</span></div>
-                        <div className="flex justify-between"><span>Cashier:</span> <span className="font-bold">Nimal Perera</span></div>
+                        <div className="flex justify-between"><span>Cashier:</span> <span className="font-bold">{receiptCashierName}</span></div>
                     </div>
 
                     <div className="w-full my-3 border-b border-gray-400 border-dashed" />

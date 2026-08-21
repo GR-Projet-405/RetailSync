@@ -51,7 +51,7 @@ export default function TransactionDetailsPage() {
     const cashierFullName = `${cashierFirstName} ${cashierLastName}`.trim();
 
     const branchObj = cashier.branchId || {};
-    const branchName = branchObj.branchName || branchObj.name || 'Downtown Flagship';
+    const branchName = branchObj.branchName || branchObj.name || 'Branch N/A';
 
     console.log("Cashier Object:", cashier);
     console.log("Branch ID/Object:", cashier.branchId);

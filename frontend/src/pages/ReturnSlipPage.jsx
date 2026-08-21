@@ -90,7 +90,7 @@ export default function ReturnSlipPage() {
           </div>
           <h1 className="text-xl font-extrabold text-slate-900">RetailOS Pro</h1>
           <p className="text-sm font-bold tracking-wide uppercase text-emerald-600">Return & Refund Slip</p>
-          <p className="mt-1 text-xs text-slate-500">Downtown Flagship Store</p>
+          <p className="mt-1 text-xs text-slate-500">RetailSync Store</p>
           <p className="text-xs text-slate-500">123 Commerce Str, Colombo 03</p>
         </div>
 

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   TrendingUp, TrendingDown, ChevronDown, ArrowUpRight,
@@ -320,8 +320,8 @@ function KPICard({ label, value, trend, up, badWhenUp, onClick, linkLabel }) {
 
 export default function InventoryDashboard() {
   const navigate = useNavigate();
-  const { branches = [] } = useAuth();
-  const [activeBranch, setActiveBranch] = useState('All Branches');
+  // Use the global activeBranch from AuthContext — the local state has been removed (Bug Fix #1)
+  const { branches = [], activeBranch } = useAuth();
 
   const { data: branchRes } = useBranches();
   const activeBranchObject = useMemo(
@@ -373,7 +373,8 @@ export default function InventoryDashboard() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Inventory Dashboard</h1>
         </div>
-        <BranchDropdown activeBranch={activeBranch} onChange={setActiveBranch} options={branches} />
+        {/* BranchDropdown is now read-only — branch switching is done via the global navbar BranchSelector */}
+        <BranchDropdown activeBranch={activeBranch} onChange={useCallback(() => {}, [])} options={branches} />
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
