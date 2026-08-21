@@ -17,6 +17,13 @@ export const getAnnouncements = async (params = {}) => {
   return data;
 };
 
+export const getLiveStockAlerts = async (params = {}) => {
+  const { data } = await api.get('/inventory-management/low-stock-alerts', {
+    params: { limit: 100, ...params },
+  });
+  return data;
+};
+
 export const updateAnnouncement = async ({ id, payload }) => {
   const { data } = await api.patch(`${BASE}/announcements/${id}`, payload);
   return data;

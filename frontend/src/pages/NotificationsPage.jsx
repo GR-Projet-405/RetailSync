@@ -68,6 +68,16 @@ const priorityVariant = {
   low: "info",
 };
 
+const getDisplayCategory = (notification) => {
+  if (notification.category !== "activity") return notification.category;
+  if (["orders", "payments"].includes(notification.metadata?.activityType)) {
+    return "orders";
+  }
+  if (notification.metadata?.activityType === "inventory") return "inventory";
+  if (notification.metadata?.activityType === "alerts") return "alerts";
+  return "activity";
+};
+
 const formatRelativeTime = (dateValue) => {
   if (!dateValue) return "Just now";
 
@@ -149,7 +159,12 @@ function NotificationCenterPage({ initialTab = "all" }) {
   });
 
   const notifications = data?.data?.notifications || [];
-  const stats = data?.data?.stats || { total: 0, unread: 0, highPriority: 0 };
+  const stats = data?.data?.stats || {
+    total: 0,
+    unread: 0,
+    highPriority: 0,
+    tabCounts: { all: 0, unread: 0, orders: 0, inventory: 0, alerts: 0 },
+  };
 
   const invalidateNotifications = () => {
     queryClient.invalidateQueries({ queryKey: NOTIFICATION_QUERY_KEYS.all });
@@ -271,9 +286,9 @@ function NotificationCenterPage({ initialTab = "all" }) {
               )}
             >
               {tab.label}
-              {tab.id === "all" && stats.unread > 0 && (
+              {stats.tabCounts?.[tab.id] > 0 && (
                 <span className="ml-1 rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                  {stats.unread}
+                  {stats.tabCounts[tab.id]}
                 </span>
               )}
             </button>
@@ -294,7 +309,7 @@ function NotificationCenterPage({ initialTab = "all" }) {
         ) : (
           notifications.map((notification) => {
             const category =
-              categoryStyles[notification.category] || categoryStyles.system;
+              categoryStyles[getDisplayCategory(notification)] || categoryStyles.system;
             const Icon = category.icon;
 
             return (

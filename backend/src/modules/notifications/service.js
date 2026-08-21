@@ -21,7 +21,27 @@ const buildQuery = ({ search, status, category, priority }) => {
   if (status === 'unread') query.isRead = false;
   if (status === 'read') query.isRead = true;
   if (category && category !== 'all' && VALID_CATEGORIES.includes(category)) {
-    query.category = category;
+    // System Messages is an operational feed. Include historical activity
+    // records so existing real database events remain visible, alongside
+    // explicit system incidents recorded by the error handler.
+    if (category === 'system') {
+      query.category = { $in: ['system', 'activity'] };
+    } else if (category === 'orders' || category === 'inventory' || category === 'alerts') {
+      // Older records were saved as `activity`. Keep them visible in their
+      // correct tab by using the activity type stored with the event.
+      const legacyTypes = category === 'orders' ? ['orders', 'payments'] : [category];
+      query.$and = [
+        ...(query.$and || []),
+        {
+          $or: [
+            { category },
+            { category: 'activity', 'metadata.activityType': { $in: legacyTypes } },
+          ],
+        },
+      ];
+    } else {
+      query.category = category;
+    }
   }
   if (priority && priority !== 'all' && VALID_PRIORITIES.includes(priority)) {
     query.priority = priority;
@@ -52,12 +72,23 @@ class NotificationsPageService {
   async fetchDetails(filters = {}) {
     const query = buildQuery(filters);
     const statsQuery = buildStatsQuery(filters);
+    const unreadTabQuery = (category) =>
+      buildQuery({
+        search: filters.search,
+        priority: filters.priority,
+        status: 'unread',
+        ...(category ? { category } : {}),
+      });
 
-    const [notifications, total, unread, highPriority] = await Promise.all([
+    const [notifications, total, unread, highPriority, unreadAll, unreadOrders, unreadInventory, unreadAlerts] = await Promise.all([
       Notification.find(query).sort({ isRead: 1, createdAt: -1 }).lean(),
       Notification.countDocuments(statsQuery),
       Notification.countDocuments({ ...statsQuery, isRead: false }),
       Notification.countDocuments({ ...statsQuery, priority: 'high', isRead: false }),
+      Notification.countDocuments(unreadTabQuery()),
+      Notification.countDocuments(unreadTabQuery('orders')),
+      Notification.countDocuments(unreadTabQuery('inventory')),
+      Notification.countDocuments(unreadTabQuery('alerts')),
     ]);
 
     return {
@@ -66,6 +97,13 @@ class NotificationsPageService {
         total,
         unread,
         highPriority,
+        tabCounts: {
+          all: unreadAll,
+          unread: unreadAll,
+          orders: unreadOrders,
+          inventory: unreadInventory,
+          alerts: unreadAlerts,
+        },
       },
     };
   }

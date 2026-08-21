@@ -1,26 +1,19 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   Bell,
-  CheckCircle2,
   Clock,
   Flag,
   Inbox,
   Info,
   RefreshCw,
   Search,
-  X,
 } from "lucide-react";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
 import { cn } from "../utils/cn";
-import {
-  NOTIFICATION_QUERY_KEYS,
-  clearNotifications,
-  deleteNotification,
-  getNotifications,
-} from "../services/notificationService";
+import { getLiveStockAlerts } from "../services/notificationService";
 
 const severityMeta = {
   high: {
@@ -88,25 +81,39 @@ const EmptyState = ({ isError }) => (
     <p className="mt-1 max-w-md text-sm text-slate-500">
       {isError
         ? "Check that the backend server is running, then refresh this panel."
-        : "Critical, warning, and info alerts from Notification Center will appear here."}
+        : "Live low-stock alerts appear here when inventory reaches its reorder level."}
     </p>
   </div>
 );
 
 export default function AlertsPanelPage() {
-  const queryClient = useQueryClient();
   const [activeSeverity, setActiveSeverity] = useState("all");
   const [search, setSearch] = useState("");
 
   const { data, isLoading, isError, isFetching, refetch } = useQuery({
-    queryKey: NOTIFICATION_QUERY_KEYS.list({ category: "alerts" }),
-    queryFn: () => getNotifications({ category: "alerts" }),
+    queryKey: ["inventory", "low-stock-alerts"],
+    queryFn: getLiveStockAlerts,
     staleTime: 30_000,
   });
 
   const alerts = useMemo(
-    () => data?.data?.notifications || [],
-    [data?.data?.notifications],
+    () =>
+      (data?.data?.alerts || []).map((alert) => {
+        const priority = alert.severity === "CRITICAL" ? "high" : "medium";
+        const productName = alert.product?.name || "Inventory item";
+        const sku = alert.product?.sku ? ` (${alert.product.sku})` : "";
+
+        return {
+          ...alert,
+          priority,
+          title: `${alert.severity === "CRITICAL" ? "Critical" : "Low"} stock: ${productName}`,
+          message: `${productName}${sku} has ${alert.currentStock} unit(s) available; reorder level is ${alert.reorderLevel}.`,
+          branchName: alert.warehouse?.name || null,
+          source: "Live inventory",
+          createdAt: alert.lastMovementAt || alert.updatedAt,
+        };
+      }),
+    [data?.data?.alerts],
   );
 
   const counts = useMemo(
@@ -140,20 +147,6 @@ export default function AlertsPanelPage() {
     });
   }, [activeSeverity, alerts, search]);
 
-  const invalidateNotifications = () => {
-    queryClient.invalidateQueries({ queryKey: NOTIFICATION_QUERY_KEYS.all });
-  };
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteNotification,
-    onSuccess: invalidateNotifications,
-  });
-
-  const clearMutation = useMutation({
-    mutationFn: () => clearNotifications({ category: "alerts" }),
-    onSuccess: invalidateNotifications,
-  });
-
   return (
     <div className="space-y-7">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -180,14 +173,6 @@ export default function AlertsPanelPage() {
           >
             <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} />
             Refresh
-          </Button>
-          <Button
-            onClick={() => clearMutation.mutate()}
-            disabled={alerts.length === 0 || clearMutation.isPending}
-            className="gap-2"
-          >
-            <CheckCircle2 className="h-4 w-4" />
-            Clear All
           </Button>
         </div>
       </div>
@@ -231,9 +216,9 @@ export default function AlertsPanelPage() {
         <div className="grid grid-cols-4 rounded-lg bg-blue-50 p-1 lg:w-[560px]">
           {[
             { id: "all", label: "All", count: counts.all },
-            { id: "critical", label: "Critical" },
-            { id: "warning", label: "Warning" },
-            { id: "info", label: "Info" },
+            { id: "critical", label: "Critical", count: counts.high },
+            { id: "warning", label: "Warning", count: counts.medium },
+            { id: "info", label: "Info", count: counts.low },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -245,7 +230,7 @@ export default function AlertsPanelPage() {
               )}
             >
               {tab.label}
-              {tab.id === "all" && counts.all > 0 && (
+              {tab.count > 0 && (
                 <span className="ml-1 rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
                   {tab.count}
                 </span>
@@ -315,16 +300,6 @@ export default function AlertsPanelPage() {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => deleteMutation.mutate(alert._id)}
-                  disabled={deleteMutation.isPending}
-                  className="h-8 w-8 shrink-0 rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
-                  aria-label="Dismiss alert"
-                  title="Dismiss"
-                >
-                  <X className="mx-auto h-4 w-4" />
-                </button>
               </article>
             );
           })

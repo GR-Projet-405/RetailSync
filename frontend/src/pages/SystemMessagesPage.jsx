@@ -63,6 +63,14 @@ const statusMeta = {
   },
 };
 
+const getSystemStatus = (message) => {
+  const explicitStatus = message.metadata?.systemStatus;
+  if (statusMeta[explicitStatus]) return explicitStatus;
+  if (message.priority === "high") return "error";
+  if (message.priority === "medium") return "warning";
+  return "info";
+};
+
 const formatTime = (dateValue) => {
   const date = new Date(dateValue);
   if (Number.isNaN(date.getTime())) return "--:--";
@@ -101,9 +109,10 @@ export default function SystemMessagesPage() {
 
   const messages = useMemo(
     () =>
-      (data?.data?.notifications || []).filter((message) =>
-        statusMeta[message.metadata?.systemStatus],
-      ),
+      (data?.data?.notifications || []).map((message) => ({
+        ...message,
+        systemStatus: getSystemStatus(message),
+      })),
     [data?.data?.notifications],
   );
 
@@ -111,7 +120,7 @@ export default function SystemMessagesPage() {
     () =>
       messages.reduce(
         (acc, message) => {
-          const status = message.metadata.systemStatus;
+          const status = message.systemStatus;
           acc.all += 1;
           acc[status] += 1;
           return acc;
@@ -125,7 +134,7 @@ export default function SystemMessagesPage() {
     () =>
       messages.filter((message) => {
         if (activeStatus === "all") return true;
-        return message.metadata.systemStatus === activeStatus;
+        return message.systemStatus === activeStatus;
       }),
     [activeStatus, messages],
   );
@@ -201,10 +210,10 @@ export default function SystemMessagesPage() {
       <div className="grid grid-cols-5 rounded-lg bg-blue-50 p-1">
         {[
           { id: "all", label: "All", count: counts.all },
-          { id: "error", label: "Errors" },
-          { id: "warning", label: "Warnings" },
-          { id: "success", label: "Success" },
-          { id: "info", label: "Info" },
+          { id: "error", label: "Errors", count: counts.error },
+          { id: "warning", label: "Warnings", count: counts.warning },
+          { id: "success", label: "Success", count: counts.success },
+          { id: "info", label: "Info", count: counts.info },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -213,13 +222,13 @@ export default function SystemMessagesPage() {
             className={cn(
               "h-8 rounded-md text-xs font-medium text-slate-600 transition hover:text-blue-700",
               activeStatus === tab.id && "bg-white text-blue-600 shadow-sm",
-            )}
-          >
-            {tab.label}
-            {tab.id === "all" && counts.all > 0 && (
-              <span className="ml-1 rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                {tab.count}
-              </span>
+              )}
+            >
+              {tab.label}
+              {tab.count > 0 && (
+                <span className="ml-1 rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {tab.count}
+                </span>
             )}
           </button>
         ))}
@@ -237,7 +246,7 @@ export default function SystemMessagesPage() {
           <EmptyState isError={isError} />
         ) : (
           visibleMessages.map((message) => {
-            const meta = statusMeta[message.metadata.systemStatus];
+            const meta = statusMeta[message.systemStatus];
             const Icon = meta.icon;
 
             return (

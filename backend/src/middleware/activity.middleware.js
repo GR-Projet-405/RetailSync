@@ -1,15 +1,15 @@
 const notifications = require('../modules/notifications/service');
 
 const MODULE_METADATA = {
-  'purchase-orders': { label: 'Purchase order', activityType: 'orders' },
-  'pos-billing': { label: 'POS sale', activityType: 'orders' },
-  'payment-processing': { label: 'Payment', activityType: 'payments' },
-  'sales-history': { label: 'Sale', activityType: 'orders' },
-  'inventory-management': { label: 'Inventory', activityType: 'inventory' },
-  'goods-receiving': { label: 'Goods receipt', activityType: 'inventory' },
-  'stock-transfers': { label: 'Stock transfer', activityType: 'inventory' },
-  'product-management': { label: 'Product', activityType: 'inventory' },
-  'customer-management': { label: 'Customer', activityType: 'orders' },
+  'purchase-orders': { label: 'Purchase order', activityType: 'orders', category: 'orders' },
+  'pos-billing': { label: 'POS sale', activityType: 'orders', category: 'orders' },
+  'payment-processing': { label: 'Payment', activityType: 'payments', category: 'orders' },
+  'sales-history': { label: 'Sale', activityType: 'orders', category: 'orders' },
+  'inventory-management': { label: 'Inventory', activityType: 'inventory', category: 'inventory' },
+  'goods-receiving': { label: 'Goods receipt', activityType: 'inventory', category: 'inventory' },
+  'stock-transfers': { label: 'Stock transfer', activityType: 'inventory', category: 'inventory' },
+  'product-management': { label: 'Product', activityType: 'inventory', category: 'inventory' },
+  'customer-management': { label: 'Customer', activityType: 'orders', category: 'orders' },
 };
 
 const ACTIONS = {
@@ -31,7 +31,11 @@ const getModuleName = (originalUrl = '') => {
  * completed business operation if activity recording is unavailable.
  */
 const recordActivity = (req, res, next) => {
-  if (!ACTIONS[req.method] || req.originalUrl.includes('/notifications')) {
+  if (
+    !ACTIONS[req.method] ||
+    req.originalUrl.includes('/notifications') ||
+    req.originalUrl.includes('/auth')
+  ) {
     return next();
   }
 
@@ -42,6 +46,7 @@ const recordActivity = (req, res, next) => {
     const module = MODULE_METADATA[moduleName] || {
       label: moduleName.replace(/-/g, ' '),
       activityType: 'system',
+      category: 'activity',
     };
     const action = ACTIONS[req.method];
     const actor = [req.user?.firstName, req.user?.lastName]
@@ -51,7 +56,7 @@ const recordActivity = (req, res, next) => {
     notifications.createNotification({
       title: `${module.label} ${action}`,
       message: `${actor} ${action} a ${module.label.toLowerCase()} record.`,
-      category: 'activity',
+      category: module.category,
       priority: 'low',
       branchName: req.user?.branchName || null,
       source: module.label,
