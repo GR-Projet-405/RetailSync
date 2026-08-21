@@ -32,6 +32,8 @@ import StockMovementsPage from '../pages/StockMovementsPage';
 import StockAdjustmentsPage from '../pages/StockAdjustmentsPage';
 import LowStockAlertsPage from '../pages/LowStockAlertsPage';
 import WarehousePage from '../pages/WarehousePage';
+import CapacityView from '../pages/CapacityView';
+import TransferRequests from '../pages/TransferRequests';
 import PurchaseOrderPage from '../pages/PurchaseOrderPage';
 import GoodsReceivingPage from '../pages/GoodsReceivingPage';
 import StockTransferPage from '../pages/StockTransferPage';
@@ -277,6 +279,20 @@ export const AppRoutes = () => {
         <Route path="/warehouses" element={
           <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
             <WarehousePage />
+          </ProtectedRoute>
+        } />
+
+        {/* Capacity Analytics */}
+        <Route path="/capacity-analytics" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <CapacityView />
+          </ProtectedRoute>
+        } />
+
+        {/* Transfer Requests */}
+        <Route path="/transfer-requests" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <TransferRequests />
           </ProtectedRoute>
         } />
 

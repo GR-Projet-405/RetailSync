@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Boxes, Building2, MapPin, Search, Users } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Boxes, Building2, MapPin, Search, Users, Plus, X } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
 import { useAuth } from '../contexts/AuthContext';
 import { useBranches } from '../hooks/useBranches';
-import { useWarehouses } from '../hooks/useWarehouses';
+import { useWarehouses, WAREHOUSE_QUERY_KEYS } from '../hooks/useWarehouses';
+import api from '../services/api';
+import StorageLocations from './StorageLocations';
 
 const statusStyles = {
   Active: 'success',
@@ -23,13 +26,19 @@ const displayStatus = (status) => {
 };
 
 export default function WarehousePage() {
+  const queryClient = useQueryClient();
   const { activeBranch } = useAuth();
   const { data: branchRes } = useBranches();
   
+  const branchesArray = useMemo(() => {
+    if (Array.isArray(branchRes)) return branchRes;
+    return branchRes?.data?.data || branchRes?.data || [];
+  }, [branchRes]);
+  
   // Resolve selected active branch to branchId
   const activeBranchObject = useMemo(() => {
-    return branchRes?.data?.find(b => b.branchName === activeBranch || b.name === activeBranch);
-  }, [branchRes, activeBranch]);
+    return branchesArray.find(b => b.branchName === activeBranch || b.name === activeBranch);
+  }, [branchesArray, activeBranch]);
   
   const branchId = activeBranchObject?._id;
 
@@ -39,6 +48,11 @@ export default function WarehousePage() {
 
   const [selectedWarehouse, setSelectedWarehouse] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showLocations, setShowLocations] = useState(false);
+  const [addForm, setAddForm] = useState({ name: '', code: '', city: '', address: '', capacity: '' });
+  const [addLoading, setAddLoading] = useState(false);
+  const [addError, setAddError] = useState('');
 
   // Synchronize selected warehouse
   useEffect(() => {
@@ -77,12 +91,66 @@ export default function WarehousePage() {
     };
   }, [warehouses]);
 
+  const handleAddWarehouse = async (e) => {
+    e.preventDefault();
+    setAddLoading(true);
+    setAddError('');
+    try {
+      const branch = activeBranchObject || branchesArray[0];
+      const response = await api.post('/warehouse-management', {
+        name: addForm.name,
+        code: addForm.code,
+        branchId: branch?._id,
+        location: {
+          city: addForm.city,
+          address: addForm.address,
+        },
+        capacity: Number(addForm.capacity) || 5000,
+        status: 'ACTIVE',
+      });
+      const newWarehouse = response.data?.data;
+      if (newWarehouse && branchId) {
+        queryClient.setQueryData(WAREHOUSE_QUERY_KEYS.list({ branchId }), (old) => {
+          if (!old?.data) return old;
+          return {
+            ...old,
+            data: [newWarehouse, ...old.data]
+          };
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: WAREHOUSE_QUERY_KEYS.all });
+      setShowAddModal(false);
+      setAddForm({ name: '', code: '', city: '', address: '', capacity: '' });
+    } catch (err) {
+      setAddError(err.response?.data?.message || 'Failed to create warehouse');
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
+  if (showLocations && selectedWarehouse) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Storage Locations"
+          description={selectedWarehouse.name}
+          actions={
+            <Button variant="secondary" onClick={() => setShowLocations(false)}>
+              Back to Warehouse Details
+            </Button>
+          }
+        />
+        <StorageLocations warehouseId={selectedWarehouse._id} onBack={() => setShowLocations(false)} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Warehouse Management"
         description="Monitor warehouse capacity, zones, and stock movement in one place."
-        actions={<Button variant="primary">Add Warehouse</Button>}
+        actions={<Button variant="primary" onClick={() => setShowAddModal(true)}>Add Warehouse</Button>}
       />
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -200,12 +268,18 @@ export default function WarehousePage() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-slate-200 p-3">
                     <p className="text-sm text-slate-500">Capacity</p>
-                    <p className="text-lg font-semibold text-slate-900">{selectedWarehouse.totalCapacity?.toLocaleString()} units</p>
+                    <p className="text-lg font-semibold text-slate-900">{(selectedWarehouse.totalCapacity ?? 0).toLocaleString()} units</p>
                   </div>
                   <div className="rounded-xl border border-slate-200 p-3">
                     <p className="text-sm text-slate-500">Utilization</p>
                     <p className="text-lg font-semibold text-slate-900">{Math.round(((selectedWarehouse.usedCapacity || 0) / (selectedWarehouse.totalCapacity || 1)) * 100)}%</p>
                   </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button variant="secondary" onClick={() => setShowLocations(true)} className="flex-1">
+                    View Storage Locations
+                  </Button>
                 </div>
 
                 <div>
@@ -229,6 +303,50 @@ export default function WarehousePage() {
           </CardContent>
         </Card>
       </div>
+
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-[24px]">
+          <div className="bg-white rounded-[16px] shadow-xl w-full max-w-[520px] border border-slate-200">
+            <div className="flex items-center justify-between px-[24px] py-[18px] border-b border-slate-200">
+              <p className="font-semibold text-slate-900 text-[18px]">Add New Warehouse</p>
+              <button onClick={() => setShowAddModal(false)} className="p-[6px] rounded-[8px] hover:bg-slate-100 transition-colors text-slate-500">
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleAddWarehouse} className="p-[24px] flex flex-col gap-[16px]">
+              {addError && <p className="text-sm text-red-600 bg-red-50 p-2 rounded border border-red-100">{addError}</p>}
+              <div className="grid grid-cols-2 gap-[12px]">
+                <div>
+                  <label className="font-medium text-slate-700 text-[12px] tracking-[0.12px] mb-[6px] block">Warehouse Name</label>
+                  <input required value={addForm.name} onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))} className="w-full px-[12px] py-[8px] rounded-[8px] border border-slate-200 text-sm focus:outline-none focus:border-blue-500" />
+                </div>
+                <div>
+                  <label className="font-medium text-slate-700 text-[12px] tracking-[0.12px] mb-[6px] block">Warehouse Code</label>
+                  <input required value={addForm.code} onChange={(e) => setAddForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))} className="w-full px-[12px] py-[8px] rounded-[8px] border border-slate-200 text-sm focus:outline-none focus:border-blue-500" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-[12px]">
+                <div>
+                  <label className="font-medium text-slate-700 text-[12px] tracking-[0.12px] mb-[6px] block">City</label>
+                  <input required value={addForm.city} onChange={(e) => setAddForm((f) => ({ ...f, city: e.target.value }))} className="w-full px-[12px] py-[8px] rounded-[8px] border border-slate-200 text-sm focus:outline-none focus:border-blue-500" />
+                </div>
+                <div>
+                  <label className="font-medium text-slate-700 text-[12px] tracking-[0.12px] mb-[6px] block">Capacity</label>
+                  <input type="number" value={addForm.capacity} onChange={(e) => setAddForm((f) => ({ ...f, capacity: e.target.value }))} className="w-full px-[12px] py-[8px] rounded-[8px] border border-slate-200 text-sm focus:outline-none focus:border-blue-500" />
+                </div>
+              </div>
+              <div>
+                <label className="font-medium text-slate-700 text-[12px] tracking-[0.12px] mb-[6px] block">Address</label>
+                <input value={addForm.address} onChange={(e) => setAddForm((f) => ({ ...f, address: e.target.value }))} className="w-full px-[12px] py-[8px] rounded-[8px] border border-slate-200 text-sm focus:outline-none focus:border-blue-500" />
+              </div>
+              <div className="flex items-center justify-end gap-[8px] pt-[8px]">
+                <button type="button" onClick={() => setShowAddModal(false)} className="px-[16px] py-[8px] rounded-[8px] border border-slate-200 font-medium text-slate-600 text-[13px] hover:bg-slate-50 transition-colors">Cancel</button>
+                <button type="submit" disabled={addLoading} className="px-[16px] py-[8px] rounded-[8px] bg-[#2563eb] text-white font-medium text-[13px] hover:bg-[#1d4ed8] transition-colors disabled:opacity-70">{addLoading ? 'Creating...' : 'Create Warehouse'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

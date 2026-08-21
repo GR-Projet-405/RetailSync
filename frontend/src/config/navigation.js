@@ -177,6 +177,30 @@ export const NAVIGATION_GROUPS = [
           ROLES.INVENTORY_MANAGER,
         ],
       },
+      {
+        id: "capacity-analytics",
+        name: "Capacity Analytics",
+        path: "/capacity-analytics",
+        icon: "BarChart3",
+        allowedRoles: [
+          ROLES.SUPER_ADMIN,
+          ROLES.ADMIN,
+          ROLES.BRANCH_MANAGER,
+          ROLES.INVENTORY_MANAGER,
+        ],
+      },
+      {
+        id: "transfer-requests",
+        name: "Transfer Requests",
+        path: "/transfer-requests",
+        icon: "ArrowLeftRight",
+        allowedRoles: [
+          ROLES.SUPER_ADMIN,
+          ROLES.ADMIN,
+          ROLES.BRANCH_MANAGER,
+          ROLES.INVENTORY_MANAGER,
+        ],
+      },
     ],
   },
   {

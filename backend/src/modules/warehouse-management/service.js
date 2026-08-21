@@ -36,10 +36,29 @@ class WarehouseManagementService {
   }
 
   async createWarehouse(payload) {
-    return await Warehouse.create(payload);
+    try {
+      return await Warehouse.create(payload);
+    } catch (error) {
+      if (error.name === 'ValidationError') {
+        const err = new Error(error.message);
+        err.statusCode = 400;
+        throw err;
+      }
+      if (error.code === 11000) {
+        const err = new Error('Warehouse code already exists');
+        err.statusCode = 409;
+        throw err;
+      }
+      throw error;
+    }
   }
 
   async getWarehouseLocations(id) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      const err = new Error('Invalid warehouse ID');
+      err.statusCode = 400;
+      throw err;
+    }
     const LocationModel = mongoose.models.Location;
     if (LocationModel) {
       return await LocationModel.find({ warehouseId: id }).lean();
