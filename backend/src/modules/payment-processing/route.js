@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('./controller');
+const { verifyToken, hasRole } = require('../../middleware/auth.middleware');
 
 // 1. Route to get/search customers (e.g., GET /api/payment-processing/payment-customers?search=077)
 router.get('/customers', controller.getCustomers);
@@ -9,7 +10,7 @@ router.get('/customers', controller.getCustomers);
 router.post('/customers', controller.addCustomer);
 
 // 3. Route to process the final payment (e.g., POST /api/payment-processing/process)
-router.post('/process', controller.processPayment);
+router.post('/process', verifyToken, controller.processPayment);
 
 // 4. Route to fetch transaction history (e.g., GET /api/payment-processing/transactions)
 router.get('/transactions', controller.getTransactions);

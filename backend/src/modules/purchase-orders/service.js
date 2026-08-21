@@ -1,7 +1,9 @@
+const mongoose = require('mongoose');
 const PurchaseOrderPage = require('./model');
 const Supplier = require('../supplier-management/model');
 // ADAPT: point this at your actual product model / path
 const ProductPage = require('../product-management/model');
+const Category = require('../category-management/model');
 // ADAPT: path to your mailer util
 const mailer = require('../../utils/mailer');
 
@@ -11,7 +13,7 @@ class PurchaseOrderPageService {
     const { status, supplier, search, orderDate, page = 1, limit = 20 } = query;
 
     const filter = {};
-    if (status) filter.status = status;
+    if (status && status !== 'All') filter.status = status;
     if (supplier) filter.supplierNameSnapshot = supplier;
     if (search) {
       filter.$or = [
@@ -66,7 +68,17 @@ class PurchaseOrderPageService {
 
   // ── Step 1: supplier typeahead search ──
   async searchSuppliers(search = '') {
-    const filter = search ? { name: { $regex: search, $options: 'i' } } : {};
+    const filter = {
+      status: { $ne: 'Inactive' },
+    };
+
+    if (search && search.trim()) {
+      const safeSearch = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.$or = [
+        { name: { $regex: safeSearch, $options: 'i' } },
+        { supplierId: { $regex: safeSearch, $options: 'i' } },
+      ];
+    }
     const suppliers = await Supplier.find(filter).select('name supplierId').limit(20);
 
     return suppliers.map((s) => ({
@@ -105,17 +117,38 @@ class PurchaseOrderPageService {
   async searchCatalog(search = '', supplierId = '') {
     const filter = {};
 
-    if (supplierId) {
+    if (supplierId && mongoose.Types.ObjectId.isValid(supplierId)) {
       filter.supplier = supplierId;
     }
 
-    if (search) {
-      filter.$or = [
-        // FIXED: schema field is `name`, not `productName`
-        { name: { $regex: search, $options: 'i' } },
-        { sku: { $regex: search, $options: 'i' } },
-        { category: { $regex: search, $options: 'i' } },
+    if (search && search.trim()) {
+      const trimmedSearch = search.trim();
+      const safeSearch = trimmedSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      const matchingCategories = await Category.find({
+        $or: [
+          { name: { $regex: safeSearch, $options: 'i' } },
+          { code: { $regex: safeSearch, $options: 'i' } },
+        ],
+      }).select('_id');
+      const categoryIds = matchingCategories.map((c) => c._id);
+
+      const searchOr = [
+        { name: { $regex: safeSearch, $options: 'i' } },
+        { sku: { $regex: safeSearch, $options: 'i' } },
+        { brand: { $regex: safeSearch, $options: 'i' } },
       ];
+
+      if (categoryIds.length > 0) {
+        searchOr.push({ category: { $in: categoryIds } });
+      }
+
+      if (mongoose.Types.ObjectId.isValid(trimmedSearch)) {
+        searchOr.push({ category: new mongoose.Types.ObjectId(trimmedSearch) });
+        searchOr.push({ _id: new mongoose.Types.ObjectId(trimmedSearch) });
+      }
+
+      filter.$or = searchOr;
     }
 
     const products = await ProductPage.find(filter).limit(50);
@@ -200,6 +233,18 @@ class PurchaseOrderPageService {
       throw err;
     }
 
+    if (!expectedDeliveryDate || isNaN(new Date(expectedDeliveryDate).getTime())) {
+      const err = new Error('expectedDeliveryDate is required and must be a valid date');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (!shippingAddress || typeof shippingAddress !== 'string' || !shippingAddress.trim()) {
+      const err = new Error('shippingAddress is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
     const supplier = await Supplier.findById(supplierId);
     if (!supplier) {
       const err = new Error('Supplier not found');
@@ -213,7 +258,9 @@ class PurchaseOrderPageService {
       throw err;
     }
 
-    const productIds = items.map((i) => i.productId).filter(Boolean);
+    const productIds = items
+      .map((i) => i.productId || i.product?._id || i.product)
+      .filter(Boolean);
     const products = await ProductPage.find({ _id: { $in: productIds } });
     const productMap = new Map(products.map((p) => [String(p._id), p]));
 
@@ -224,18 +271,26 @@ class PurchaseOrderPageService {
     }
 
     const lineItems = items.map((i) => {
-      const product = productMap.get(String(i.productId));
+      const pId = String(i.productId || i.product?._id || i.product);
+      const product = productMap.get(pId);
       if (!product) {
-        const err = new Error(`Product ${i.productId} not found`);
+        const err = new Error(`Product ${pId} not found`);
         err.statusCode = 400;
         throw err;
       }
-      if (product.supplier && String(product.supplier) !== String(supplier._id)) {
+      const prodSupplierId = product.supplier?._id ? String(product.supplier._id) : (product.supplier ? String(product.supplier) : null);
+      if (!prodSupplierId || prodSupplierId !== String(supplier._id)) {
         const err = new Error(`Product "${product.name}" does not belong to the selected supplier`);
         err.statusCode = 400;
         throw err;
       }
-      const quantity = Number(i.quantity) || 0;
+      const rawQty = i.quantity !== undefined ? i.quantity : i.qty;
+      const quantity = Number(rawQty);
+      if (isNaN(quantity) || quantity <= 0) {
+        const err = new Error(`Quantity for item "${product.name}" must be at least 1`);
+        err.statusCode = 400;
+        throw err;
+      }
       // FIXED: fall back to the real nested pricing.sellingPrice field
       // instead of the non-existent top-level sellingPrice/unitPrice/price.
       const unitPrice = i.unitPrice ?? product.pricing?.sellingPrice ?? 0;
@@ -271,14 +326,21 @@ class PurchaseOrderPageService {
 
   // ── Create (handles both "Save as Draft" and "Send to Supplier") ──
   async create(body, userId) {
-    const payload = await this._buildOrderPayload(body);
-    const order = new PurchaseOrderPage({
-      ...payload,
-      orderDate: new Date(),
-      createdBy: userId || null,
-    });
-    await order.save();
-    return order;
+    try {
+      const payload = await this._buildOrderPayload(body);
+      const order = new PurchaseOrderPage({
+        ...payload,
+        orderDate: new Date(),
+        createdBy: userId || null,
+      });
+      await order.save();
+      return order;
+    } catch (err) {
+      if (err.name === 'ValidationError' || err.name === 'CastError') {
+        err.statusCode = 400;
+      }
+      throw err;
+    }
   }
 
   // ── Update an existing draft ──
@@ -301,13 +363,30 @@ class PurchaseOrderPageService {
       throw err;
     }
 
-    const payload = body.supplierId
-      ? await this._buildOrderPayload(body)
-      : body;
+    try {
+      const currentSupplierId = order.supplier?._id ? String(order.supplier._id) : String(order.supplier);
+      const mergedBody = {
+        supplierId: body.supplierId || currentSupplierId,
+        expectedDeliveryDate: body.expectedDeliveryDate || order.expectedDeliveryDate,
+        shippingAddress: body.shippingAddress || order.shippingAddress,
+        items: body.items !== undefined ? body.items : order.items,
+        taxRate: body.taxRate !== undefined ? body.taxRate : order.taxRate,
+        shippingHandling: body.shippingHandling !== undefined ? body.shippingHandling : order.shippingHandling,
+        internalNotes: body.internalNotes !== undefined ? body.internalNotes : order.internalNotes,
+        asDraft: body.asDraft !== undefined ? body.asDraft : (order.status === 'DRAFT'),
+      };
 
-    Object.assign(order, payload);
-    await order.save(); // pre-save hook recalculates totals
-    return order;
+      const payload = await this._buildOrderPayload(mergedBody);
+
+      Object.assign(order, payload);
+      await order.save(); // pre-save hook recalculates totals
+      return order;
+    } catch (err) {
+      if (err.name === 'ValidationError' || err.name === 'CastError') {
+        err.statusCode = 400;
+      }
+      throw err;
+    }
   }
 
   // ── "Send" action — moves a Draft PO to the supplier ──
@@ -524,7 +603,11 @@ class PurchaseOrderPageService {
       throw err;
     }
 
-    await mailer.send({ to, subject, html });
+    try {
+      await mailer.send({ to, subject, html });
+    } catch (sendErr) {
+      console.error(`Failed to resend email for PO ${order.poNumber}:`, sendErr.message);
+    }
 
     order.lastEmailSentAt = new Date();
     order.emailSendCount = (order.emailSendCount || 0) + 1;

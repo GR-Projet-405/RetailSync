@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('./controller');
+const { verifyToken } = require('../../middleware/auth.middleware');
+
+// Protect all Purchase Order routes with authentication
+router.use(verifyToken);
 
 // List / read — specific routes MUST come before the /:id catch-all
 router.get('/', controller.getDetails);

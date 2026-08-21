@@ -94,4 +94,4 @@ stockMovementSchema.index({ type: 1 });
 stockMovementSchema.index({ performedAt: -1 });
 stockMovementSchema.index({ referenceId: 1 });
 
-module.exports = mongoose.model('StockMovement', stockMovementSchema);
+module.exports = mongoose.models.StockMovement || mongoose.model('StockMovement', stockMovementSchema);

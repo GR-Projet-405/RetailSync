@@ -38,7 +38,7 @@ const warehouseSchema = new mongoose.Schema(
     },
     capacity: {
       type: Number,
-      default: null,
+      default: 5000,
     },
     status: {
       type: String,
@@ -52,4 +52,28 @@ const warehouseSchema = new mongoose.Schema(
 warehouseSchema.index({ branchId: 1 });
 warehouseSchema.index({ status: 1 });
 
-module.exports = mongoose.model('Warehouse', warehouseSchema);
+// Virtuals for frontend backward-compatibility
+warehouseSchema.virtual('address').get(function () {
+  return this.location?.address;
+});
+
+warehouseSchema.virtual('city').get(function () {
+  return this.location?.city;
+});
+
+warehouseSchema.virtual('totalCapacity').get(function () {
+  return this.capacity || 5000;
+});
+
+warehouseSchema.virtual('manager').get(function () {
+  if (this.managerId && typeof this.managerId === 'object') {
+    return `${this.managerId.firstName || ''} ${this.managerId.lastName || ''}`.trim() || this.managerId.username || 'Unassigned';
+  }
+  return 'Unassigned';
+});
+
+// Ensure virtuals are output in JSON and Objects
+warehouseSchema.set('toJSON', { virtuals: true });
+warehouseSchema.set('toObject', { virtuals: true });
+
+module.exports = mongoose.models.Warehouse || mongoose.model('Warehouse', warehouseSchema);

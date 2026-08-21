@@ -11,6 +11,7 @@ import { Card } from '../../components/Card';
 import { Modal } from '../../components/Modal';
 import { cn } from '../../utils/cn';
 import { reportService, REPORT_KEYS } from '../../services/reportService';
+import { resolveBranchLabel, namesFromBranchRefs } from '../../utils/branchLabel';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -131,6 +132,20 @@ export default function BranchManagerReportsPage() {
     return [gb.firstName, gb.lastName].filter(Boolean).join(' ') || gb.employeeId || '—';
   }
 
+  function handleViewReport(row) {
+    const filters = row.filters || {};
+    navigate(`/reports/view/${row.type?.toLowerCase()}`, {
+      state: {
+        report: row,
+        dateFrom: filters.dateFrom,
+        dateTo: filters.dateTo,
+        allBranches: filters.allBranches,
+        selectedBranchIds: (filters.branches || []).map((b) => b._id || b),
+        additionalFilters: filters.additionalFilters,
+      },
+    });
+  }
+
   const ACCENT_HEX = {
     SALES:'#3B82F6', INVENTORY:'#10B981', FINANCE:'#F59E0B', EMPLOYEE:'#8B5CF6', CUSTOMER:'#F43F5E',
   };
@@ -197,7 +212,12 @@ export default function BranchManagerReportsPage() {
     const df = filters.dateFrom ? formatDate(filters.dateFrom) : null;
     const dt = filters.dateTo   ? formatDate(filters.dateTo)   : null;
     drawRow('Date Range', df && dt ? `${df} – ${dt}` : 'All Time');
-    drawRow('Branches',   filters.allBranches ? 'All Branches' : `${(filters.branches||[]).length} branch(es) selected`);
+    const { label: branchesLabel } = resolveBranchLabel({
+      allBranches: filters.allBranches,
+      names: namesFromBranchRefs(filters.branches),
+      count: (filters.branches || []).length,
+    });
+    drawRow('Branches', branchesLabel);
     const af = filters.additionalFilters || {};
     if (af.financeSubType)  drawRow('Finance Sub-type', af.financeSubType);
     if (af.stockStatus)     drawRow('Stock Status',     af.stockStatus);
@@ -425,7 +445,7 @@ export default function BranchManagerReportsPage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => navigate(`/reports/view/${row.type?.toLowerCase()}`)}
+                              onClick={() => handleViewReport(row)}
                               className="w-8 h-8 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-400 hover:text-blue-600 transition-colors"
                               title="View report"
                             >

@@ -12,6 +12,9 @@ export default function TransactionDetailsPage() {
     // Modal State for Customer Profile
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
+    // Modal State for Cashier Profile 
+    const [isCashierModalOpen, setIsCashierModalOpen] = useState(false);
+
     // Get data passed from the previous page
     const { transaction, customer, isHistory } = location.state || {};
 
@@ -41,9 +44,17 @@ export default function TransactionDetailsPage() {
         ? (customer?.loyaltyPoints || 0)
         : ((customer?.loyaltyPoints || 0) - (transaction.pointsRedeemed || 0) + (transaction.pointsEarned || 0));
 
-    // Get Cashier and Branch names from transaction (Fallbacks included)
-    const cashierName = transaction.cashierId?.name || 'Nimal Perera';
-    const branchName = transaction.cashierId?.branchId?.name || 'Downtown Flagship';
+    // get cashier and branch details from transaction
+    const cashier = transaction.cashierId || {};
+    const cashierFirstName = cashier.firstName || 'Nimal';
+    const cashierLastName = cashier.lastName || 'Perera';
+    const cashierFullName = `${cashierFirstName} ${cashierLastName}`.trim();
+
+    const branchObj = cashier.branchId || {};
+    const branchName = branchObj.branchName || branchObj.name || 'Downtown Flagship';
+
+    console.log("Cashier Object:", cashier);
+    console.log("Branch ID/Object:", cashier.branchId);
 
     return (
         <div className="space-y-6 fade-in">
@@ -71,7 +82,11 @@ export default function TransactionDetailsPage() {
                     <span className="px-3 py-1 text-xs font-bold text-blue-700 bg-blue-100 rounded-full">Completed</span>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" className="flex items-center gap-2 font-bold text-red-600 border-red-200 hover:bg-red-50">
+                    <Button
+                        onClick={() => navigate('/returns-refunds', { state: { autoLoadReceiptId: transaction.receiptId } })}
+                        variant="outline"
+                        className="flex items-center gap-2 font-bold text-red-600 border-red-200 hover:bg-red-50"
+                    >
                         <RefreshCcw size={16} /> Issue Refund
                     </Button>
                     <Button
@@ -173,6 +188,11 @@ export default function TransactionDetailsPage() {
                                     <p className="font-bold text-emerald-600">- Rs. {formatCurrency(transaction.memberDiscount)}</p>
                                 </div>
 
+                                <div>
+                                    <p className="text-slate-500 mb-0.5">POS Discount</p>
+                                    <p className="font-bold text-purple-600">- Rs. {formatCurrency(transaction.posDiscount)}</p>
+                                </div>
+
                                 {transaction.pointsRedeemed > 0 && (
                                     <div>
                                         <p className="text-slate-500 mb-0.5">Points Redeemed</p>
@@ -188,7 +208,7 @@ export default function TransactionDetailsPage() {
                                 )}
 
                                 <div>
-                                    <p className="text-slate-500 mb-0.5">VAT(15%)</p>
+                                    <p className="text-slate-500 mb-0.5">TAX</p>
                                     <p className="font-bold text-red-500">+ Rs. {formatCurrency(transaction.taxAmount)}</p>
                                 </div>
                             </div>
@@ -226,11 +246,20 @@ export default function TransactionDetailsPage() {
                             </div>
 
                             <div>
-                                <p className="mb-2 text-xs font-bold tracking-wider uppercase text-slate-400">Processed By (Cashier)</p>
-                                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                                    <User size={16} className="text-blue-500" />
-                                    {/* Dynamic Cashier and Branch Display */}
-                                    {cashierName} <span className="font-normal text-slate-400">({branchName})</span>
+                                <p className="mb-2 text-xs font-bold tracking-wider uppercase text-slate-400">Processed By</p>
+                                <div
+                                    onClick={() => setIsCashierModalOpen(true)}
+                                    className="flex items-center justify-between p-3 transition-all border border-blue-100 rounded-lg cursor-pointer bg-blue-50/50 hover:bg-blue-100/50 hover:border-blue-300 group"
+                                >
+                                    <div className="flex items-center gap-2.5 text-sm font-medium text-slate-700">
+                                        <User size={18} className="text-blue-500 transition-transform group-hover:scale-110" />
+                                        <span>
+                                            {cashierFullName} <span className="font-normal text-slate-500">({branchName})</span>
+                                        </span>
+                                    </div>
+                                    <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider opacity-80 group-hover:opacity-100 group-hover:underline">
+                                        View
+                                    </span>
                                 </div>
                             </div>
                         </CardContent>
@@ -296,6 +325,74 @@ export default function TransactionDetailsPage() {
                     </div>
                 </Modal>
             )}
+
+            {/* --- CASHIER PROFILE MODAL --- */}
+            <Modal
+                isOpen={isCashierModalOpen}
+                onClose={() => setIsCashierModalOpen(false)}
+                title="Cashier Profile"
+                size="sm"
+            >
+                <div className="flex flex-col items-center pt-2 pb-4 space-y-4">
+
+                    {cashier.profileImage ? (
+                        <img
+                            src={cashier.profileImage}
+                            alt="Cashier"
+                            className="object-cover w-20 h-20 rounded-full ring-4 ring-blue-50"
+                        />
+                    ) : (
+                        <div className="flex items-center justify-center w-20 h-20 text-2xl font-extrabold text-blue-700 uppercase bg-blue-100 rounded-full ring-4 ring-blue-50">
+                            {(cashierFirstName.charAt(0) || '') + (cashierLastName.charAt(0) || '')}
+                        </div>
+                    )}
+
+                    <div className="text-center">
+                        <h3 className="text-xl font-bold text-slate-800">
+                            {cashierFullName}
+                        </h3>
+                        <p className="text-sm text-slate-500">@{cashier.username || 'cashier'}</p>
+
+                        {/* Status Badge */}
+                        <span className={`inline-block mt-2 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full ${cashier.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                            {cashier.status || 'ACTIVE'}
+                        </span>
+                    </div>
+
+                    <div className="w-full pt-4 space-y-3 border-t border-slate-100">
+                        {/* Employee ID */}
+                        <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
+                            <Award size={18} className="text-slate-400" />
+                            <span className="w-20 text-xs font-semibold text-slate-500">Emp ID:</span>
+                            <span className="text-sm font-bold text-slate-700">{cashier.employeeId || 'N/A'}</span>
+                        </div>
+                        {/* Phone */}
+                        <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
+                            <Phone size={18} className="text-slate-400" />
+                            <span className="w-20 text-xs font-semibold text-slate-500">Phone:</span>
+                            <span className="text-sm font-bold text-slate-700">{cashier.phoneNumber || 'N/A'}</span>
+                        </div>
+                        {/* Email */}
+                        <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
+                            <Mail size={18} className="text-slate-400" />
+                            <span className="w-20 text-xs font-semibold text-slate-500">Email:</span>
+                            <span className="text-sm font-bold truncate text-slate-700">{cashier.email || 'N/A'}</span>
+                        </div>
+                        {/* Branch */}
+                        <div className="flex items-center gap-3 p-3 border rounded-lg bg-slate-50 border-slate-200">
+                            <User size={18} className="text-blue-500" />
+                            <span className="w-20 text-xs font-semibold text-slate-500">Branch:</span>
+                            <span className="text-sm font-bold text-slate-800">{branchName}</span>
+                        </div>
+                    </div>
+
+                    <Button onClick={() => setIsCashierModalOpen(false)} variant="outline" className="w-full mt-2">
+                        Close
+                    </Button>
+                </div>
+            </Modal>
+
         </div>
     );
 }

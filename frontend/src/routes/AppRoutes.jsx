@@ -32,6 +32,8 @@ import StockMovementsPage from '../pages/StockMovementsPage';
 import StockAdjustmentsPage from '../pages/StockAdjustmentsPage';
 import LowStockAlertsPage from '../pages/LowStockAlertsPage';
 import WarehousePage from '../pages/WarehousePage';
+import CapacityView from '../pages/CapacityView';
+import TransferRequests from '../pages/TransferRequests';
 import PurchaseOrderPage from '../pages/PurchaseOrderPage';
 import GoodsReceivingPage from '../pages/GoodsReceivingPage';
 import StockTransferPage from '../pages/StockTransferPage';
@@ -94,6 +96,7 @@ import AddCustomerPage from '../pages/AddCustomerPage';
 import CustomerProfilePage from '../pages/CustomerProfilePage';
 import CustomerHistoryPage from '../pages/CustomerHistoryPage';
 import CustomerSearchPage from '../pages/CustomerSearchPage';
+import ManagerDashboard from '../pages/ManagerDashboard';
 
 
 
@@ -228,14 +231,14 @@ export const AppRoutes = () => {
 
         {/* Audit Dashboard */}
         <Route path="/audit-dashboard" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.AUDITOR]}>
             <AuditDashboardPage />
           </ProtectedRoute>
         } />
 
         {/* Activity Logs */}
         <Route path="/activity-logs" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AUDITOR]}>
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.BRANCH_MANAGER, ROLES.AUDITOR]}>
             <ActivityLogsPage />
           </ProtectedRoute>
         } />
@@ -276,6 +279,20 @@ export const AppRoutes = () => {
         <Route path="/warehouses" element={
           <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
             <WarehousePage />
+          </ProtectedRoute>
+        } />
+
+        {/* Capacity Analytics */}
+        <Route path="/capacity-analytics" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <CapacityView />
+          </ProtectedRoute>
+        } />
+
+        {/* Transfer Requests */}
+        <Route path="/transfer-requests" element={
+          <ProtectedRoute allowedRoles={INVENTORY_ROLES}>
+            <TransferRequests />
           </ProtectedRoute>
         } />
 
