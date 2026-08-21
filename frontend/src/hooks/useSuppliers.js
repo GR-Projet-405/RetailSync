@@ -14,7 +14,7 @@ import {
   getSupplierById,
   createSupplier,
   updateSupplier,
-  // deactivateSupplier,
+  deactivateSupplier,
   SUPPLIER_QUERY_KEYS,
 } from '../services/supplierServices';
 // 🔔 Adjust this import if your toast utility's API differs (see useGoodsReceiving.js for the same note).
