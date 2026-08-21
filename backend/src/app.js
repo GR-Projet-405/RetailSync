@@ -45,22 +45,41 @@ require('./modules/warehouse-management/model');
 require('./modules/product-management/model');
 require('./modules/inventory-management/model');
 
-const customerRoutes = require("./modules/customer-management/route");
-app.use("/api/v1/customers", customerRoutes);
-
-// Dynamically register routes for all modular folders
-const modulesPath = path.join(__dirname, 'modules');
-if (fs.existsSync(modulesPath)) {
-  fs.readdirSync(modulesPath).forEach((folderName) => {
-    if (folderName === 'customer-management') return;
-
-    const routePath = path.join(modulesPath, folderName, "route.js");
-    if (fs.existsSync(routePath)) {
-      const router = require(routePath);
-      app.use(`/api/v1/${folderName}`, router);
-    }
-  });
-}
+// Static route registration for Vercel deployment (replaces dynamic readdirSync)
+app.use("/api/v1/customers", require("./modules/customer-management/route"));
+app.use("/api/v1/ai-alerts", require("./modules/ai-alerts/route"));
+app.use("/api/v1/ai-assistant-disabled", require("./modules/ai-assistant-disabled/route"));
+app.use("/api/v1/ai-forecasting", require("./modules/ai-forecasting/route"));
+app.use("/api/v1/ai-reordering", require("./modules/ai-reordering/route"));
+app.use("/api/v1/audit-logs", require("./modules/audit-logs/route"));
+app.use("/api/v1/auth", require("./modules/auth/route"));
+app.use("/api/v1/branch-management", require("./modules/branch-management/route"));
+app.use("/api/v1/business-analytics", require("./modules/business-analytics/route"));
+app.use("/api/v1/category-management", require("./modules/category-management/route"));
+app.use("/api/v1/contact-support", require("./modules/contact-support/route"));
+app.use("/api/v1/dashboard", require("./modules/dashboard/route"));
+app.use("/api/v1/employee-management", require("./modules/employee-management/route"));
+app.use("/api/v1/goods-receiving", require("./modules/goods-receiving/route"));
+app.use("/api/v1/help-support", require("./modules/help-support/route"));
+app.use("/api/v1/inventory-management", require("./modules/inventory-management/route"));
+app.use("/api/v1/notifications", require("./modules/notifications/route"));
+app.use("/api/v1/payment-processing", require("./modules/payment-processing/route"));
+app.use("/api/v1/pos-billing", require("./modules/pos-billing/route"));
+app.use("/api/v1/product-management", require("./modules/product-management/route"));
+app.use("/api/v1/profile-settings", require("./modules/profile-settings/route"));
+app.use("/api/v1/promotions-discounts", require("./modules/promotions-discounts/route"));
+app.use("/api/v1/purchase-orders", require("./modules/purchase-orders/route"));
+app.use("/api/v1/reports", require("./modules/reports/route"));
+app.use("/api/v1/returns-refunds", require("./modules/returns-refunds/route"));
+app.use("/api/v1/sales-history", require("./modules/sales-history/route"));
+app.use("/api/v1/stock-transfers", require("./modules/stock-transfers/route"));
+app.use("/api/v1/supplier-management", require("./modules/supplier-management/route"));
+app.use("/api/v1/system-events", require("./modules/system-events/route"));
+app.use("/api/v1/user-actions", require("./modules/user-actions/route"));
+app.use("/api/v1/user-management", require("./modules/user-management/route"));
+app.use("/api/v1/user-role-management", require("./modules/user-role-management/route"));
+app.use("/api/v1/role-management", require("./modules/role-management/route"));
+app.use("/api/v1/warehouse-management", require("./modules/warehouse-management/route"));
 
 // Global fallback JSON Error Handler
 app.use(errorHandler);
